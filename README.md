@@ -1,36 +1,43 @@
-# FioLab 0.4.0
+# FioLab 0.5.0
 
-Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
+Aplicativo Android nativo para matrizes de bordado diretamente pelo celular.
 
 ## Formatos liberados
 
-- DST — parser próprio FioLab.
+- DST — Tajima.
+- PES — Brother/Baby Lock.
 - JEF — Janome/Elna.
-- PES — Brother.
 
-JEF e PES são normalizados para o mesmo modelo interno usado pelo visualizador e simulador do FioLab.
+## Conversor
 
-## Funcional nesta versão
+A v0.5.0 permite converter:
 
-- Abrir DST, JEF e PES pelo seletor nativo do Android.
-- Visualizar matriz com zoom e arraste.
-- Mostrar dimensões, pontos e blocos de cor.
-- Simular sequência progressiva de bordado.
-- Play, pausa, avanço, retrocesso e velocidade.
-- Estimar consumo de linha.
-- Salvar cópia na memória, SD ou pendrive OTG quando disponível.
-- Compartilhar matriz por aplicativos compatíveis.
-- Preservar arquivo original.
+**DST ⇄ PES ⇄ JEF**
 
-## Validação de formatos
+Fluxo:
 
-O CI inclui arquivos binários reais JEF e PES e exige que ambos sejam lidos antes de publicar o APK.
+1. Abra uma matriz.
+2. Toque em **Converter**.
+3. Escolha o formato de destino.
+4. Use **Converter e salvar** ou **Converter e compartilhar**.
+5. Ao salvar, escolha memória interna, cartão SD ou pendrive OTG disponível no seletor do Android.
 
-## Engine de compatibilidade
+O arquivo original nunca é sobrescrito.
 
-Para formatos complexos, o FioLab usa EmbroideryIO, biblioteca Java/Android sob licença MIT, mantendo uma camada própria de normalização e renderização.
+## Cores
 
-Consulte `THIRD_PARTY_NOTICES.md`.
+PES/JEF podem trazer informações de cores de linha e o FioLab preserva essa paleta quando disponível.
+
+DST normalmente não carrega uma paleta de linha confiável. Ao converter DST para PES/JEF, o FioLab mantém os blocos/trocas e aplica uma paleta padrão para que a estrutura de cores não seja perdida.
+
+## Validação
+
+O CI executa:
+- teste do parser DST;
+- leitura de amostras reais PES/JEF;
+- conversão para DST, PES e JEF;
+- reabertura dos arquivos convertidos;
+- compilação Android.
 
 ## Compatibilidade
 
@@ -41,10 +48,16 @@ Consulte `THIRD_PARTY_NOTICES.md`.
 - Gradle 9.6.0.
 - Jetpack Compose.
 
+## Download
+
+Cada Release publica:
+- APK direto;
+- ZIP contendo o APK, como alternativa para navegadores Android.
+
 ## Próximos passos
 
-- 0.5: conversão real entre formatos.
 - 0.6: editor básico.
-- 0.7: Criar Nome e fontes de bordado.
+- 0.7: Criar Nome e biblioteca de fontes de bordado.
+- expansão gradual para VP3, EXP, XXX, U01 e TBF.
 
 Desenvolvido por **T.I. Machado — Soluções em Tecnologia**.

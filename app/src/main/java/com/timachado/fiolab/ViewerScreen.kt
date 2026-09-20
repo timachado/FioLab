@@ -39,6 +39,7 @@ fun ViewerScreen(
     onBack: () -> Unit,
     onOpen: () -> Unit,
     onSimulate: () -> Unit,
+    onConvert: () -> Unit,
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
@@ -204,6 +205,20 @@ fun ViewerScreen(
                     Modifier.height(8.dp)
                 )
 
+                OutlinedButton(
+                    onClick = onConvert,
+                    modifier =
+                        Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "⇄ Converter formato"
+                    )
+                }
+
+                Spacer(
+                    Modifier.height(8.dp)
+                )
+
                 Row(
                     horizontalArrangement =
                         Arrangement.spacedBy(8.dp)
@@ -213,9 +228,7 @@ fun ViewerScreen(
                         modifier =
                             Modifier.weight(1f)
                     ) {
-                        Text(
-                            "Salvar cópia"
-                        )
+                        Text("Salvar cópia")
                     }
 
                     OutlinedButton(
@@ -223,9 +236,7 @@ fun ViewerScreen(
                         modifier =
                             Modifier.weight(1f)
                     ) {
-                        Text(
-                            "Compartilhar"
-                        )
+                        Text("Compartilhar")
                     }
                 }
 
@@ -234,7 +245,7 @@ fun ViewerScreen(
                 )
 
                 Text(
-                    "Salvar cópia abre o seletor do Android. Você pode escolher memória interna, cartão SD ou pendrive OTG disponível.",
+                    "Salvar e converter usam o seletor do Android, compatível com memória interna, cartão SD e pendrive OTG disponível.",
                     color = FioTextMuted,
                     fontSize = 10.sp
                 )

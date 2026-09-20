@@ -12,42 +12,75 @@ object MatrixExporter {
         contentResolver: ContentResolver,
         destination: Uri,
         design: EmbroideryDesign
+    ): Result<Unit> =
+        saveBytes(
+            contentResolver = contentResolver,
+            destination = destination,
+            bytes = design.sourceBytes
+        )
+
+    fun saveBytes(
+        contentResolver: ContentResolver,
+        destination: Uri,
+        bytes: ByteArray
     ): Result<Unit> = runCatching {
-        val output = contentResolver.openOutputStream(destination, "w")
-            ?: error("Não foi possível abrir o destino selecionado.")
-        output.use { it.write(design.sourceBytes) }
+        val output =
+            contentResolver.openOutputStream(destination, "w")
+                ?: error("Não foi possível abrir o destino selecionado.")
+
+        output.use { it.write(bytes) }
     }
 
     fun createShareIntent(
         context: Context,
         design: EmbroideryDesign
+    ): Result<Intent> =
+        createShareIntent(
+            context = context,
+            fileName = design.fileName,
+            bytes = design.sourceBytes
+        )
+
+    fun createShareIntent(
+        context: Context,
+        fileName: String,
+        bytes: ByteArray
     ): Result<Intent> = runCatching {
-        val sharedDir = File(context.cacheDir, "shared").apply {
-            if (!exists() && !mkdirs()) {
-                error("Não foi possível preparar a pasta temporária.")
+        val sharedDir =
+            File(context.cacheDir, "shared").apply {
+                if (!exists() && !mkdirs()) {
+                    error("Não foi possível preparar a pasta temporária.")
+                }
             }
+
+        val safeName = safeFileName(fileName)
+        val file = File(sharedDir, safeName)
+
+        file.outputStream().use {
+            it.write(bytes)
         }
 
-        val file = File(sharedDir, safeFileName(design.fileName))
-        file.outputStream().use { it.write(design.sourceBytes) }
-
-        val contentUri = FileProvider.getUriForFile(
-            context,
-            context.packageName + ".fileprovider",
-            file
-        )
+        val contentUri =
+            FileProvider.getUriForFile(
+                context,
+                context.packageName + ".fileprovider",
+                file
+            )
 
         Intent(Intent.ACTION_SEND).apply {
             type = "application/octet-stream"
             putExtra(Intent.EXTRA_STREAM, contentUri)
-            putExtra(Intent.EXTRA_SUBJECT, design.fileName)
+            putExtra(Intent.EXTRA_SUBJECT, safeName)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
 
     fun safeFileName(input: String): String {
         val cleaned = input
-            .replace(Regex("[\\/:*?\"<>|\\p{Cntrl}]"), "_")
+            .replace(
+                Regex("[\\/:*?\"<>|\\p{Cntrl}]"),
+                "_"
+            )
             .trim()
             .trim('.')
             .take(120)

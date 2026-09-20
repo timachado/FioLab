@@ -44,6 +44,7 @@ fun HomeScreen(
     onOpen: () -> Unit,
     onRecent: () -> Unit,
     onSimulate: () -> Unit,
+    onConvert: () -> Unit,
     onUnavailable: (String) -> Unit
 ) {
     LazyColumn(
@@ -93,6 +94,7 @@ fun HomeScreen(
                         fontWeight =
                             FontWeight.Bold
                     )
+
                     Text(
                         "Do nome à máquina, direto pelo celular.",
                         color = FioTextMuted,
@@ -128,7 +130,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.4 abre, visualiza e simula DST, JEF e PES.",
+                        "FioLab 0.5 abre, simula e converte DST, JEF e PES.",
                         color = FioTextMuted
                     )
                 }
@@ -196,12 +198,16 @@ fun HomeScreen(
                     icon = "⇄",
                     title = "Converter",
                     subtitle =
-                        "Em desenvolvimento",
-                    enabled = false
+                        "DST ⇄ PES ⇄ JEF",
+                    enabled = recent != null
                 ) {
-                    onUnavailable(
-                        "Conversão entra após validação dos formatos."
-                    )
+                    if (recent != null) {
+                        onConvert()
+                    } else {
+                        onUnavailable(
+                            "Abra uma matriz primeiro."
+                        )
+                    }
                 }
             }
         }
@@ -314,7 +320,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.4.0 • Android",
+                "FioLab 0.5.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

@@ -37,13 +37,25 @@ data class EmbroideryDesign(
     val jumpCount: Int,
     val colorChanges: Int,
     val endFound: Boolean,
-    val sourceBytes: ByteArray
+    val sourceBytes: ByteArray,
+    val threadColors: List<Int> = emptyList()
 ) {
-    val colorCount: Int get() = if (points.isEmpty()) 0 else colorChanges + 1
+    val colorCount: Int
+        get() = maxOf(
+            if (points.isEmpty()) 0 else colorChanges + 1,
+            threadColors.size
+        )
 }
+
+data class ConvertedMatrix(
+    val fileName: String,
+    val format: String,
+    val bytes: ByteArray
+)
 
 sealed interface EmbroideryLoadResult {
     data class Success(val design: EmbroideryDesign) : EmbroideryLoadResult
+
     data class Error(
         val userMessage: String,
         val technicalMessage: String? = null

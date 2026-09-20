@@ -23,9 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.timachado.fiolab.core.embroidery.ConvertedMatrix
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
+import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
@@ -37,7 +39,11 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { FioLabTheme { FioLabApp() } }
+        setContent {
+            FioLabTheme {
+                FioLabApp()
+            }
+        }
     }
 }
 
@@ -45,7 +51,14 @@ private sealed interface Screen {
     data object Home : Screen
     data class Viewer(val design: EmbroideryDesign) : Screen
     data class Simulator(val design: EmbroideryDesign) : Screen
+    data class Converter(val design: EmbroideryDesign) : Screen
 }
+
+private data class PendingDocument(
+    val fileName: String,
+    val bytes: ByteArray,
+    val successMessage: String
+)
 
 @Composable
 private fun FioLabApp() {
@@ -53,15 +66,28 @@ private fun FioLabApp() {
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
-    var screen by remember { mutableStateOf<Screen>(Screen.Home) }
-    var recent by remember { mutableStateOf<EmbroideryDesign?>(null) }
-    var pendingSave by remember { mutableStateOf<EmbroideryDesign?>(null) }
-    var loading by remember { mutableStateOf(false) }
+    var screen by remember {
+        mutableStateOf<Screen>(Screen.Home)
+    }
+
+    var recent by remember {
+        mutableStateOf<EmbroideryDesign?>(null)
+    }
+
+    var pendingDocument by remember {
+        mutableStateOf<PendingDocument?>(null)
+    }
+
+    var loading by remember {
+        mutableStateOf(false)
+    }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+        if (uri == null) {
+            return@rememberLauncherForActivityResult
+        }
 
         runCatching {
             context.contentResolver.takePersistableUriPermission(
@@ -72,9 +98,14 @@ private fun FioLabApp() {
 
         scope.launch {
             loading = true
+
             val result = withContext(Dispatchers.IO) {
-                EmbroideryLoader.load(context.contentResolver, uri)
+                EmbroideryLoader.load(
+                    context.contentResolver,
+                    uri
+                )
             }
+
             loading = false
 
             when (result) {
@@ -82,56 +113,96 @@ private fun FioLabApp() {
                     recent = result.design
                     screen = Screen.Viewer(result.design)
                 }
+
                 is EmbroideryLoadResult.Error -> {
-                    snackbar.showSnackbar(result.userMessage)
+                    snackbar.showSnackbar(
+                        result.userMessage
+                    )
                 }
             }
         }
     }
 
-    val saveCopyLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { destination: Uri? ->
-        val design = pendingSave
-        pendingSave = null
+    val saveDocumentLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument(
+                "application/octet-stream"
+            )
+        ) { destination: Uri? ->
+            val document = pendingDocument
+            pendingDocument = null
 
-        if (destination == null || design == null) {
-            return@rememberLauncherForActivityResult
-        }
+            if (
+                destination == null ||
+                document == null
+            ) {
+                return@rememberLauncherForActivityResult
+            }
 
-        scope.launch {
-            loading = true
-            val result = withContext(Dispatchers.IO) {
-                MatrixExporter.saveCopy(
-                    contentResolver = context.contentResolver,
-                    destination = destination,
-                    design = design
+            scope.launch {
+                loading = true
+
+                val result =
+                    withContext(Dispatchers.IO) {
+                        MatrixExporter.saveBytes(
+                            contentResolver =
+                                context.contentResolver,
+                            destination = destination,
+                            bytes = document.bytes
+                        )
+                    }
+
+                loading = false
+
+                result.fold(
+                    onSuccess = {
+                        snackbar.showSnackbar(
+                            document.successMessage
+                        )
+                    },
+                    onFailure = {
+                        snackbar.showSnackbar(
+                            "Não foi possível salvar o arquivo."
+                        )
+                    }
                 )
             }
-            loading = false
-
-            result.fold(
-                onSuccess = {
-                    snackbar.showSnackbar("Cópia salva com sucesso.")
-                },
-                onFailure = {
-                    snackbar.showSnackbar("Não foi possível salvar a cópia.")
-                }
-            )
         }
+
+    fun requestSaveOriginal(
+        design: EmbroideryDesign
+    ) {
+        val name =
+            MatrixExporter.safeFileName(
+                design.fileName
+            )
+
+        pendingDocument =
+            PendingDocument(
+                fileName = name,
+                bytes = design.sourceBytes,
+                successMessage =
+                    "Cópia salva com sucesso."
+            )
+
+        saveDocumentLauncher.launch(name)
     }
 
-    fun requestSave(design: EmbroideryDesign) {
-        pendingSave = design
-        saveCopyLauncher.launch(MatrixExporter.safeFileName(design.fileName))
-    }
-
-    fun requestShare(design: EmbroideryDesign) {
+    fun openShareIntent(
+        matrix: ConvertedMatrix
+    ) {
         scope.launch {
             loading = true
-            val result = withContext(Dispatchers.IO) {
-                MatrixExporter.createShareIntent(context, design)
-            }
+
+            val result =
+                withContext(Dispatchers.IO) {
+                    MatrixExporter.createShareIntent(
+                        context = context,
+                        fileName = matrix.fileName,
+                        bytes = matrix.bytes
+                    )
+                }
+
             loading = false
 
             result.fold(
@@ -144,11 +215,106 @@ private fun FioLabApp() {
                             )
                         )
                     }.onFailure {
-                        snackbar.showSnackbar("Nenhum aplicativo disponível para compartilhar.")
+                        snackbar.showSnackbar(
+                            "Nenhum aplicativo disponível para compartilhar."
+                        )
                     }
                 },
                 onFailure = {
-                    snackbar.showSnackbar("Não foi possível preparar o compartilhamento.")
+                    snackbar.showSnackbar(
+                        "Não foi possível preparar o compartilhamento."
+                    )
+                }
+            )
+        }
+    }
+
+    fun requestShareOriginal(
+        design: EmbroideryDesign
+    ) {
+        openShareIntent(
+            ConvertedMatrix(
+                fileName = design.fileName,
+                format = design.format,
+                bytes = design.sourceBytes
+            )
+        )
+    }
+
+    fun convertForSave(
+        design: EmbroideryDesign,
+        targetFormat: String
+    ) {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(Dispatchers.Default) {
+                    MatrixConverter.convert(
+                        design,
+                        targetFormat
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = { converted ->
+                    val name =
+                        MatrixExporter.safeFileName(
+                            converted.fileName
+                        )
+
+                    pendingDocument =
+                        PendingDocument(
+                            fileName = name,
+                            bytes = converted.bytes,
+                            successMessage =
+                                "Matriz convertida para " +
+                                    converted.format +
+                                    " e salva com sucesso."
+                        )
+
+                    saveDocumentLauncher.launch(name)
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível converter para " +
+                            targetFormat +
+                            "."
+                    )
+                }
+            )
+        }
+    }
+
+    fun convertForShare(
+        design: EmbroideryDesign,
+        targetFormat: String
+    ) {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(Dispatchers.Default) {
+                    MatrixConverter.convert(
+                        design,
+                        targetFormat
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                    openShareIntent(it)
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível converter para " +
+                            targetFormat +
+                            "."
+                    )
                 }
             )
         }
@@ -156,44 +322,131 @@ private fun FioLabApp() {
 
     Scaffold(
         containerColor = FioBackground,
-        snackbarHost = { SnackbarHost(snackbar) }
+        snackbarHost = {
+            SnackbarHost(snackbar)
+        }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             when (val current = screen) {
-                Screen.Home -> HomeScreen(
-                    recent = recent,
-                    onOpen = { picker.launch(arrayOf("*/*")) },
-                    onRecent = { recent?.let { screen = Screen.Viewer(it) } },
-                    onSimulate = { recent?.let { screen = Screen.Simulator(it) } },
-                    onUnavailable = { message ->
-                        scope.launch { snackbar.showSnackbar(message) }
-                    }
-                )
+                Screen.Home -> {
+                    HomeScreen(
+                        recent = recent,
+                        onOpen = {
+                            picker.launch(
+                                arrayOf("*/*")
+                            )
+                        },
+                        onRecent = {
+                            recent?.let {
+                                screen =
+                                    Screen.Viewer(it)
+                            }
+                        },
+                        onSimulate = {
+                            recent?.let {
+                                screen =
+                                    Screen.Simulator(it)
+                            }
+                        },
+                        onConvert = {
+                            recent?.let {
+                                screen =
+                                    Screen.Converter(it)
+                            }
+                        },
+                        onUnavailable = { message ->
+                            scope.launch {
+                                snackbar.showSnackbar(
+                                    message
+                                )
+                            }
+                        }
+                    )
+                }
 
-                is Screen.Viewer -> ViewerScreen(
-                    design = current.design,
-                    onBack = { screen = Screen.Home },
-                    onOpen = { picker.launch(arrayOf("*/*")) },
-                    onSimulate = {
-                        screen = Screen.Simulator(current.design)
-                    },
-                    onSaveCopy = {
-                        requestSave(current.design)
-                    },
-                    onShare = {
-                        requestShare(current.design)
-                    }
-                )
+                is Screen.Viewer -> {
+                    ViewerScreen(
+                        design = current.design,
+                        onBack = {
+                            screen = Screen.Home
+                        },
+                        onOpen = {
+                            picker.launch(
+                                arrayOf("*/*")
+                            )
+                        },
+                        onSimulate = {
+                            screen =
+                                Screen.Simulator(
+                                    current.design
+                                )
+                        },
+                        onConvert = {
+                            screen =
+                                Screen.Converter(
+                                    current.design
+                                )
+                        },
+                        onSaveCopy = {
+                            requestSaveOriginal(
+                                current.design
+                            )
+                        },
+                        onShare = {
+                            requestShareOriginal(
+                                current.design
+                            )
+                        }
+                    )
+                }
 
-                is Screen.Simulator -> SimulatorScreen(
-                    design = current.design,
-                    onBack = { screen = Screen.Viewer(current.design) }
-                )
+                is Screen.Simulator -> {
+                    SimulatorScreen(
+                        design = current.design,
+                        onBack = {
+                            screen =
+                                Screen.Viewer(
+                                    current.design
+                                )
+                        }
+                    )
+                }
+
+                is Screen.Converter -> {
+                    ConverterScreen(
+                        design = current.design,
+                        onBack = {
+                            screen =
+                                Screen.Viewer(
+                                    current.design
+                                )
+                        },
+                        onSave = { format ->
+                            convertForSave(
+                                current.design,
+                                format
+                            )
+                        },
+                        onShare = { format ->
+                            convertForShare(
+                                current.design,
+                                format
+                            )
+                        }
+                    )
+                }
             }
 
             if (loading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier =
+                        Modifier.align(
+                            Alignment.Center
+                        ),
                     color = FioGold
                 )
             }

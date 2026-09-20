@@ -86,7 +86,8 @@ object DstParser {
                 jumpCount = jumpCount,
                 colorChanges = colorChanges,
                 endFound = endFound,
-                sourceBytes = bytes.copyOf()
+                sourceBytes = bytes.copyOf(),
+                threadColors = emptyList()
             )
         )
     }
