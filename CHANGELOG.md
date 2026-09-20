@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.24.0
+
+### Satin de fontes e simulação
+- Analisado o comportamento do Mão Design a partir do vídeo e do APK fornecidos, usando apenas a arquitetura/comportamento como referência.
+- O FioLab passa a separar claramente digitalização da fonte e renderização da simulação.
+- O modo Satin de TTF/OTF não possui mais fallback silencioso para preenchimento horizontal.
+- Glifos simples usam colunas Satin normais; geometrias complexas usam colunas Satin conservadoras, mantendo o mesmo princípio de costura.
+- Trechos do eixo são ordenados por proximidade para reduzir deslocamentos e manter uma sequência natural.
+- Pontos Satin longos são divididos automaticamente em segmentos seguros sem mudar para varredura horizontal.
+- A sequência passa por reparo para remover repetições degeneradas e limitar comprimentos excessivos.
+- Quando não existe eixo utilizável, o fallback é contorno seguro em ponto corrido, nunca scanline horizontal disfarçado de Satin.
+- A simulação reproduz exatamente a sequência de pontos gerada e ignora deslocamentos sem costura na renderização.
+- Percentual, slider e progresso passam a usar pontos realmente costurados, não JUMP/TRIM.
+- Renderização da linha costurada recebeu sombra, corpo e brilho para aspecto mais próximo de fio real.
+
 ## 0.23.0
 
 ### Motor adaptativo TTF/OTF
