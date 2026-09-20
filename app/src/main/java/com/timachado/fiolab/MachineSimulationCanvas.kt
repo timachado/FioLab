@@ -616,7 +616,7 @@ private fun DrawScope.drawStitches(
                         if (ghost) {
                             color.copy(
                                 alpha =
-                                    0.10f
+                                    0.16f
                             )
                         } else {
                             color
@@ -741,36 +741,11 @@ private fun DrawScope.drawNeedle(
             point
         )
 
-    drawLine(
-        color =
-            Color(
-                0x88434446
-            ),
-        start =
-            Offset(
-                center.x,
-                center.y -
-                    20.dp
-                        .toPx()
-            ),
-        end =
-            Offset(
-                center.x,
-                center.y -
-                    4.dp
-                        .toPx()
-            ),
-        strokeWidth =
-            1.6.dp.toPx(),
-        cap =
-            StrokeCap.Round
-    )
-
     drawCircle(
         color =
             Color.White,
         radius =
-            6.dp.toPx(),
+            5.dp.toPx(),
         center =
             center
     )
@@ -779,7 +754,7 @@ private fun DrawScope.drawNeedle(
         color =
             color,
         radius =
-            4.2.dp.toPx(),
+            3.6.dp.toPx(),
         center =
             center
     )
@@ -788,7 +763,7 @@ private fun DrawScope.drawNeedle(
         color =
             Color.White,
         radius =
-            1.4.dp.toPx(),
+            1.2.dp.toPx(),
         center =
             center
     )
