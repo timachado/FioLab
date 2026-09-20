@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "fix/matrix-detect-satin-axis-0223"]
   workflow_dispatch:
 
 permissions:
@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.22.2-debug.apk
-          zip -9 FioLab-0.22.2-debug.zip FioLab-0.22.2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.22.3-debug.apk
+          zip -9 FioLab-0.22.3-debug.zip FioLab-0.22.3-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.22.2-downloads
+          name: FioLab-0.22.3-downloads
           path: |
-            FioLab-0.22.2-debug.apk
-            FioLab-0.22.2-debug.zip
+            FioLab-0.22.3-debug.apk
+            FioLab-0.22.3-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.22.2 >/dev/null 2>&1; then
-            gh release upload v0.22.2               FioLab-0.22.2-debug.apk               FioLab-0.22.2-debug.zip               --clobber
+          if gh release view v0.22.3 >/dev/null 2>&1; then
+            gh release upload v0.22.3               FioLab-0.22.3-debug.apk               FioLab-0.22.3-debug.zip               --clobber
           else
-            gh release create v0.22.2               FioLab-0.22.2-debug.apk               FioLab-0.22.2-debug.zip               --target main               --title "FioLab 0.22.2"               --notes "FioLab 0.22.2: corrige a ordem de bordado das fontes TTF/OTF para trabalhar caractere por caractere e remove linhas visuais falsas de deslocamentos JUMP na simulação."
+            gh release create v0.22.3               FioLab-0.22.3-debug.apk               FioLab-0.22.3-debug.zip               --target main               --title "FioLab 0.22.3"               --notes "FioLab 0.22.3: reconhece DST/PES/JEF mesmo quando o Android omite a extensão, mantém a matriz ativa e gera Satin de fontes TTF/OTF seguindo o eixo natural dos traços para uma simulação mais próxima do bordado real."
           fi
