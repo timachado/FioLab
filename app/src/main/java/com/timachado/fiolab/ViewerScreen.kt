@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -64,12 +65,7 @@ fun ViewerScreen(
     ) {
         mutableStateOf(
             design.hoopProfile
-                ?: com.timachado
-                    .fiolab
-                    .core
-                    .embroidery
-                    .HoopProfile
-                    .H100X100
+                ?: HoopProfile.H100X100
         )
     }
 
