@@ -45,8 +45,7 @@ import java.util.Locale
 fun HomeScreen(
     recent: EmbroideryDesign?,
     onCreateName: () -> Unit,
-    onCreateMonogram: () -> Unit,
-    onCreateDrawing: () -> Unit,
+    onFonts: () -> Unit,
     onTransfer: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
@@ -216,33 +215,14 @@ fun HomeScreen(
                         .heightIn(
                             min = 138.dp
                         ),
-                icon = "ABC",
+                icon = "Ff",
                 title =
-                    "Monograma",
+                    "Fontes",
                 subtitle =
-                    "1 • 2 • 3 iniciais",
+                    "Nativas • TTF • OTF",
                 enabled = true,
                 onClick =
-                    onCreateMonogram
-            )
-        }
-
-        item {
-            FeatureCard(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(
-                            min = 138.dp
-                        ),
-                icon = "✦",
-                title =
-                    "Desenho/logo",
-                subtitle =
-                    "SVG • desenhar com o dedo",
-                enabled = true,
-                onClick =
-                    onCreateDrawing
+                    onFonts
             )
         }
 
@@ -527,7 +507,7 @@ fun HomeScreen(
             }
         ) {
             Text(
-                "FioLab 0.21.6 • Android",
+                "FioLab 0.21.7 • Android",
                 modifier =
                     Modifier
                         .fillMaxWidth()
