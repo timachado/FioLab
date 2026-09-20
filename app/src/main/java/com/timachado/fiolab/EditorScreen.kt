@@ -99,6 +99,68 @@ fun EditorScreen(
         mutableStateOf(false)
     }
 
+    var displayMode by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            EmbroideryDisplayMode
+                .REALISTIC
+        )
+    }
+
+    var referenceHoop by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            design.hoopProfile
+                ?: com.timachado
+                    .fiolab
+                    .core
+                    .embroidery
+                    .HoopProfile
+                    .H100X100
+        )
+    }
+
+    var showConnections by remember(
+        design.fileName
+    ) {
+        mutableStateOf(false)
+    }
+
+    var showDisplaySettings by remember {
+        mutableStateOf(false)
+    }
+
+    if (
+        showDisplaySettings
+    ) {
+        DisplaySettingsSheet(
+            displayMode =
+                displayMode,
+            onDisplayModeChange = {
+                displayMode =
+                    it
+            },
+            hoop =
+                referenceHoop,
+            onHoopChange = {
+                referenceHoop =
+                    it
+            },
+            showConnections =
+                showConnections,
+            onShowConnectionsChange = {
+                showConnections =
+                    it
+            },
+            onDismiss = {
+                showDisplaySettings =
+                    false
+            }
+        )
+    }
+
     val initialColors =
         remember(design.fileName) {
             val count =
@@ -199,6 +261,18 @@ fun EditorScreen(
 
             TextButton(
                 onClick = {
+                    showDisplaySettings =
+                        true
+                }
+            ) {
+                Text(
+                    "Exibição",
+                    color = FioGold
+                )
+            }
+
+            TextButton(
+                onClick = {
                     scale = 1f
                     rotation = 0f
                     offsetXmm = 0f
@@ -222,6 +296,12 @@ fun EditorScreen(
 
         EmbroideryCanvas(
             design = preview,
+            hoop =
+                referenceHoop,
+            displayMode =
+                displayMode,
+            showConnections =
+                showConnections,
             modifier =
                 Modifier
                     .fillMaxWidth()
