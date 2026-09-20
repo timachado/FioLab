@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.21.3
+
+### Hotfix de logo e inicialização
+- Substituído o recurso de imagem corrompido por uma cópia válida da arte original FioLab Matrizes.
+- A mesma arte válida é usada na Home e como ícone/roundIcon do aplicativo.
+- Removida a dependência do mipmap corrompido da versão anterior.
+- Mantido o isolamento de Minha Conta/Supabase da inicialização da Home.
+- Mantido Ktor 3.2.2 com Supabase 3.2.x.
+
+
 ## 0.21.4
 
 ### Correção definitiva do empacotamento da logo
