@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/ttf-fill-0218"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
