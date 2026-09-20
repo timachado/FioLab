@@ -197,16 +197,21 @@ object FioLabAccountService {
 
             client.from(
                 "fiolab_profiles"
-            ).upsert(
-                FioLabProfileUpsert(
-                    userId =
-                        user.id,
-                    displayName =
+            ).update(
+                {
+                    set(
+                        "display_name",
                         name
-                ),
-                onConflict =
-                    "user_id"
-            )
+                    )
+                }
+            ) {
+                filter {
+                    eq(
+                        "user_id",
+                        user.id
+                    )
+                }
+            }
 
             accountFor(
                 userId =
@@ -258,15 +263,13 @@ object FioLabAccountService {
 
                     client.from(
                         "fiolab_profiles"
-                    ).upsert(
+                    ).insert(
                         FioLabProfileUpsert(
                             userId =
                                 userId,
                             displayName =
                                 fallbackName
-                        ),
-                        onConflict =
-                            "user_id"
+                        )
                     )
 
                     client.from(
