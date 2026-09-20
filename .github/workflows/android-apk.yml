@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/adaptive-font-engine-0230"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
