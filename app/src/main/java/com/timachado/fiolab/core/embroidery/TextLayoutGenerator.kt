@@ -24,6 +24,14 @@ data class LetterAdjustment(
     val color: Int? = null
 )
 
+data class TextGlyphProvider(
+    val preserveCase: Boolean = false,
+    val spacingScale: Float = 1f,
+    val generate:
+        (Char, TextMatrixOptions) ->
+            Result<EmbroideryDesign>
+)
+
 data class TextLayoutOptions(
     val textOptions: TextMatrixOptions,
     val layoutMode: TextLayoutMode =
@@ -32,6 +40,9 @@ data class TextLayoutOptions(
     val letterAdjustments:
         List<LetterAdjustment> =
         emptyList(),
+    val glyphProvider:
+        TextGlyphProvider? =
+        null,
     val machineFinishingSettings:
         MachineFinishingSettings =
         MachineFinishingSettings()
@@ -70,11 +81,20 @@ object TextLayoutGenerator {
             }
 
             val normalized =
-                sourceText.uppercase(
-                    Locale.forLanguageTag(
-                        "pt-BR"
+                if (
+                    options
+                        .glyphProvider
+                        ?.preserveCase ==
+                        true
+                ) {
+                    sourceText
+                } else {
+                    sourceText.uppercase(
+                        Locale.forLanguageTag(
+                            "pt-BR"
+                        )
                     )
-                )
+                }
 
             val adjustmentMap =
                 options
@@ -83,13 +103,20 @@ object TextLayoutGenerator {
                         it.sourceIndex
                     }
 
+            val spacingScale =
+                options
+                    .glyphProvider
+                    ?.spacingScale
+                    ?: options
+                        .textOptions
+                        .font
+                        .spacingScale
+
             val spacingUnits =
                 options.textOptions
                     .spacingMm *
                     10f *
-                    options.textOptions
-                        .font
-                        .spacingScale
+                    spacingScale
 
             val units =
                 normalized
@@ -102,19 +129,31 @@ object TextLayoutGenerator {
                         ) {
                             null
                         } else {
+                            val glyphOptions =
+                                options
+                                    .textOptions
+                                    .copy(
+                                        text =
+                                            char
+                                                .toString(),
+                                        hoopProfile =
+                                            null,
+                                        enforceHoop =
+                                            false
+                                    )
+
                             val design =
-                                TextMatrixGenerator
-                                    .generate(
-                                        options
-                                            .textOptions
-                                            .copy(
-                                                text =
-                                                    char
-                                                        .toString(),
-                                                hoopProfile =
-                                                    null,
-                                                enforceHoop =
-                                                    false
+                                (
+                                    options
+                                        .glyphProvider
+                                        ?.generate
+                                        ?.invoke(
+                                            char,
+                                            glyphOptions
+                                        )
+                                        ?: TextMatrixGenerator
+                                            .generate(
+                                                glyphOptions
                                             )
                                     )
                                     .getOrThrow()
