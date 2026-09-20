@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.21.2
+
+### Correção de inicialização
+- Minha Conta/Supabase foi isolada da tela inicial.
+- O cliente Supabase só é carregado quando o usuário abre Minha Conta.
+- Ktor alinhado para 3.2.2 com a linha Supabase 3.2.x.
+- A Home não depende mais do SDK de autenticação para iniciar.
+
+### Launcher
+- Ícone principal passa a usar recurso mipmap próprio.
+- A arte FioLab Matrizes fornecida pelo projeto continua sendo a identidade do app.
+- Corrige o fallback visual para o ícone Android genérico em launchers/instaladores compatíveis.
+
+
 ## 0.21.1
 
 ### Identidade visual

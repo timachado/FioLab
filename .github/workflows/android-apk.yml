@@ -44,24 +44,24 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.1-debug.apk
-          zip -9 FioLab-0.21.1-debug.zip FioLab-0.21.1-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.2-debug.apk
+          zip -9 FioLab-0.21.2-debug.zip FioLab-0.21.2-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.21.1-downloads
+          name: FioLab-0.21.2-downloads
           path: |
-            FioLab-0.21.1-debug.apk
-            FioLab-0.21.1-debug.zip
+            FioLab-0.21.2-debug.apk
+            FioLab-0.21.2-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.21.1 >/dev/null 2>&1; then
-            gh release upload v0.21.1               FioLab-0.21.1-debug.apk               FioLab-0.21.1-debug.zip               --clobber
+          if gh release view v0.21.2 >/dev/null 2>&1; then
+            gh release upload v0.21.2               FioLab-0.21.2-debug.apk               FioLab-0.21.2-debug.zip               --clobber
           else
-            gh release create v0.21.1               FioLab-0.21.1-debug.apk               FioLab-0.21.1-debug.zip               --target main               --title "FioLab 0.21.1"               --notes "FioLab 0.21.1: identidade FioLab Matrizes aplicada com a imagem fornecida pelo projeto no ícone do launcher e no cabeçalho interno, sem redesenhar a marca."
+            gh release create v0.21.2               FioLab-0.21.2-debug.apk               FioLab-0.21.2-debug.zip               --target main               --title "FioLab 0.21.2"               --notes "FioLab 0.21.2: correção de crash de inicialização com Minha Conta isolada, Ktor alinhado ao Supabase 3.2.x e launcher usando mipmap da identidade FioLab Matrizes."
           fi
