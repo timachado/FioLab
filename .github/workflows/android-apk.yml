@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/home-nav-0216"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
