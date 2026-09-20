@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.17.0
+
+### Foco do produto
+- O FioLab permanece um app leve para criar fontes, nomes, monogramas e matrizes.
+- Não tenta substituir softwares completos de digitalização profissional.
+- O acabamento técnico continua automático por baixo, sem ocupar a interface principal.
+
+### Enviar para a máquina
+- Nova tela dedicada "Enviar para a máquina".
+- Escolha rápida entre DST, PES e JEF.
+- Fluxo Pendrive OTG usando o seletor de armazenamento do Android.
+- O usuário escolhe o pendrive USB como destino e salva o arquivo diretamente nele.
+- Fluxo Wi-Fi/app gera o arquivo e abre os destinos compatíveis instalados no Android.
+- Compatibilidade Wi-Fi direta depende do protocolo ou aplicativo suportado pela bordadeira.
+
+### Interface simplificada
+- Botão "Enviar para máquina" na Home.
+- Botão principal "Enviar para máquina" no visualizador.
+- Controles avançados de tie-in/tie-off/cortes deixam de ocupar Criar Nome e Monograma.
+- O acabamento automático continua aplicado com os padrões seguros da v0.16.
+
+
 ## 0.16.0
 
 ### Acabamento de Máquina

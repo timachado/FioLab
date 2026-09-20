@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
-import com.timachado.fiolab.core.embroidery.MachineFinishing
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -42,15 +41,10 @@ fun ViewerScreen(
     onSimulate: () -> Unit,
     onEdit: () -> Unit,
     onConvert: () -> Unit,
+    onTransfer: () -> Unit,
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
-    val quality =
-        MachineFinishing
-            .analyze(
-                design
-            )
-
     Column(
         Modifier.fillMaxSize()
     ) {
@@ -272,71 +266,6 @@ fun ViewerScreen(
                     )
                 )
 
-                design.machineFinishing
-                    ?.let {
-                        finishing ->
-                        Text(
-                            "Acabamento: " +
-                                (
-                                    if (
-                                        finishing.tieInEnabled &&
-                                        finishing.tieOffEnabled
-                                    ) {
-                                        "arremates automáticos"
-                                    } else {
-                                        "arremates personalizados"
-                                    }
-                                    ) +
-                                " • " +
-                                (
-                                    if (
-                                        finishing.autoTrimLongJumps
-                                    ) {
-                                        "corte de saltos ≥ " +
-                                            mm(
-                                                finishing
-                                                    .trimJumpThresholdMm
-                                            ) +
-                                            " mm"
-                                    } else {
-                                        "corte automático desligado"
-                                    }
-                                    ),
-                            color =
-                                FioTextMuted,
-                            fontSize =
-                                10.sp
-                        )
-                    }
-
-                Text(
-                    if (
-                        quality.hasWarnings
-                    ) {
-                        "⚠ Qualidade: " +
-                            quality.longStitchCount +
-                            " ponto(s) > 7 mm • " +
-                            quality.longJumpCount +
-                            " salto(s) > 12 mm"
-                    } else {
-                        "✓ Qualidade: sem pontos ou saltos acima dos limites de alerta"
-                    },
-                    color =
-                        if (
-                            quality.hasWarnings
-                        ) {
-                            Color(
-                                0xFFFFB36B
-                            )
-                        } else {
-                            Color(
-                                0xFF7ED6A5
-                            )
-                        },
-                    fontSize =
-                        10.sp
-                )
-
                 Spacer(
                     Modifier.height(
                         12.dp
@@ -345,7 +274,7 @@ fun ViewerScreen(
 
                 Button(
                     onClick =
-                        onSimulate,
+                        onTransfer,
                     modifier =
                         Modifier
                             .fillMaxWidth(),
@@ -359,9 +288,27 @@ fun ViewerScreen(
                             )
                 ) {
                     Text(
-                        "▶ Simular bordado",
+                        "⇧ Enviar para máquina",
                         fontWeight =
                             FontWeight.Bold
+                    )
+                }
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                OutlinedButton(
+                    onClick =
+                        onSimulate,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(),
+                ) {
+                    Text(
+                        "▶ Simular bordado"
                     )
                 }
 

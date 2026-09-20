@@ -54,6 +54,10 @@ private sealed interface Screen {
     data object CreateMonogram : Screen
     data object FontLibrary : Screen
 
+    data class Transfer(
+        val design: EmbroideryDesign
+    ) : Screen
+
     data class Viewer(
         val design: EmbroideryDesign
     ) : Screen
@@ -218,7 +222,9 @@ private fun FioLabApp() {
         }
 
     fun openShareIntent(
-        matrix: ConvertedMatrix
+        matrix: ConvertedMatrix,
+        chooserTitle: String =
+            "Compartilhar matriz"
     ) {
         scope.launch {
             loading = true
@@ -246,7 +252,7 @@ private fun FioLabApp() {
                         context.startActivity(
                             Intent.createChooser(
                                 shareIntent,
-                                "Compartilhar matriz"
+                                chooserTitle
                             )
                         )
                     }.onFailure {
@@ -312,6 +318,9 @@ private fun FioLabApp() {
                                     "criado" ->
                                         "Matriz criada salva com sucesso."
 
+                                    "maquina" ->
+                                        "Arquivo da máquina salvo no destino escolhido."
+
                                     else ->
                                         "Matriz convertida para " +
                                             converted.format +
@@ -335,7 +344,9 @@ private fun FioLabApp() {
         design: EmbroideryDesign,
         targetFormat: String,
         suffix: String =
-            "convertido"
+            "convertido",
+        chooserTitle: String =
+            "Compartilhar matriz"
     ) {
         scope.launch {
             loading = true
@@ -358,7 +369,10 @@ private fun FioLabApp() {
 
             result.fold(
                 onSuccess = {
-                    openShareIntent(it)
+                    openShareIntent(
+                        it,
+                        chooserTitle
+                    )
                 },
                 onFailure = {
                     snackbar.showSnackbar(
@@ -478,6 +492,14 @@ private fun FioLabApp() {
                             screen =
                                 Screen.FontLibrary
                         },
+                        onTransfer = {
+                            recent?.let {
+                                screen =
+                                    Screen.Transfer(
+                                        it
+                                    )
+                            }
+                        },
                         onOpen = {
                             picker.launch(
                                 arrayOf("*/*")
@@ -596,6 +618,43 @@ private fun FioLabApp() {
                     )
                 }
 
+                is Screen.Transfer -> {
+                    MachineTransferScreen(
+                        design =
+                            current.design,
+                        onBack = {
+                            screen =
+                                Screen.Viewer(
+                                    current.design
+                                )
+                        },
+                        onUsbOtg = {
+                                format ->
+                            convertForSave(
+                                design =
+                                    current.design,
+                                targetFormat =
+                                    format,
+                                suffix =
+                                    "maquina"
+                            )
+                        },
+                        onWifi = {
+                                format ->
+                            convertForShare(
+                                design =
+                                    current.design,
+                                targetFormat =
+                                    format,
+                                suffix =
+                                    "maquina",
+                                chooserTitle =
+                                    "Enviar matriz por Wi-Fi / app da máquina"
+                            )
+                        }
+                    )
+                }
+
                 is Screen.Viewer -> {
                     ViewerScreen(
                         design =
@@ -632,6 +691,12 @@ private fun FioLabApp() {
                                         current
                                             .design
                                     )
+                        },
+                        onTransfer = {
+                            screen =
+                                Screen.Transfer(
+                                    current.design
+                                )
                         },
                         onSaveCopy = {
                             requestSave(

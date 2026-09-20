@@ -44,6 +44,7 @@ fun HomeScreen(
     onCreateName: () -> Unit,
     onCreateMonogram: () -> Unit,
     onFonts: () -> Unit,
+    onTransfer: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
     onSimulate: () -> Unit,
@@ -145,7 +146,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.16 adiciona acabamento de máquina, arremates, cortes e análise de qualidade.",
+                        "FioLab 0.17 mantém o foco simples: criar a matriz e enviar para a bordadeira por OTG ou app/rede.",
                         color = FioTextMuted
                     )
                 }
@@ -298,6 +299,30 @@ fun HomeScreen(
         }
 
         item {
+            FeatureCard(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                icon = "⇧",
+                title =
+                    "Enviar para máquina",
+                subtitle =
+                    "Pendrive OTG • Wi-Fi/app",
+                enabled =
+                    recent != null
+            ) {
+                if (
+                    recent != null
+                ) {
+                    onTransfer()
+                } else {
+                    onUnavailable(
+                        "Crie ou abra uma matriz primeiro."
+                    )
+                }
+            }
+        }
+
+        item {
             Text(
                 "Recente",
                 color = FioText,
@@ -423,7 +448,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.16.0 • Android",
+                "FioLab 0.17.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

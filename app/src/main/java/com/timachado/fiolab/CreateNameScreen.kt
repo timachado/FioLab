@@ -46,7 +46,6 @@ import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.LetterAdjustment
-import com.timachado.fiolab.core.embroidery.MachineFinishingSettings
 import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
 import com.timachado.fiolab.core.embroidery.TextLayoutMode
 import com.timachado.fiolab.core.embroidery.TextLayoutOptions
@@ -173,26 +172,6 @@ fun CreateNameScreen(
         >(emptyMap())
     }
 
-    var tieInEnabled by remember {
-        mutableStateOf(true)
-    }
-
-    var tieOffEnabled by remember {
-        mutableStateOf(true)
-    }
-
-    var autoTrimLongJumps by remember {
-        mutableStateOf(true)
-    }
-
-    var trimJumpThresholdMm by remember {
-        mutableFloatStateOf(8f)
-    }
-
-    var optimizeTravel by remember {
-        mutableStateOf(true)
-    }
-
     val letterSourceIndices =
         text.indices
             .filter {
@@ -258,19 +237,6 @@ fun CreateNameScreen(
                     letterAdjustments
                         .values
                         .toList(),
-                machineFinishingSettings =
-                    MachineFinishingSettings(
-                        tieInEnabled =
-                            tieInEnabled,
-                        tieOffEnabled =
-                            tieOffEnabled,
-                        autoTrimLongJumps =
-                            autoTrimLongJumps,
-                        trimJumpThresholdMm =
-                            trimJumpThresholdMm,
-                        optimizeTravel =
-                            optimizeTravel
-                    )
             )
         )
 
@@ -1474,140 +1440,6 @@ fun CreateNameScreen(
                         )
                     }
                 }
-
-                Text(
-                    "Acabamento de máquina",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        tieInEnabled =
-                            !tieInEnabled
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (
-                            tieInEnabled
-                        ) {
-                            "✓ Arremate inicial automático"
-                        } else {
-                            "Arremate inicial desativado"
-                        }
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(
-                        6.dp
-                    )
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        tieOffEnabled =
-                            !tieOffEnabled
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (
-                            tieOffEnabled
-                        ) {
-                            "✓ Arremate final automático"
-                        } else {
-                            "Arremate final desativado"
-                        }
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(
-                        6.dp
-                    )
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        autoTrimLongJumps =
-                            !autoTrimLongJumps
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (
-                            autoTrimLongJumps
-                        ) {
-                            "✓ Cortar saltos longos"
-                        } else {
-                            "Corte automático desativado"
-                        }
-                    )
-                }
-
-                if (
-                    autoTrimLongJumps
-                ) {
-                    Text(
-                        "Cortar a partir de " +
-                            mm(
-                                trimJumpThresholdMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontSize = 12.sp
-                    )
-
-                    Slider(
-                        value =
-                            trimJumpThresholdMm,
-                        onValueChange = {
-                            trimJumpThresholdMm =
-                                it
-                        },
-                        valueRange =
-                            4f..20f
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        optimizeTravel =
-                            !optimizeTravel
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (
-                            optimizeTravel
-                        ) {
-                            "✓ Otimização segura de deslocamentos"
-                        } else {
-                            "Otimização desativada"
-                        }
-                    )
-                }
-
-                Text(
-                    "A otimização remove comandos redundantes sem reordenar cores ou blocos.",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
-
-                Spacer(
-                    Modifier.height(
-                        12.dp
-                    )
-                )
 
                 Text(
                     "Formato de saída",
