@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.timachado.fiolab"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.timachado.fiolab"
@@ -50,7 +50,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
