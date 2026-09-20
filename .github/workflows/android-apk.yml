@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/maodesign-flow-0220"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
