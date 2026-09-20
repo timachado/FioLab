@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.22.0
+
+### Criar Nome
+- Interface reorganizada para reduzir a sensação de tela carregada.
+- Prévia permanece grande e atualiza em tempo real.
+- Controles separados em abas curtas: Texto, Fonte, Tamanho, Cor e Mais.
+- Texto concentra digitação e formato reto/arco.
+- Fonte concentra famílias FioLab e TTF/OTF importadas.
+- Tamanho concentra altura, espaçamento e tipo/densidade de ponto.
+- Cor concentra a paleta de linha.
+- Bastidor, tecido, formato e ajustes técnicos ficam em Mais.
+- Geração TTF/OTF e o motor de pontos da 0.21.8 são preservados.
+
+### Simulação
+- Bastidor passa a ocupar a maior parte da tela.
+- Matriz completa fica visível como desenho fantasma claro ao fundo.
+- Pontadas concluídas aparecem fortes e progressivas sobre a matriz fantasma.
+- Marcador atual da costura passa a ser um ponto discreto.
+- Percentual e dimensões ficam sobre o bastidor.
+- Velocidades 1x, 2x e 4x permanecem no cabeçalho.
+- Painel inferior compacto mostra linha atual, pontos, tempo restante, progresso e controles de reprodução.
+- Removidos os cartões grandes de estatísticas e o texto explicativo que ocupavam espaço da simulação.
+
 ## 0.21.8
 
 ### Correção TTF/OTF
