@@ -8,7 +8,7 @@ import org.junit.Test
 class AdaptiveFontPolicyTest {
 
     @Test
-    fun thinCurvedGlyphUsesAxisSatin() {
+    fun thinCurvedGlyphUsesSatinColumns() {
         val technique =
             AdaptiveFontPolicy
                 .chooseTechnique(
@@ -22,13 +22,14 @@ class AdaptiveFontPolicyTest {
                 )
 
         assertEquals(
-            ImportedGlyphTechnique.AXIS_SATIN,
+            ImportedGlyphTechnique
+                .SATIN_COLUMNS,
             technique
         )
     }
 
     @Test
-    fun boldDisplayGlyphFallsBackToAreaFill() {
+    fun boldDisplayGlyphUsesConservativeSatinColumns() {
         val technique =
             AdaptiveFontPolicy
                 .chooseTechnique(
@@ -42,13 +43,14 @@ class AdaptiveFontPolicyTest {
                 )
 
         assertEquals(
-            ImportedGlyphTechnique.AREA_FILL,
+            ImportedGlyphTechnique
+                .SATIN_COLUMNS_CONSERVATIVE,
             technique
         )
     }
 
     @Test
-    fun highlyBranchedDecorativeGlyphFallsBackToAreaFill() {
+    fun highlyBranchedDecorativeGlyphStillUsesSatinColumns() {
         val technique =
             AdaptiveFontPolicy
                 .chooseTechnique(
@@ -62,13 +64,14 @@ class AdaptiveFontPolicyTest {
                 )
 
         assertEquals(
-            ImportedGlyphTechnique.AREA_FILL,
+            ImportedGlyphTechnique
+                .SATIN_COLUMNS_CONSERVATIVE,
             technique
         )
     }
 
     @Test
-    fun degenerateGlyphNeverUsesAxisSatin() {
+    fun degenerateGlyphUsesConservativeModeInsteadOfHorizontalFill() {
         val technique =
             AdaptiveFontPolicy
                 .chooseTechnique(
@@ -82,7 +85,8 @@ class AdaptiveFontPolicyTest {
                 )
 
         assertEquals(
-            ImportedGlyphTechnique.AREA_FILL,
+            ImportedGlyphTechnique
+                .SATIN_COLUMNS_CONSERVATIVE,
             technique
         )
     }
