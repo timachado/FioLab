@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.13.0
+
+### Biblioteca de Fontes
+- Nova tela Biblioteca de Fontes acessível pela Home.
+- 7 famílias: Fio Linha, Compacta, Larga, Moderna, Itálica, Elegante e Ornamental.
+- Cada família altera a geometria das letras, não apenas o nome do preset.
+- Inclinação real nas famílias Itálica/Elegante.
+- Serifas geradas como trajetórias extras nas famílias Elegante/Ornamental.
+- Prolongamentos decorativos na Fio Ornamental.
+- Prévia Satin de cada família dentro da biblioteca.
+- Categoria e descrição de uso para cada fonte.
+- Biblioteca integrada ao Criar Nome e Criar Monograma.
+- Testes garantindo geometrias distintas entre as famílias.
+- Testes de exportação de todas as fontes para DST/PES/JEF.
+
+
 ## 0.12.0
 
 ### Monogramas

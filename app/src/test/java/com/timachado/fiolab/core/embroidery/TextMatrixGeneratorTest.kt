@@ -398,4 +398,95 @@ class TextMatrixGeneratorTest {
         )
     }
 
+    @Test
+    fun fontLibraryHasDistinctGeometry() {
+        val signatures =
+            EmbroideryFontPreset
+                .entries
+                .map {
+                        font ->
+                    val design =
+                        TextMatrixGenerator
+                            .generate(
+                                TextMatrixOptions(
+                                    text = "FIO",
+                                    heightMm =
+                                        14f,
+                                    style =
+                                        TextStitchStyle
+                                            .SATIN,
+                                    font =
+                                        font
+                                )
+                            )
+                            .getOrThrow()
+
+                    design.points
+                        .take(80)
+                        .joinToString(
+                            separator = ";"
+                        ) {
+                                point ->
+                            point.xUnits
+                                .toString() +
+                                "," +
+                                point.yUnits
+                        }
+                }
+
+        assertEquals(
+            EmbroideryFontPreset
+                .entries
+                .size,
+            signatures
+                .distinct()
+                .size
+        )
+    }
+
+    @Test
+    fun everyFontExportsToReleasedFormats() {
+        EmbroideryFontPreset
+            .entries
+            .forEach {
+                    font ->
+                val design =
+                    TextMatrixGenerator
+                        .generate(
+                            TextMatrixOptions(
+                                text = "AB",
+                                heightMm =
+                                    10f,
+                                style =
+                                    TextStitchStyle
+                                        .SATIN,
+                                font =
+                                    font
+                            )
+                        )
+                        .getOrThrow()
+
+                MatrixConverter
+                    .supportedFormats
+                    .forEach {
+                            format ->
+                        val converted =
+                            MatrixConverter
+                                .convert(
+                                    design,
+                                    format,
+                                    "fonte-" +
+                                        font.name
+                                            .lowercase()
+                                )
+                                .getOrThrow()
+
+                        assertTrue(
+                            converted.bytes
+                                .isNotEmpty()
+                        )
+                    }
+            }
+    }
+
 }

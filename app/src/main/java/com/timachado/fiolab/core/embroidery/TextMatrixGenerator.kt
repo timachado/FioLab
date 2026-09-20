@@ -13,14 +13,82 @@ enum class TextStitchStyle(
     SATIN("Satin")
 }
 
+enum class FontCategory(
+    val displayName: String
+) {
+    ESSENTIAL("Essencial"),
+    MODERN("Moderna"),
+    ELEGANT("Elegante"),
+    DECORATIVE("Decorativa")
+}
+
 enum class EmbroideryFontPreset(
     val displayName: String,
+    val category: FontCategory,
+    val description: String,
     val xScale: Float,
-    val spacingScale: Float
+    val spacingScale: Float,
+    val slant: Float = 0f,
+    val serifAmount: Float = 0f,
+    val swashAmount: Float = 0f,
+    val centerShift: Float = 0f
 ) {
-    LINE("Fio Linha", 1f, 1f),
-    COMPACT("Fio Compacta", 0.82f, 0.86f),
-    WIDE("Fio Larga", 1.18f, 1.08f)
+    LINE(
+        "Fio Linha",
+        FontCategory.ESSENTIAL,
+        "Equilibrada e versátil",
+        1f,
+        1f
+    ),
+    COMPACT(
+        "Fio Compacta",
+        FontCategory.ESSENTIAL,
+        "Mais estreita para espaços pequenos",
+        0.82f,
+        0.86f
+    ),
+    WIDE(
+        "Fio Larga",
+        FontCategory.ESSENTIAL,
+        "Presença maior e leitura aberta",
+        1.18f,
+        1.08f
+    ),
+    MODERN(
+        "Fio Moderna",
+        FontCategory.MODERN,
+        "Geométrica com proporção limpa",
+        0.96f,
+        0.94f,
+        centerShift = -0.035f
+    ),
+    ITALIC(
+        "Fio Itálica",
+        FontCategory.MODERN,
+        "Inclinação suave e dinâmica",
+        1f,
+        0.96f,
+        slant = 0.20f
+    ),
+    ELEGANT(
+        "Fio Elegante",
+        FontCategory.ELEGANT,
+        "Inclinação discreta com serifas",
+        0.94f,
+        1.02f,
+        slant = 0.08f,
+        serifAmount = 0.12f
+    ),
+    ORNAMENTAL(
+        "Fio Ornamental",
+        FontCategory.DECORATIVE,
+        "Serifas e prolongamentos para monogramas",
+        1.03f,
+        1.06f,
+        slant = 0.05f,
+        serifAmount = 0.16f,
+        swashAmount = 0.18f
+    )
 }
 
 data class TextMatrixOptions(
@@ -315,17 +383,14 @@ object TextMatrixGenerator {
                         options.font.xScale
 
                 val strokes =
-                    buildList {
-                        addAll(
-                            glyph.strokes
-                        )
-
-                        addAll(
-                            accentStrokes(
-                                accent
-                            )
-                        )
-                    }
+                    styledStrokes(
+                        glyph =
+                            glyph,
+                        accent =
+                            accent,
+                        font =
+                            options.font
+                    )
 
                 strokes.forEach {
                         stroke ->
@@ -531,6 +596,169 @@ object TextMatrixGenerator {
 
             design
         }
+
+    private fun styledStrokes(
+        glyph: Glyph,
+        accent: Char?,
+        font: EmbroideryFontPreset
+    ): List<List<P>> {
+        val base =
+            buildList {
+                addAll(
+                    glyph.strokes
+                )
+
+                addAll(
+                    accentStrokes(
+                        accent
+                    )
+                )
+            }
+
+        val transformed =
+            base.map {
+                    stroke ->
+                stroke.map {
+                        point ->
+                    transformPoint(
+                        point =
+                            point,
+                        font =
+                            font
+                    )
+                }
+            }.toMutableList()
+
+        if (
+            font.serifAmount >
+                0f
+        ) {
+            val serif =
+                font.serifAmount
+
+            glyph.strokes
+                .forEach {
+                        stroke ->
+                    val endpoints =
+                        listOf(
+                            stroke.first(),
+                            stroke.last()
+                        )
+
+                    endpoints.forEach {
+                            point ->
+                        if (
+                            point.y <=
+                                0.10f ||
+                            point.y >=
+                                0.90f
+                        ) {
+                            val center =
+                                transformPoint(
+                                    point,
+                                    font
+                                )
+
+                            transformed +=
+                                listOf(
+                                    P(
+                                        center.x -
+                                            serif,
+                                        center.y
+                                    ),
+                                    P(
+                                        center.x +
+                                            serif,
+                                        center.y
+                                    )
+                                )
+                        }
+                    }
+                }
+        }
+
+        if (
+            font.swashAmount >
+                0f
+        ) {
+            val swash =
+                font.swashAmount
+
+            transformed +=
+                listOf(
+                    transformPoint(
+                        P(
+                            -swash,
+                            0.04f
+                        ),
+                        font
+                    ),
+                    transformPoint(
+                        P(
+                            0.18f,
+                            0f
+                        ),
+                        font
+                    )
+                )
+
+            transformed +=
+                listOf(
+                    transformPoint(
+                        P(
+                            0.82f,
+                            1f
+                        ),
+                        font
+                    ),
+                    transformPoint(
+                        P(
+                            1f +
+                                swash,
+                            0.92f
+                        ),
+                        font
+                    )
+                )
+        }
+
+        return transformed
+    }
+
+    private fun transformPoint(
+        point: P,
+        font: EmbroideryFontPreset
+    ): P {
+        val y =
+            point.y
+
+        val slantedX =
+            point.x +
+                font.slant *
+                    (
+                        y -
+                            0.5f
+                        )
+
+        val centerAdjustedX =
+            slantedX +
+                font.centerShift *
+                    (
+                        1f -
+                            kotlin.math.abs(
+                                y -
+                                    0.5f
+                            ) *
+                            2f
+                        )
+
+        return P(
+            x =
+                centerAdjustedX,
+            y =
+                y
+        )
+    }
 
     private fun appendRunningStroke(
         points: MutableList<EmbroideryPoint>,

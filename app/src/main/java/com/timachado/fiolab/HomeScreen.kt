@@ -43,6 +43,7 @@ fun HomeScreen(
     recent: EmbroideryDesign?,
     onCreateName: () -> Unit,
     onCreateMonogram: () -> Unit,
+    onFonts: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
     onSimulate: () -> Unit,
@@ -144,7 +145,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.12 cria nomes e monogramas em Satin, com bastidor, tecido, simulação e exportação.",
+                        "FioLab 0.13 cria nomes e monogramas com biblioteca de fontes em pontadas reais.",
                         color = FioTextMuted
                     )
                 }
@@ -184,6 +185,21 @@ fun HomeScreen(
                         onCreateMonogram
                 )
             }
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                icon = "Ff",
+                title =
+                    "Biblioteca de fontes",
+                subtitle =
+                    "7 famílias de bordado",
+                enabled = true,
+                onClick =
+                    onFonts
+            )
         }
 
         item {
@@ -407,7 +423,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.12.0 • Android",
+                "FioLab 0.13.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

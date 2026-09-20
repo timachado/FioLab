@@ -52,6 +52,7 @@ private sealed interface Screen {
     data object Home : Screen
     data object CreateName : Screen
     data object CreateMonogram : Screen
+    data object FontLibrary : Screen
 
     data class Viewer(
         val design: EmbroideryDesign
@@ -473,6 +474,10 @@ private fun FioLabApp() {
                             screen =
                                 Screen.CreateMonogram
                         },
+                        onFonts = {
+                            screen =
+                                Screen.FontLibrary
+                        },
                         onOpen = {
                             picker.launch(
                                 arrayOf("*/*")
@@ -520,6 +525,15 @@ private fun FioLabApp() {
                                         message
                                     )
                             }
+                        }
+                    )
+                }
+
+                Screen.FontLibrary -> {
+                    FontLibraryScreen(
+                        onBack = {
+                            screen =
+                                Screen.Home
                         }
                     )
                 }

@@ -609,7 +609,7 @@ fun MonogramScreen(
                 )
 
                 Text(
-                    "Fonte de bordado",
+                    "Biblioteca de fontes",
                     color = FioText,
                     fontWeight =
                         FontWeight.SemiBold
@@ -672,6 +672,20 @@ fun MonogramScreen(
                             }
                         }
                 }
+
+                Text(
+                    font.description,
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
 
                 Text(
                     "Altura " +

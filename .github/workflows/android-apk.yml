@@ -44,24 +44,24 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.12.0-debug.apk
-          zip -9 FioLab-0.12.0-debug.zip FioLab-0.12.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.13.0-debug.apk
+          zip -9 FioLab-0.13.0-debug.zip FioLab-0.13.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.12.0-downloads
+          name: FioLab-0.13.0-downloads
           path: |
-            FioLab-0.12.0-debug.apk
-            FioLab-0.12.0-debug.zip
+            FioLab-0.13.0-debug.apk
+            FioLab-0.13.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.12.0 >/dev/null 2>&1; then
-            gh release upload v0.12.0               FioLab-0.12.0-debug.apk               FioLab-0.12.0-debug.zip               --clobber
+          if gh release view v0.13.0 >/dev/null 2>&1; then
+            gh release upload v0.13.0               FioLab-0.13.0-debug.apk               FioLab-0.13.0-debug.zip               --clobber
           else
-            gh release create v0.12.0               FioLab-0.12.0-debug.apk               FioLab-0.12.0-debug.zip               --target main               --title "FioLab 0.12.0"               --notes "FioLab 0.12.0: Criar Monograma com 1, 2 ou 3 iniciais, estilos Linear/Clássico/Empilhado, Satin real, bastidor, tecido, simulação e exportação DST/PES/JEF."
+            gh release create v0.13.0               FioLab-0.13.0-debug.apk               FioLab-0.13.0-debug.zip               --target main               --title "FioLab 0.13.0"               --notes "FioLab 0.13.0: Biblioteca com 7 famílias de fontes de bordado, geometrias distintas, prévia em pontadas, integração com Criar Nome/Monograma e exportação DST/PES/JEF."
           fi

@@ -1,4 +1,4 @@
-# FioLab 0.12.0
+# FioLab 0.13.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,21 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Biblioteca de Fontes
+
+A v0.13 cria uma biblioteca nativa de fontes de bordado com 7 famílias:
+- Fio Linha;
+- Fio Compacta;
+- Fio Larga;
+- Fio Moderna;
+- Fio Itálica;
+- Fio Elegante;
+- Fio Ornamental.
+
+As famílias alteram a geometria que será convertida em pontadas: largura, espaçamento, inclinação, serifas e prolongamentos decorativos. A Fio Ornamental foi pensada especialmente para monogramas.
+
+A Home possui uma tela própria de Biblioteca, com prévia Satin gerada pelo mesmo motor usado nos arquivos finais.
 
 ## Monogramas
 

@@ -503,7 +503,7 @@ fun CreateNameScreen(
                 )
 
                 Text(
-                    "Fonte de bordado",
+                    "Biblioteca de fontes",
                     color = FioText,
                     fontWeight =
                         FontWeight.SemiBold
@@ -552,7 +552,9 @@ fun CreateNameScreen(
                                     )
                             ) {
                                 Text(
-                                    option.displayName,
+                                    option.displayName +
+                                        " • " +
+                                        option.category.displayName,
                                     modifier =
                                         Modifier.padding(
                                             horizontal =
@@ -644,6 +646,20 @@ fun CreateNameScreen(
                             }
                         }
                 }
+
+                Text(
+                    font.description,
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
 
                 Text(
                     "Altura " +
