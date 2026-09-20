@@ -449,7 +449,7 @@ private fun ImportedFontCard(
     val textColor =
         FioText.toArgb()
 
-    val typeface =
+    val previewTypeface =
         remember(
             font.id
         ) {
@@ -544,7 +544,7 @@ private fun ImportedFontCard(
                             8,
                             0
                         )
-                        typeface
+                        previewTypeface
                             ?.let {
                                 this.typeface =
                                     it
@@ -556,7 +556,7 @@ private fun ImportedFontCard(
                     view.text =
                         "FioLab Matrizes"
 
-                    typeface
+                    previewTypeface
                         ?.let {
                             view.typeface =
                                 it
