@@ -6,6 +6,13 @@ import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
+enum class TextStitchStyle(
+    val displayName: String
+) {
+    RUNNING("Ponto corrido"),
+    SATIN("Satin")
+}
+
 enum class EmbroideryFontPreset(
     val displayName: String,
     val xScale: Float,
@@ -21,6 +28,10 @@ data class TextMatrixOptions(
     val heightMm: Float = 10f,
     val spacingMm: Float = 1.2f,
     val stitchLengthMm: Float = 2.5f,
+    val style: TextStitchStyle = TextStitchStyle.RUNNING,
+    val satinWidthMm: Float = 2.4f,
+    val satinDensityMm: Float = 0.45f,
+    val satinUnderlay: Boolean = true,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
     val outputFormat: String = "DST"
@@ -36,6 +47,13 @@ object TextMatrixGenerator {
     private data class Glyph(
         val strokes: List<List<P>>,
         val width: Float = 0.72f
+    )
+
+    private data class StrokeBuildResult(
+        val currentX: Int,
+        val currentY: Int,
+        val stitchCount: Int,
+        val jumpCount: Int
     )
 
     private val glyphs: Map<Char, Glyph> = mapOf(
@@ -208,6 +226,14 @@ object TextMatrixGenerator {
                 "O comprimento de ponto deve ficar entre 1 e 5 mm."
             }
 
+            require(options.satinWidthMm in 1f..6f) {
+                "A largura Satin deve ficar entre 1 e 6 mm."
+            }
+
+            require(options.satinDensityMm in 0.3f..1.2f) {
+                "A densidade Satin deve ficar entre 0,3 e 1,2 mm."
+            }
+
             val outputFormat =
                 options.outputFormat
                     .uppercase(Locale.ROOT)
@@ -229,6 +255,12 @@ object TextMatrixGenerator {
 
             val stitchUnits =
                 options.stitchLengthMm * 10f
+
+            val satinWidthUnits =
+                options.satinWidthMm * 10f
+
+            val satinStepUnits =
+                options.satinDensityMm * 10f
 
             val points =
                 mutableListOf<EmbroideryPoint>()
@@ -294,114 +326,66 @@ object TextMatrixGenerator {
                         return@forEach
                     }
 
-                    val first =
-                        toUnits(
-                            stroke.first(),
-                            cursorX,
-                            glyphWidth,
-                            heightUnits
-                        )
-
-                    if (
-                        currentX != first.first ||
-                        currentY != first.second ||
-                        points.isEmpty()
-                    ) {
-                        points +=
-                            EmbroideryPoint(
-                                first.first,
-                                first.second,
-                                StitchCommand.JUMP,
-                                0
-                            )
-
-                        jumpCount++
-                    }
-
-                    currentX =
-                        first.first
-
-                    currentY =
-                        first.second
-
-                    for (
-                        index in
-                            1 until stroke.size
-                    ) {
-                        val target =
+                    val unitStroke =
+                        stroke.map {
+                            point ->
                             toUnits(
-                                stroke[index],
+                                point,
                                 cursorX,
                                 glyphWidth,
                                 heightUnits
                             )
-
-                        val dx =
-                            target.first -
-                                currentX
-
-                        val dy =
-                            target.second -
-                                currentY
-
-                        val distance =
-                            hypot(
-                                dx.toDouble(),
-                                dy.toDouble()
-                            )
-
-                        val segments =
-                            maxOf(
-                                1,
-                                ceil(
-                                    distance /
-                                        stitchUnits
-                                ).toInt()
-                            )
-
-                        val startX =
-                            currentX
-
-                        val startY =
-                            currentY
-
-                        for (
-                            part in
-                                1..segments
-                        ) {
-                            val ratio =
-                                part.toDouble() /
-                                    segments
-
-                            val x =
-                                (
-                                    startX +
-                                        dx * ratio
-                                    ).roundToInt()
-
-                            val y =
-                                (
-                                    startY +
-                                        dy * ratio
-                                    ).roundToInt()
-
-                            points +=
-                                EmbroideryPoint(
-                                    x,
-                                    y,
-                                    StitchCommand.STITCH,
-                                    0
-                                )
-
-                            stitchCount++
                         }
 
-                        currentX =
-                            target.first
+                    val built =
+                        when (
+                            options.style
+                        ) {
+                            TextStitchStyle.RUNNING ->
+                                appendRunningStroke(
+                                    points =
+                                        points,
+                                    stroke =
+                                        unitStroke,
+                                    currentX =
+                                        currentX,
+                                    currentY =
+                                        currentY,
+                                    stitchUnits =
+                                        stitchUnits
+                                )
 
-                        currentY =
-                            target.second
-                    }
+                            TextStitchStyle.SATIN ->
+                                appendSatinStroke(
+                                    points =
+                                        points,
+                                    stroke =
+                                        unitStroke,
+                                    currentX =
+                                        currentX,
+                                    currentY =
+                                        currentY,
+                                    satinWidthUnits =
+                                        satinWidthUnits,
+                                    satinStepUnits =
+                                        satinStepUnits,
+                                    underlay =
+                                        options
+                                            .satinUnderlay
+                                )
+                        }
+
+                    currentX =
+                        built.currentX
+
+                    currentY =
+                        built.currentY
+
+                    stitchCount +=
+                        built.stitchCount
+
+                    jumpCount +=
+                        built.jumpCount
                 }
 
                 cursorX +=
@@ -507,6 +491,378 @@ object TextMatrixGenerator {
                 isModified = true
             )
         }
+
+    private fun appendRunningStroke(
+        points: MutableList<EmbroideryPoint>,
+        stroke: List<Pair<Int, Int>>,
+        currentX: Int,
+        currentY: Int,
+        stitchUnits: Float
+    ): StrokeBuildResult {
+        var x =
+            currentX
+
+        var y =
+            currentY
+
+        var stitches = 0
+        var jumps = 0
+
+        val first =
+            stroke.first()
+
+        if (
+            x != first.first ||
+            y != first.second ||
+            points.isEmpty()
+        ) {
+            points +=
+                EmbroideryPoint(
+                    first.first,
+                    first.second,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            x = first.first
+            y = first.second
+            jumps++
+        }
+
+        for (
+            index in
+                1 until stroke.size
+        ) {
+            val target =
+                stroke[index]
+
+            val dx =
+                target.first -
+                    x
+
+            val dy =
+                target.second -
+                    y
+
+            val distance =
+                hypot(
+                    dx.toDouble(),
+                    dy.toDouble()
+                )
+
+            val segments =
+                maxOf(
+                    1,
+                    ceil(
+                        distance /
+                            stitchUnits
+                    ).toInt()
+                )
+
+            val startX = x
+            val startY = y
+
+            for (
+                part in
+                    1..segments
+            ) {
+                val ratio =
+                    part.toDouble() /
+                        segments
+
+                val px =
+                    (
+                        startX +
+                            dx * ratio
+                        ).roundToInt()
+
+                val py =
+                    (
+                        startY +
+                            dy * ratio
+                        ).roundToInt()
+
+                points +=
+                    EmbroideryPoint(
+                        px,
+                        py,
+                        StitchCommand.STITCH,
+                        0
+                    )
+
+                stitches++
+            }
+
+            x = target.first
+            y = target.second
+        }
+
+        return StrokeBuildResult(
+            currentX = x,
+            currentY = y,
+            stitchCount = stitches,
+            jumpCount = jumps
+        )
+    }
+
+    private fun appendSatinStroke(
+        points: MutableList<EmbroideryPoint>,
+        stroke: List<Pair<Int, Int>>,
+        currentX: Int,
+        currentY: Int,
+        satinWidthUnits: Float,
+        satinStepUnits: Float,
+        underlay: Boolean
+    ): StrokeBuildResult {
+        var x =
+            currentX
+
+        var y =
+            currentY
+
+        var stitches = 0
+        var jumps = 0
+
+        val first =
+            stroke.first()
+
+        if (
+            x != first.first ||
+            y != first.second ||
+            points.isEmpty()
+        ) {
+            points +=
+                EmbroideryPoint(
+                    first.first,
+                    first.second,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            x = first.first
+            y = first.second
+            jumps++
+        }
+
+        if (underlay) {
+            val underlayStep =
+                maxOf(
+                    20f,
+                    satinStepUnits *
+                        4f
+                )
+
+            for (
+                index in
+                    1 until stroke.size
+            ) {
+                val target =
+                    stroke[index]
+
+                val dx =
+                    target.first -
+                        x
+
+                val dy =
+                    target.second -
+                        y
+
+                val distance =
+                    hypot(
+                        dx.toDouble(),
+                        dy.toDouble()
+                    )
+
+                val segments =
+                    maxOf(
+                        1,
+                        ceil(
+                            distance /
+                                underlayStep
+                        ).toInt()
+                    )
+
+                val startX = x
+                val startY = y
+
+                for (
+                    part in
+                        1..segments
+                ) {
+                    val ratio =
+                        part.toDouble() /
+                            segments
+
+                    points +=
+                        EmbroideryPoint(
+                            (
+                                startX +
+                                    dx * ratio
+                                ).roundToInt(),
+                            (
+                                startY +
+                                    dy * ratio
+                                ).roundToInt(),
+                            StitchCommand.STITCH,
+                            0
+                        )
+
+                    stitches++
+                }
+
+                x = target.first
+                y = target.second
+            }
+
+            points +=
+                EmbroideryPoint(
+                    first.first,
+                    first.second,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            jumps++
+            x = first.first
+            y = first.second
+        }
+
+        val halfWidth =
+            satinWidthUnits /
+                2f
+
+        var parity = 0
+
+        for (
+            index in
+                1 until stroke.size
+        ) {
+            val start =
+                stroke[
+                    index -
+                        1
+                ]
+
+            val target =
+                stroke[index]
+
+            val dx =
+                target.first -
+                    start.first
+
+            val dy =
+                target.second -
+                    start.second
+
+            val distance =
+                hypot(
+                    dx.toDouble(),
+                    dy.toDouble()
+                )
+
+            if (
+                distance <
+                    0.001
+            ) {
+                continue
+            }
+
+            val normalX =
+                (
+                    -dy /
+                        distance
+                    ).toFloat()
+
+            val normalY =
+                (
+                    dx /
+                        distance
+                    ).toFloat()
+
+            val samples =
+                maxOf(
+                    1,
+                    ceil(
+                        distance /
+                            satinStepUnits
+                    ).toInt()
+                )
+
+            val firstPart =
+                if (
+                    index ==
+                        1
+                ) {
+                    0
+                } else {
+                    1
+                }
+
+            for (
+                part in
+                    firstPart..samples
+            ) {
+                val ratio =
+                    part.toDouble() /
+                        samples
+
+                val centerX =
+                    start.first +
+                        dx * ratio
+
+                val centerY =
+                    start.second +
+                        dy * ratio
+
+                val side =
+                    if (
+                        parity %
+                            2 ==
+                            0
+                    ) {
+                        1f
+                    } else {
+                        -1f
+                    }
+
+                val px =
+                    (
+                        centerX +
+                            normalX *
+                                halfWidth *
+                                side
+                        ).roundToInt()
+
+                val py =
+                    (
+                        centerY +
+                            normalY *
+                                halfWidth *
+                                side
+                        ).roundToInt()
+
+                points +=
+                    EmbroideryPoint(
+                        px,
+                        py,
+                        StitchCommand.STITCH,
+                        0
+                    )
+
+                x = px
+                y = py
+                stitches++
+                parity++
+            }
+        }
+
+        return StrokeBuildResult(
+            currentX = x,
+            currentY = y,
+            stitchCount = stitches,
+            jumpCount = jumps
+        )
+    }
 
     private fun toUnits(
         point: P,
