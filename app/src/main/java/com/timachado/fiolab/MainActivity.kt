@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -28,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.timachado.fiolab.core.embroidery.ConvertedMatrix
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
@@ -837,7 +840,9 @@ private fun FioLabApp() {
             if (topLevelScreen) {
                 NavigationBar(
                     containerColor =
-                        FioSurface
+                        FioSurface,
+                    tonalElevation =
+                        4.dp
                 ) {
                     val navigationColors =
                         NavigationBarItemDefaults
@@ -863,7 +868,15 @@ private fun FioLabApp() {
                                 Screen.Home
                         },
                         icon = {
-                            Text("⌂")
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_home_rounded
+                                    ),
+                                contentDescription =
+                                    "Início"
+                            )
                         },
                         label = {
                             Text("Início")
@@ -881,7 +894,15 @@ private fun FioLabApp() {
                                 Screen.CreateName
                         },
                         icon = {
-                            Text("Aa")
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_text_fields_rounded
+                                    ),
+                                contentDescription =
+                                    "Criar"
+                            )
                         },
                         label = {
                             Text("Criar")
@@ -903,7 +924,15 @@ private fun FioLabApp() {
                             }
                         },
                         icon = {
-                            Text("▣")
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_folder_open_rounded
+                                    ),
+                                contentDescription =
+                                    "Matrizes"
+                            )
                         },
                         label = {
                             Text("Matrizes")
@@ -921,7 +950,15 @@ private fun FioLabApp() {
                                 Screen.FontLibrary
                         },
                         icon = {
-                            Text("Ff")
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_font_download_rounded
+                                    ),
+                                contentDescription =
+                                    "Fontes"
+                            )
                         },
                         label = {
                             Text("Fontes")
@@ -939,7 +976,15 @@ private fun FioLabApp() {
                                 Screen.Account
                         },
                         icon = {
-                            Text("☺")
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_account_circle_rounded
+                                    ),
+                                contentDescription =
+                                    "Conta"
+                            )
                         },
                         label = {
                             Text("Conta")
