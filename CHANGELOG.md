@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.21.3
+
+### Correção crítica de imagem
+- Substitui a logo interna corrompida por uma cópia válida da arte original FioLab Matrizes.
+- Substitui o recurso de launcher corrompido pela mesma arte original redimensionada.
+- Remove o PNG inválido que fazia o Android usar o ícone verde genérico.
+- A Home deixa de tentar decodificar o arquivo gráfico corrompido que podia causar fechamento imediato.
+- Nenhuma alteração visual foi feita na marca; apenas redimensionamento/compressão para Android.
+
+
 ## 0.21.2
 
 ### Correção de inicialização
