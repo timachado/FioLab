@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.21.5
+
+### Fontes TTF/OTF
+- Adicionada importação de fontes .ttf e .otf pela Biblioteca de Fontes.
+- A fonte é validada antes do cadastro e copiada para o armazenamento privado do aplicativo.
+- Limite de 12 MB por arquivo e bloqueio de extensões fora de TTF/OTF.
+- Fontes importadas podem ser visualizadas e excluídas na própria biblioteca.
+- Fontes importadas aparecem em Criar Nome sem remover ou substituir as famílias nativas do FioLab.
+- O desenho vetorial dos glifos é extraído da fonte e convertido em trajetórias de bordado.
+- Mantidos altura, espaçamento, ponto corrido/Satin, densidade, underlay, tecido, bastidor, cores, arco e ajustes por letra.
+- A fonte importada preserva maiúsculas/minúsculas e caracteres suportados pelo próprio arquivo de fonte.
+
+### Preservado
+- Fontes nativas FioLab e o motor de texto existente.
+- Geração, simulação, edição, exportação e transferência já existentes.
+- Minha Conta/Supabase continua isolada da inicialização.
+- Identidade visual e recursos de logo/launcher da 0.21.4.
+
+
 ## 0.21.3
 
 ### Hotfix de logo e inicialização
