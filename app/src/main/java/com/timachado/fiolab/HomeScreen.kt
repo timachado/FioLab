@@ -507,7 +507,7 @@ fun HomeScreen(
             }
         ) {
             Text(
-                "FioLab 0.21.7 • Android",
+                "FioLab 0.22.0 • Android",
                 modifier =
                     Modifier
                         .fillMaxWidth()
