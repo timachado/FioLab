@@ -6,15 +6,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -46,9 +47,6 @@ fun HomeScreen(
     onCreateName: () -> Unit,
     onCreateMonogram: () -> Unit,
     onCreateDrawing: () -> Unit,
-    onFonts: () -> Unit,
-    onProjects: () -> Unit,
-    onAccount: () -> Unit,
     onTransfer: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
@@ -57,25 +55,37 @@ fun HomeScreen(
     onConvert: () -> Unit,
     onUnavailable: (String) -> Unit
 ) {
-    LazyColumn(
+    LazyVerticalGrid(
+        columns =
+            GridCells.Fixed(2),
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(
                     horizontal =
-                        20.dp
+                        16.dp
                 ),
         contentPadding =
             PaddingValues(
-                top = 24.dp,
-                bottom = 32.dp
+                top = 16.dp,
+                bottom = 24.dp
+            ),
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                12.dp
             ),
         verticalArrangement =
             Arrangement.spacedBy(
-                18.dp
+                12.dp
             )
     ) {
-        item {
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
+                )
+            }
+        ) {
             Column(
                 modifier =
                     Modifier.fillMaxWidth(),
@@ -94,16 +104,10 @@ fun HomeScreen(
                         Modifier
                             .fillMaxWidth()
                             .height(
-                                154.dp
+                                126.dp
                             ),
                     contentScale =
                         ContentScale.Fit
-                )
-
-                Spacer(
-                    Modifier.height(
-                        4.dp
-                    )
                 )
 
                 Text(
@@ -118,7 +122,13 @@ fun HomeScreen(
             }
         }
 
-        item {
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
+                )
+            }
+        ) {
             Card(
                 colors =
                     CardDefaults.cardColors(
@@ -127,18 +137,18 @@ fun HomeScreen(
                     ),
                 shape =
                     RoundedCornerShape(
-                        24.dp
+                        22.dp
                     )
             ) {
                 Column(
                     Modifier.padding(
-                        20.dp
+                        18.dp
                     )
                 ) {
                     Text(
                         "O que vamos bordar hoje?",
                         color = FioText,
-                        fontSize = 21.sp,
+                        fontSize = 20.sp,
                         fontWeight =
                             FontWeight.SemiBold
                     )
@@ -148,57 +158,88 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.21.4 corrige a identidade FioLab Matrizes no launcher e na Home.",
-                        color = FioTextMuted
+                        "Acesso rápido às ferramentas principais. Conta, matrizes e fontes ficam sempre na barra inferior.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            12.sp
                     )
                 }
             }
         }
 
-        item {
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        12.dp
-                    )
-            ) {
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "Aa",
-                    title =
-                        "Criar nome",
-                    subtitle =
-                        "Satin ou ponto corrido",
-                    enabled = true,
-                    onClick =
-                        onCreateName
-                )
-
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "ABC",
-                    title =
-                        "Monograma",
-                    subtitle =
-                        "1 • 2 • 3 iniciais",
-                    enabled = true,
-                    onClick =
-                        onCreateMonogram
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
                 )
             }
+        ) {
+            Text(
+                "Criar e trabalhar",
+                color = FioText,
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize = 17.sp,
+                modifier =
+                    Modifier.padding(
+                        top = 2.dp,
+                        bottom = 2.dp
+                    )
+            )
         }
 
         item {
             FeatureCard(
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "Aa",
+                title =
+                    "Criar nome",
+                subtitle =
+                    "Satin ou ponto corrido",
+                enabled = true,
+                onClick =
+                    onCreateName
+            )
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "ABC",
+                title =
+                    "Monograma",
+                subtitle =
+                    "1 • 2 • 3 iniciais",
+                enabled = true,
+                onClick =
+                    onCreateMonogram
+            )
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
                 icon = "✦",
                 title =
-                    "Criar desenho/logo",
+                    "Desenho/logo",
                 subtitle =
-                    "SVG simples • desenhar com o dedo",
+                    "SVG • desenhar com o dedo",
                 enabled = true,
                 onClick =
                     onCreateDrawing
@@ -208,139 +249,46 @@ fun HomeScreen(
         item {
             FeatureCard(
                 modifier =
-                    Modifier.fillMaxWidth(),
-                icon = "☺",
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "↗",
                 title =
-                    "Minha Conta",
+                    "Abrir matriz",
                 subtitle =
-                    "Perfil • plano • status da assinatura",
+                    "DST • JEF • PES",
                 enabled = true,
                 onClick =
-                    onAccount
+                    onOpen
             )
         }
 
         item {
             FeatureCard(
                 modifier =
-                    Modifier.fillMaxWidth(),
-                icon = "▣",
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "▶",
                 title =
-                    "Minhas Matrizes",
+                    "Simulador",
                 subtitle =
-                    "Salvas no celular • abrir • enviar",
-                enabled = true,
-                onClick =
-                    onProjects
-            )
-        }
-
-        item {
-            FeatureCard(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                icon = "Ff",
-                title =
-                    "Biblioteca de fontes",
-                subtitle =
-                    "7 famílias de bordado",
-                enabled = true,
-                onClick =
-                    onFonts
-            )
-        }
-
-        item {
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        12.dp
-                    )
+                    "Sequência real",
+                enabled =
+                    recent != null
             ) {
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "↗",
-                    title =
-                        "Abrir matriz",
-                    subtitle =
-                        "DST • JEF • PES",
-                    enabled = true,
-                    onClick = onOpen
-                )
-
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "▶",
-                    title =
-                        "Simulador",
-                    subtitle =
-                        "Sequência real",
-                    enabled =
-                        recent != null
+                if (
+                    recent != null
                 ) {
-                    if (
-                        recent != null
-                    ) {
-                        onSimulate()
-                    } else {
-                        onUnavailable(
-                            "Crie ou abra uma matriz primeiro."
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Row(
-                horizontalArrangement =
-                    Arrangement.spacedBy(
-                        12.dp
+                    onSimulate()
+                } else {
+                    onUnavailable(
+                        "Crie ou abra uma matriz primeiro."
                     )
-            ) {
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "✎",
-                    title =
-                        "Editor",
-                    subtitle =
-                        "Mover • girar • cores",
-                    enabled =
-                        recent != null
-                ) {
-                    if (
-                        recent != null
-                    ) {
-                        onEdit()
-                    } else {
-                        onUnavailable(
-                            "Crie ou abra uma matriz primeiro."
-                        )
-                    }
-                }
-
-                FeatureCard(
-                    modifier =
-                        Modifier.weight(1f),
-                    icon = "⇄",
-                    title = "Converter",
-                    subtitle =
-                        "DST ⇄ PES ⇄ JEF",
-                    enabled =
-                        recent != null
-                ) {
-                    if (
-                        recent != null
-                    ) {
-                        onConvert()
-                    } else {
-                        onUnavailable(
-                            "Crie ou abra uma matriz primeiro."
-                        )
-                    }
                 }
             }
         }
@@ -348,12 +296,72 @@ fun HomeScreen(
         item {
             FeatureCard(
                 modifier =
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "✎",
+                title =
+                    "Editor",
+                subtitle =
+                    "Mover • girar • cores",
+                enabled =
+                    recent != null
+            ) {
+                if (
+                    recent != null
+                ) {
+                    onEdit()
+                } else {
+                    onUnavailable(
+                        "Crie ou abra uma matriz primeiro."
+                    )
+                }
+            }
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
+                icon = "⇄",
+                title =
+                    "Converter",
+                subtitle =
+                    "DST ⇄ PES ⇄ JEF",
+                enabled =
+                    recent != null
+            ) {
+                if (
+                    recent != null
+                ) {
+                    onConvert()
+                } else {
+                    onUnavailable(
+                        "Crie ou abra uma matriz primeiro."
+                    )
+                }
+            }
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 138.dp
+                        ),
                 icon = "⇧",
                 title =
-                    "Enviar para máquina",
+                    "Enviar",
                 subtitle =
-                    "Pendrive OTG • Wi-Fi/app",
+                    "OTG • Wi-Fi/app",
                 enabled =
                     recent != null
             ) {
@@ -369,17 +377,33 @@ fun HomeScreen(
             }
         }
 
-        item {
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
+                )
+            }
+        ) {
             Text(
                 "Recente",
                 color = FioText,
                 fontWeight =
                     FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 17.sp,
+                modifier =
+                    Modifier.padding(
+                        top = 4.dp
+                    )
             )
         }
 
-        item {
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
+                )
+            }
+        ) {
             if (recent == null) {
                 Card(
                     colors =
@@ -395,14 +419,16 @@ fun HomeScreen(
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(22.dp),
+                            .padding(20.dp),
                         horizontalAlignment =
                             Alignment.CenterHorizontally
                     ) {
                         Text(
                             "Nenhuma matriz criada ou aberta nesta sessão.",
                             color =
-                                FioTextMuted
+                                FioTextMuted,
+                            textAlign =
+                                TextAlign.Center
                         )
 
                         Spacer(
@@ -493,15 +519,27 @@ fun HomeScreen(
             }
         }
 
-        item {
+        item(
+            span = {
+                GridItemSpan(
+                    maxLineSpan
+                )
+            }
+        ) {
             Text(
-                "FioLab 0.21.4 • Android",
+                "FioLab 0.21.6 • Android",
                 modifier =
-                    Modifier.fillMaxWidth(),
-                color = FioTextMuted,
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 4.dp
+                        ),
+                color =
+                    FioTextMuted,
                 textAlign =
                     TextAlign.Center,
-                fontSize = 11.sp
+                fontSize =
+                    11.sp
             )
         }
     }
@@ -535,12 +573,12 @@ private fun FeatureCard(
     ) {
         Column(
             Modifier.padding(
-                18.dp
+                16.dp
             )
         ) {
             Box(
                 Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .background(
                         if (enabled) {
                             FioGold
@@ -567,7 +605,7 @@ private fun FeatureCard(
 
             Spacer(
                 Modifier.height(
-                    18.dp
+                    14.dp
                 )
             )
 
@@ -580,8 +618,10 @@ private fun FeatureCard(
 
             Text(
                 subtitle,
-                color = FioTextMuted,
-                fontSize = 11.sp
+                color =
+                    FioTextMuted,
+                fontSize =
+                    11.sp
             )
         }
     }
