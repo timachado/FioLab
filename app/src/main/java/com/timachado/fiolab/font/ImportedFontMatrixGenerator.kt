@@ -903,7 +903,7 @@ object ImportedFontMatrixGenerator {
         val fillPaint =
             Paint().apply {
                 isAntiAlias =
-                    false
+                    true
 
                 style =
                     Paint.Style.FILL
@@ -1000,8 +1000,8 @@ object ImportedFontMatrixGenerator {
                     pixels[index]
                         ushr
                         24
-                    ) >
-                    0
+                    ) >=
+                    96
             }
 
         val skeleton =
