@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.26.0
+
+### Satin orientado pelo traço
+- Corrigida a limitação restante da 0.25.0, que preservava melhor o contorno mas ainda mantinha muitas colunas Satin em orientação horizontal.
+- O contorno vetorial da TTF/OTF continua sendo a fonte da forma final.
+- Uma máscara de alta resolução é usada apenas para obter um eixo central suavizado e estimar a direção local do traço.
+- O eixo não define mais o desenho da letra; ele serve somente como campo de orientação.
+- Cada amostra calcula a tangente local do traço e lança uma normal perpendicular para encontrar as duas bordas reais da letra.
+- As pontadas Satin passam a girar junto com hastes, curvas e ligações da fonte.
+- O rastreamento do eixo atravessa junções escolhendo a continuação de menor mudança angular, reduzindo fragmentação em letras cursivas.
+- Pequenos ramos residuais são descartados antes da geração dos pontos.
+- A largura de cada lado é suavizada ao longo do caminho para evitar picos.
+- JUMP/TRIM continuam fora da visualização costurada e a simulação continua usando a sequência real de pontos.
+- Validado visualmente com a fonte Alliby usada no teste de "Maria", sem regras específicas para essa família.
+
 ## 0.25.0
 
 ### Novo digitalizador Satin para fontes
