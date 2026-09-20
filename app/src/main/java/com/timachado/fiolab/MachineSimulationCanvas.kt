@@ -571,35 +571,12 @@ private fun DrawScope.drawStitches(
             StitchCommand.STOP,
             StitchCommand.END -> {
                 previous =
-                    point
+                    null
             }
 
             StitchCommand.JUMP -> {
-                if (
-                    !ghost &&
-                    previous != null
-                ) {
-                    drawLine(
-                        color =
-                            Color(
-                                0x33756F66
-                            ),
-                        start =
-                            transform
-                                .point(
-                                    previous!!
-                                ),
-                        end =
-                            transform
-                                .point(
-                                    point
-                                ),
-                        strokeWidth =
-                            0.8.dp
-                                .toPx()
-                    )
-                }
-
+                // JUMP é apenas deslocamento da máquina sem costura.
+                // Não desenhar uma linha evita mostrar um fio que não existe.
                 previous =
                     point
             }
