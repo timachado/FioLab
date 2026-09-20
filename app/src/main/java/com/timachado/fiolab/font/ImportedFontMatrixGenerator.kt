@@ -1,5 +1,7 @@
 package com.timachado.fiolab.font
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
@@ -18,6 +20,7 @@ import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 object ImportedFontMatrixGenerator {
 
@@ -546,24 +549,11 @@ object ImportedFontMatrixGenerator {
                         )
 
                     TextStitchStyle.SATIN ->
-                        buildFilledText(
+                        buildSatinByAxis(
                             contours =
                                 contours,
-                            rowStepUnits =
+                            options =
                                 options
-                                    .satinDensityMm *
-                                    10f,
-                            pullCompensationUnits =
-                                options
-                                    .satinPullCompensationMm *
-                                    10f,
-                            maxStitchUnits =
-                                max(
-                                    45f,
-                                    options
-                                        .satinWidthMm *
-                                        10f
-                                )
                         )
                 }
 
@@ -688,6 +678,1375 @@ object ImportedFontMatrixGenerator {
 
         return output
     }
+
+    private data class SkeletonPoint(
+        val x: Int,
+        val y: Int
+    )
+
+    private fun buildSatinByAxis(
+        contours: List<SampledContour>,
+        options: TextMatrixOptions
+    ): MutableList<EmbroideryPoint> {
+        val allPoints =
+            contours.flatMap {
+                it.points
+            }
+
+        if (
+            allPoints.isEmpty()
+        ) {
+            return mutableListOf()
+        }
+
+        val minX =
+            allPoints.minOf {
+                it.first
+            }
+
+        val maxX =
+            allPoints.maxOf {
+                it.first
+            }
+
+        val minY =
+            allPoints.minOf {
+                it.second
+            }
+
+        val maxY =
+            allPoints.maxOf {
+                it.second
+            }
+
+        val unitsPerPixel =
+            1.5f
+
+        val padding =
+            4
+
+        val width =
+            (
+                (
+                    maxX -
+                        minX
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        val height =
+            (
+                (
+                    maxY -
+                        minY
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        if (
+            width >
+                900 ||
+            height >
+                900
+        ) {
+            return buildFilledText(
+                contours =
+                    contours,
+                rowStepUnits =
+                    options
+                        .satinDensityMm *
+                        10f,
+                pullCompensationUnits =
+                    options
+                        .satinPullCompensationMm *
+                        10f,
+                maxStitchUnits =
+                    max(
+                        45f,
+                        options
+                            .satinWidthMm *
+                            10f
+                    )
+            )
+        }
+
+        val bitmap =
+            Bitmap.createBitmap(
+                width,
+                height,
+                Bitmap.Config.ARGB_8888
+            )
+
+        val canvas =
+            Canvas(bitmap)
+
+        val fillPaint =
+            Paint().apply {
+                isAntiAlias =
+                    false
+                style =
+                    Paint.Style.FILL
+                color =
+                    android.graphics.Color.WHITE
+            }
+
+        val rasterPath =
+            Path().apply {
+                fillType =
+                    Path.FillType.EVEN_ODD
+            }
+
+        contours.forEach {
+                contour ->
+            val first =
+                contour.points
+                    .firstOrNull()
+                    ?: return@forEach
+
+            rasterPath.moveTo(
+                (
+                    first.first -
+                        minX
+                    ) /
+                    unitsPerPixel +
+                    padding,
+                (
+                    maxY -
+                        first.second
+                    ) /
+                    unitsPerPixel +
+                    padding
+            )
+
+            contour.points
+                .drop(1)
+                .forEach {
+                        point ->
+                    rasterPath.lineTo(
+                        (
+                            point.first -
+                                minX
+                            ) /
+                            unitsPerPixel +
+                            padding,
+                        (
+                            maxY -
+                                point.second
+                            ) /
+                            unitsPerPixel +
+                            padding
+                    )
+                }
+
+            if (
+                contour.closed
+            ) {
+                rasterPath.close()
+            }
+        }
+
+        canvas.drawPath(
+            rasterPath,
+            fillPaint
+        )
+
+        val pixels =
+            IntArray(
+                width *
+                    height
+            )
+
+        bitmap.getPixels(
+            pixels,
+            0,
+            width,
+            0,
+            0,
+            width,
+            height
+        )
+
+        bitmap.recycle()
+
+        val mask =
+            BooleanArray(
+                pixels.size
+            ) {
+                    index ->
+                (
+                    pixels[index]
+                        ushr
+                        24
+                    ) >
+                    0
+            }
+
+        val skeleton =
+            thinMask(
+                mask =
+                    mask,
+                width =
+                    width,
+                height =
+                    height
+            )
+
+        val lines =
+            traceSkeleton(
+                skeleton =
+                    skeleton,
+                width =
+                    width,
+                height =
+                    height
+            )
+                .filter {
+                    it.size >=
+                        3
+                }
+                .sortedWith(
+                    compareBy<
+                        List<SkeletonPoint>
+                    > {
+                        line ->
+                        line.minOf {
+                            it.x
+                        }
+                    }.thenByDescending {
+                        line ->
+                        line.size
+                    }
+                )
+
+        if (
+            lines.isEmpty()
+        ) {
+            return buildFilledText(
+                contours =
+                    contours,
+                rowStepUnits =
+                    options
+                        .satinDensityMm *
+                        10f,
+                pullCompensationUnits =
+                    options
+                        .satinPullCompensationMm *
+                        10f,
+                maxStitchUnits =
+                    max(
+                        45f,
+                        options
+                            .satinWidthMm *
+                            10f
+                    )
+            )
+        }
+
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val axisStepPixels =
+            (
+                options
+                    .satinDensityMm *
+                    10f /
+                    unitsPerPixel
+                ).coerceIn(
+                1.8f,
+                7f
+            )
+
+        val pullPixels =
+            options
+                .satinPullCompensationMm *
+                10f /
+                unitsPerPixel
+
+        lines.forEach {
+                rawLine ->
+            val line =
+                orientSkeletonLine(
+                    rawLine
+                )
+
+            val samples =
+                sampleSkeletonLine(
+                    line =
+                        line,
+                    stepPixels =
+                        axisStepPixels
+                )
+
+            if (
+                samples.size <
+                    2
+            ) {
+                return@forEach
+            }
+
+            if (
+                output.isNotEmpty()
+            ) {
+                val last =
+                    output.last()
+
+                output +=
+                    EmbroideryPoint(
+                        last.xUnits,
+                        last.yUnits,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+
+            if (
+                options
+                    .satinUnderlayMode !=
+                    com.timachado.fiolab.core.embroidery.SatinUnderlayMode.NONE
+            ) {
+                val center =
+                    samples.first()
+
+                output +=
+                    EmbroideryPoint(
+                        xUnits =
+                            skeletonXToUnits(
+                                center.x.toFloat(),
+                                minX,
+                                padding,
+                                unitsPerPixel
+                            ),
+                        yUnits =
+                            skeletonYToUnits(
+                                center.y.toFloat(),
+                                maxY,
+                                padding,
+                                unitsPerPixel
+                            ),
+                        command =
+                            StitchCommand.JUMP,
+                        colorIndex =
+                            0
+                    )
+
+                var lastCenter =
+                    center
+
+                samples.drop(1)
+                    .forEach {
+                            sample ->
+                        val distance =
+                            hypot(
+                                (
+                                    sample.x -
+                                        lastCenter.x
+                                    ).toDouble(),
+                                (
+                                    sample.y -
+                                        lastCenter.y
+                                    ).toDouble()
+                            ) *
+                                unitsPerPixel
+
+                        if (
+                            distance >=
+                                16f
+                        ) {
+                            output +=
+                                EmbroideryPoint(
+                                    xUnits =
+                                        skeletonXToUnits(
+                                            sample.x.toFloat(),
+                                            minX,
+                                            padding,
+                                            unitsPerPixel
+                                        ),
+                                    yUnits =
+                                        skeletonYToUnits(
+                                            sample.y.toFloat(),
+                                            maxY,
+                                            padding,
+                                            unitsPerPixel
+                                        ),
+                                    command =
+                                        StitchCommand.STITCH,
+                                    colorIndex =
+                                        0
+                                )
+
+                            lastCenter =
+                                sample
+                        }
+                    }
+
+                val last =
+                    output.last()
+
+                output +=
+                    EmbroideryPoint(
+                        last.xUnits,
+                        last.yUnits,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+
+            var started =
+                false
+
+            samples.forEachIndexed {
+                    index,
+                    sample ->
+                val previous =
+                    samples[
+                        (
+                            index -
+                                1
+                            ).coerceAtLeast(
+                            0
+                        )
+                    ]
+
+                val next =
+                    samples[
+                        (
+                            index +
+                                1
+                            ).coerceAtMost(
+                            samples.lastIndex
+                        )
+                    ]
+
+                val tangentX =
+                    (
+                        next.x -
+                            previous.x
+                        ).toDouble()
+
+                val tangentY =
+                    (
+                        next.y -
+                            previous.y
+                        ).toDouble()
+
+                val tangentLength =
+                    sqrt(
+                        tangentX *
+                            tangentX +
+                            tangentY *
+                                tangentY
+                    )
+
+                if (
+                    tangentLength <
+                        0.001
+                ) {
+                    return@forEachIndexed
+                }
+
+                val normalX =
+                    -tangentY /
+                        tangentLength
+
+                val normalY =
+                    tangentX /
+                        tangentLength
+
+                val positive =
+                    boundaryDistance(
+                        mask =
+                            mask,
+                        width =
+                            width,
+                        height =
+                            height,
+                        centerX =
+                            sample.x.toDouble(),
+                        centerY =
+                            sample.y.toDouble(),
+                        normalX =
+                            normalX,
+                        normalY =
+                            normalY,
+                        direction =
+                            1.0
+                    )
+
+                val negative =
+                    boundaryDistance(
+                        mask =
+                            mask,
+                        width =
+                            width,
+                        height =
+                            height,
+                        centerX =
+                            sample.x.toDouble(),
+                        centerY =
+                            sample.y.toDouble(),
+                        normalX =
+                            normalX,
+                        normalY =
+                            normalY,
+                        direction =
+                            -1.0
+                    )
+
+                if (
+                    positive <
+                        0.6 ||
+                    negative <
+                        0.6
+                ) {
+                    return@forEachIndexed
+                }
+
+                val side =
+                    if (
+                        index %
+                            2 ==
+                            0
+                    ) {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+
+                val distance =
+                    if (
+                        side >
+                            0.0
+                    ) {
+                        positive +
+                            pullPixels
+                    } else {
+                        negative +
+                            pullPixels
+                    }
+
+                val edgeX =
+                    sample.x +
+                        normalX *
+                            distance *
+                            side
+
+                val edgeY =
+                    sample.y +
+                        normalY *
+                            distance *
+                            side
+
+                val point =
+                    EmbroideryPoint(
+                        xUnits =
+                            skeletonXToUnits(
+                                edgeX.toFloat(),
+                                minX,
+                                padding,
+                                unitsPerPixel
+                            ),
+                        yUnits =
+                            skeletonYToUnits(
+                                edgeY.toFloat(),
+                                maxY,
+                                padding,
+                                unitsPerPixel
+                            ),
+                        command =
+                            if (
+                                started
+                            ) {
+                                StitchCommand.STITCH
+                            } else {
+                                StitchCommand.JUMP
+                            },
+                        colorIndex =
+                            0
+                    )
+
+                output +=
+                    point
+
+                started =
+                    true
+            }
+        }
+
+        return if (
+            output.any {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+        ) {
+            output
+        } else {
+            buildFilledText(
+                contours =
+                    contours,
+                rowStepUnits =
+                    options
+                        .satinDensityMm *
+                        10f,
+                pullCompensationUnits =
+                    options
+                        .satinPullCompensationMm *
+                        10f,
+                maxStitchUnits =
+                    max(
+                        45f,
+                        options
+                            .satinWidthMm *
+                            10f
+                    )
+            )
+        }
+    }
+
+    private fun thinMask(
+        mask: BooleanArray,
+        width: Int,
+        height: Int
+    ): BooleanArray {
+        val result =
+            mask.copyOf()
+
+        var changed =
+            true
+
+        var pass =
+            0
+
+        while (
+            changed &&
+            pass <
+                120
+        ) {
+            changed =
+                false
+
+            repeat(2) {
+                    phase ->
+                val remove =
+                    mutableListOf<Int>()
+
+                for (
+                    y in
+                        1 until
+                            height -
+                                1
+                ) {
+                    for (
+                        x in
+                            1 until
+                                width -
+                                    1
+                    ) {
+                        val index =
+                            y *
+                                width +
+                                x
+
+                        if (
+                            !result[index]
+                        ) {
+                            continue
+                        }
+
+                        val neighbors =
+                            booleanArrayOf(
+                                result[
+                                    index -
+                                        width
+                                ],
+                                result[
+                                    index -
+                                        width +
+                                        1
+                                ],
+                                result[
+                                    index +
+                                        1
+                                ],
+                                result[
+                                    index +
+                                        width +
+                                        1
+                                ],
+                                result[
+                                    index +
+                                        width
+                                ],
+                                result[
+                                    index +
+                                        width -
+                                        1
+                                ],
+                                result[
+                                    index -
+                                        1
+                                ],
+                                result[
+                                    index -
+                                        width -
+                                        1
+                                ]
+                            )
+
+                        val count =
+                            neighbors.count {
+                                it
+                            }
+
+                        if (
+                            count !in
+                                2..6
+                        ) {
+                            continue
+                        }
+
+                        var transitions =
+                            0
+
+                        for (
+                            neighborIndex in
+                                neighbors.indices
+                        ) {
+                            val current =
+                                neighbors[
+                                    neighborIndex
+                                ]
+
+                            val next =
+                                neighbors[
+                                    (
+                                        neighborIndex +
+                                            1
+                                        ) %
+                                        neighbors.size
+                                ]
+
+                            if (
+                                !current &&
+                                next
+                            ) {
+                                transitions++
+                            }
+                        }
+
+                        if (
+                            transitions !=
+                                1
+                        ) {
+                            continue
+                        }
+
+                        val p2 =
+                            neighbors[0]
+                        val p4 =
+                            neighbors[2]
+                        val p6 =
+                            neighbors[4]
+                        val p8 =
+                            neighbors[6]
+
+                        val blocked =
+                            if (
+                                phase ==
+                                    0
+                            ) {
+                                (
+                                    p2 &&
+                                        p4 &&
+                                        p6
+                                    ) ||
+                                    (
+                                        p4 &&
+                                            p6 &&
+                                            p8
+                                        )
+                            } else {
+                                (
+                                    p2 &&
+                                        p4 &&
+                                        p8
+                                    ) ||
+                                    (
+                                        p2 &&
+                                            p6 &&
+                                            p8
+                                        )
+                            }
+
+                        if (
+                            !blocked
+                        ) {
+                            remove +=
+                                index
+                        }
+                    }
+                }
+
+                if (
+                    remove.isNotEmpty()
+                ) {
+                    changed =
+                        true
+
+                    remove.forEach {
+                        result[it] =
+                            false
+                    }
+                }
+            }
+
+            pass++
+        }
+
+        return result
+    }
+
+    private fun traceSkeleton(
+        skeleton: BooleanArray,
+        width: Int,
+        height: Int
+    ): List<List<SkeletonPoint>> {
+        fun neighbors(
+            index: Int
+        ): List<Int> {
+            val x =
+                index %
+                    width
+            val y =
+                index /
+                    width
+
+            val result =
+                mutableListOf<Int>()
+
+            for (
+                dy in
+                    -1..1
+            ) {
+                for (
+                    dx in
+                        -1..1
+                ) {
+                    if (
+                        dx ==
+                            0 &&
+                        dy ==
+                            0
+                    ) {
+                        continue
+                    }
+
+                    val nx =
+                        x +
+                            dx
+                    val ny =
+                        y +
+                            dy
+
+                    if (
+                        nx in
+                            0 until
+                                width &&
+                        ny in
+                            0 until
+                                height
+                    ) {
+                        val candidate =
+                            ny *
+                                width +
+                                nx
+
+                        if (
+                            skeleton[
+                                candidate
+                            ]
+                        ) {
+                            result +=
+                                candidate
+                        }
+                    }
+                }
+            }
+
+            return result
+        }
+
+        fun edgeKey(
+            first: Int,
+            second: Int
+        ): Long {
+            val low =
+                minOf(
+                    first,
+                    second
+                )
+            val high =
+                maxOf(
+                    first,
+                    second
+                )
+
+            return (
+                low.toLong()
+                    shl
+                    32
+                ) or
+                (
+                    high.toLong() and
+                        0xffffffffL
+                    )
+        }
+
+        val active =
+            skeleton.indices
+                .filter {
+                    skeleton[it]
+                }
+
+        val degree =
+            HashMap<
+                Int,
+                Int
+            >()
+
+        active.forEach {
+                degree[it] =
+                    neighbors(it)
+                        .size
+            }
+
+        val usedEdges =
+            hashSetOf<Long>()
+
+        val lines =
+            mutableListOf<
+                List<SkeletonPoint>
+            >()
+
+        fun trace(
+            start: Int,
+            firstNext: Int
+        ): List<SkeletonPoint> {
+            val line =
+                mutableListOf<Int>()
+
+            line +=
+                start
+
+            var previous =
+                start
+
+            var current =
+                firstNext
+
+            usedEdges +=
+                edgeKey(
+                    previous,
+                    current
+                )
+
+            line +=
+                current
+
+            var guard =
+                0
+
+            while (
+                guard <
+                    active.size
+            ) {
+                guard++
+
+                val nextCandidates =
+                    neighbors(
+                        current
+                    )
+                        .filter {
+                            it !=
+                                previous &&
+                                edgeKey(
+                                    current,
+                                    it
+                                ) !in
+                                usedEdges
+                        }
+
+                if (
+                    nextCandidates
+                        .isEmpty()
+                ) {
+                    break
+                }
+
+                if (
+                    degree[current] !=
+                        2 &&
+                    current !=
+                        firstNext
+                ) {
+                    break
+                }
+
+                val next =
+                    nextCandidates
+                        .minByOrNull {
+                            candidate ->
+                            val cx =
+                                current %
+                                    width
+                            val cy =
+                                current /
+                                    width
+                            val px =
+                                previous %
+                                    width
+                            val py =
+                                previous /
+                                    width
+                            val nx =
+                                candidate %
+                                    width
+                            val ny =
+                                candidate /
+                                    width
+
+                            val inX =
+                                cx -
+                                    px
+                            val inY =
+                                cy -
+                                    py
+                            val outX =
+                                nx -
+                                    cx
+                            val outY =
+                                ny -
+                                    cy
+
+                            -(
+                                inX *
+                                    outX +
+                                    inY *
+                                        outY
+                                )
+                        } ?: break
+
+                usedEdges +=
+                    edgeKey(
+                        current,
+                        next
+                    )
+
+                previous =
+                    current
+                current =
+                    next
+                line +=
+                    current
+            }
+
+            return line.map {
+                    index ->
+                SkeletonPoint(
+                    x =
+                        index %
+                            width,
+                    y =
+                        index /
+                            width
+                )
+            }
+        }
+
+        active
+            .filter {
+                (
+                    degree[it]
+                        ?: 0
+                    ) !=
+                    2 &&
+                    (
+                        degree[it]
+                            ?: 0
+                        ) >
+                        0
+            }
+            .sortedBy {
+                it %
+                    width
+            }
+            .forEach {
+                    start ->
+                neighbors(start)
+                    .forEach {
+                            next ->
+                        if (
+                            edgeKey(
+                                start,
+                                next
+                            ) !in
+                            usedEdges
+                        ) {
+                            val line =
+                                trace(
+                                    start,
+                                    next
+                                )
+
+                            if (
+                                line.size >=
+                                    2
+                            ) {
+                                lines +=
+                                    line
+                            }
+                        }
+                    }
+            }
+
+        active.forEach {
+                start ->
+            neighbors(start)
+                .forEach {
+                        next ->
+                    if (
+                        edgeKey(
+                            start,
+                            next
+                        ) !in
+                        usedEdges
+                    ) {
+                        val line =
+                            trace(
+                                start,
+                                next
+                            )
+
+                        if (
+                            line.size >=
+                                2
+                        ) {
+                            lines +=
+                                line
+                        }
+                    }
+                }
+        }
+
+        return lines
+    }
+
+    private fun orientSkeletonLine(
+        line: List<SkeletonPoint>
+    ): List<SkeletonPoint> {
+        if (
+            line.size <
+                2
+        ) {
+            return line
+        }
+
+        val first =
+            line.first()
+        val last =
+            line.last()
+
+        return if (
+            first.x >
+                last.x ||
+            (
+                first.x ==
+                    last.x &&
+                first.y >
+                    last.y
+                )
+        ) {
+            line.asReversed()
+        } else {
+            line
+        }
+    }
+
+    private fun sampleSkeletonLine(
+        line: List<SkeletonPoint>,
+        stepPixels: Float
+    ): List<SkeletonPoint> {
+        if (
+            line.size <=
+                2
+        ) {
+            return line
+        }
+
+        val result =
+            mutableListOf<
+                SkeletonPoint
+            >()
+
+        result +=
+            line.first()
+
+        var accumulated =
+            0.0
+
+        var previous =
+            line.first()
+
+        for (
+            index in
+                1 until
+                    line.size
+        ) {
+            val current =
+                line[index]
+
+            accumulated +=
+                hypot(
+                    (
+                        current.x -
+                            previous.x
+                        ).toDouble(),
+                    (
+                        current.y -
+                            previous.y
+                        ).toDouble()
+                )
+
+            if (
+                accumulated >=
+                    stepPixels
+            ) {
+                result +=
+                    current
+                accumulated =
+                    0.0
+            }
+
+            previous =
+                current
+        }
+
+        if (
+            result.last() !=
+                line.last()
+        ) {
+            result +=
+                line.last()
+        }
+
+        return result
+    }
+
+    private fun boundaryDistance(
+        mask: BooleanArray,
+        width: Int,
+        height: Int,
+        centerX: Double,
+        centerY: Double,
+        normalX: Double,
+        normalY: Double,
+        direction: Double
+    ): Double {
+        var distance =
+            0.5
+
+        val limit =
+            90.0
+
+        while (
+            distance <=
+                limit
+        ) {
+            val x =
+                (
+                    centerX +
+                        normalX *
+                            distance *
+                            direction
+                    ).roundToInt()
+
+            val y =
+                (
+                    centerY +
+                        normalY *
+                            distance *
+                            direction
+                    ).roundToInt()
+
+            if (
+                x !in
+                    0 until
+                        width ||
+                y !in
+                    0 until
+                        height ||
+                !mask[
+                    y *
+                        width +
+                        x
+                ]
+            ) {
+                return max(
+                    0.0,
+                    distance -
+                        0.5
+                )
+            }
+
+            distance +=
+                0.5
+        }
+
+        return limit
+    }
+
+    private fun skeletonXToUnits(
+        x: Float,
+        minX: Int,
+        padding: Int,
+        unitsPerPixel: Float
+    ): Int =
+        (
+            minX +
+                (
+                    x -
+                        padding
+                    ) *
+                    unitsPerPixel
+            ).roundToInt()
+
+    private fun skeletonYToUnits(
+        y: Float,
+        maxY: Int,
+        padding: Int,
+        unitsPerPixel: Float
+    ): Int =
+        (
+            maxY -
+                (
+                    y -
+                        padding
+                    ) *
+                    unitsPerPixel
+            ).roundToInt()
 
     private fun buildFilledText(
         contours: List<SampledContour>,
