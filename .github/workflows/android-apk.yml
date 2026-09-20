@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/oriented-satin-0260"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
