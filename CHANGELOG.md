@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.2
+
+### Fontes TTF/OTF e simulação
+- Corrigida a ordem de geração das fontes importadas: o texto deixa de ser preenchido por varredura horizontal da palavra inteira.
+- Cada caractere passa a ser convertido e costurado em sequência de leitura, mantendo seus contornos e furos internos agrupados.
+- O espaçamento configurado passa a participar do posicionamento das letras importadas na geração direta.
+- Deslocamentos JUMP deixam de ser desenhados como linhas no simulador, pois são movimentos sem costura.
+- TRIM, STOP, COLOR_CHANGE e END agora interrompem corretamente o traço visual antes do próximo trecho costurado.
+- Mantidos Material 3 Expressive, Material Symbols, importação TTF/OTF e formatos de exportação existentes.
+
 ## 0.22.1
 
 ### Material 3 Expressive
