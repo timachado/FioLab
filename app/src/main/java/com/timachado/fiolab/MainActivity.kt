@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
+import com.timachado.fiolab.core.embroidery.MatrixExporter
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioLabTheme
@@ -51,28 +52,105 @@ private fun FioLabApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
     var recent by remember { mutableStateOf<EmbroideryDesign?>(null) }
+    var pendingSave by remember { mutableStateOf<EmbroideryDesign?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
+
         runCatching {
-            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
         }
+
         scope.launch {
             loading = true
             val result = withContext(Dispatchers.IO) {
                 EmbroideryLoader.load(context.contentResolver, uri)
             }
             loading = false
+
             when (result) {
                 is EmbroideryLoadResult.Success -> {
                     recent = result.design
                     screen = Screen.Viewer(result.design)
                 }
-                is EmbroideryLoadResult.Error -> snackbar.showSnackbar(result.userMessage)
+                is EmbroideryLoadResult.Error -> {
+                    snackbar.showSnackbar(result.userMessage)
+                }
             }
+        }
+    }
+
+    val saveCopyLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { destination: Uri? ->
+        val design = pendingSave
+        pendingSave = null
+
+        if (destination == null || design == null) {
+            return@rememberLauncherForActivityResult
+        }
+
+        scope.launch {
+            loading = true
+            val result = withContext(Dispatchers.IO) {
+                MatrixExporter.saveCopy(
+                    contentResolver = context.contentResolver,
+                    destination = destination,
+                    design = design
+                )
+            }
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                    snackbar.showSnackbar("Cópia salva com sucesso.")
+                },
+                onFailure = {
+                    snackbar.showSnackbar("Não foi possível salvar a cópia.")
+                }
+            )
+        }
+    }
+
+    fun requestSave(design: EmbroideryDesign) {
+        pendingSave = design
+        saveCopyLauncher.launch(MatrixExporter.safeFileName(design.fileName))
+    }
+
+    fun requestShare(design: EmbroideryDesign) {
+        scope.launch {
+            loading = true
+            val result = withContext(Dispatchers.IO) {
+                MatrixExporter.createShareIntent(context, design)
+            }
+            loading = false
+
+            result.fold(
+                onSuccess = { shareIntent ->
+                    runCatching {
+                        context.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                "Compartilhar matriz"
+                            )
+                        )
+                    }.onFailure {
+                        snackbar.showSnackbar("Nenhum aplicativo disponível para compartilhar.")
+                    }
+                },
+                onFailure = {
+                    snackbar.showSnackbar("Não foi possível preparar o compartilhamento.")
+                }
+            )
         }
     }
 
@@ -87,19 +165,32 @@ private fun FioLabApp() {
                     onOpen = { picker.launch(arrayOf("*/*")) },
                     onRecent = { recent?.let { screen = Screen.Viewer(it) } },
                     onSimulate = { recent?.let { screen = Screen.Simulator(it) } },
-                    onUnavailable = { message -> scope.launch { snackbar.showSnackbar(message) } }
+                    onUnavailable = { message ->
+                        scope.launch { snackbar.showSnackbar(message) }
+                    }
                 )
+
                 is Screen.Viewer -> ViewerScreen(
                     design = current.design,
                     onBack = { screen = Screen.Home },
                     onOpen = { picker.launch(arrayOf("*/*")) },
-                    onSimulate = { screen = Screen.Simulator(current.design) }
+                    onSimulate = {
+                        screen = Screen.Simulator(current.design)
+                    },
+                    onSaveCopy = {
+                        requestSave(current.design)
+                    },
+                    onShare = {
+                        requestShare(current.design)
+                    }
                 )
+
                 is Screen.Simulator -> SimulatorScreen(
                     design = current.design,
                     onBack = { screen = Screen.Viewer(current.design) }
                 )
             }
+
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),

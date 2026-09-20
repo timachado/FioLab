@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,7 +38,9 @@ fun ViewerScreen(
     design: EmbroideryDesign,
     onBack: () -> Unit,
     onOpen: () -> Unit,
-    onSimulate: () -> Unit
+    onSimulate: () -> Unit,
+    onSaveCopy: () -> Unit,
+    onShare: () -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -47,6 +50,7 @@ fun ViewerScreen(
             TextButton(onClick = onBack) {
                 Text("‹ Voltar", color = FioGold)
             }
+
             Column(
                 Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -57,8 +61,13 @@ fun ViewerScreen(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1
                 )
-                Text("DST • somente leitura", color = FioTextMuted, fontSize = 11.sp)
+                Text(
+                    "DST • original protegido",
+                    color = FioTextMuted,
+                    fontSize = 11.sp
+                )
             }
+
             TextButton(onClick = onOpen) {
                 Text("Abrir", color = FioGold)
             }
@@ -71,7 +80,10 @@ fun ViewerScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = 16.dp)
-                .background(Color(0xFF071017), RoundedCornerShape(24.dp))
+                .background(
+                    Color(0xFF071017),
+                    RoundedCornerShape(24.dp)
+                )
         )
 
         Card(
@@ -86,20 +98,38 @@ fun ViewerScreen(
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
+
                 design.label?.let {
-                    Text("Identificação: " + it, color = FioTextMuted, fontSize = 11.sp)
+                    Text(
+                        "Identificação: " + it,
+                        color = FioTextMuted,
+                        fontSize = 11.sp
+                    )
                 }
+
                 Spacer(Modifier.height(12.dp))
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    InfoChip(design.stitchCount.toString(), "pontos", Modifier.weight(1f))
                     InfoChip(
-                        mm(design.bounds.widthMm) + " × " + mm(design.bounds.heightMm),
+                        design.stitchCount.toString(),
+                        "pontos",
+                        Modifier.weight(1f)
+                    )
+                    InfoChip(
+                        mm(design.bounds.widthMm) + " × " +
+                            mm(design.bounds.heightMm),
                         "mm",
                         Modifier.weight(1f)
                     )
-                    InfoChip(design.colorCount.toString(), "blocos", Modifier.weight(1f))
+                    InfoChip(
+                        design.colorCount.toString(),
+                        "blocos",
+                        Modifier.weight(1f)
+                    )
                 }
+
                 Spacer(Modifier.height(12.dp))
+
                 Button(
                     onClick = onSimulate,
                     modifier = Modifier.fillMaxWidth(),
@@ -108,8 +138,37 @@ fun ViewerScreen(
                         contentColor = FioBackground
                     )
                 ) {
-                    Text("▶ Simular bordado", fontWeight = FontWeight.Bold)
+                    Text(
+                        "▶ Simular bordado",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onSaveCopy,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Salvar cópia")
+                    }
+
+                    OutlinedButton(
+                        onClick = onShare,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Compartilhar")
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Salvar cópia abre o seletor do Android. Nele você pode escolher memória interna, cartão SD ou pendrive OTG disponível.",
+                    color = FioTextMuted,
+                    fontSize = 10.sp
+                )
             }
         }
     }
@@ -127,11 +186,23 @@ fun InfoChip(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(
+                vertical = 10.dp,
+                horizontal = 6.dp
+            ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(value, color = FioText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text(label, color = FioTextMuted, fontSize = 10.sp)
+            Text(
+                value,
+                color = FioText,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
+            Text(
+                label,
+                color = FioTextMuted,
+                fontSize = 10.sp
+            )
         }
     }
 }

@@ -28,7 +28,8 @@ data class EmbroideryDesign(
     val stitchCount: Int,
     val jumpCount: Int,
     val colorChanges: Int,
-    val endFound: Boolean
+    val endFound: Boolean,
+    val sourceBytes: ByteArray
 ) {
     val colorCount: Int get() = if (points.isEmpty()) 0 else colorChanges + 1
 }

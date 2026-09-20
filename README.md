@@ -1,4 +1,4 @@
-# FioLab 0.2.0
+# FioLab 0.3.0
 
 Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
 
@@ -12,7 +12,14 @@ Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pel
 - Controle de velocidade de 0,5× a 5×.
 - Mostrar percentual concluído e bloco atual.
 - Estimativa inicial de consumo de linha.
-- Arquivo original preservado em modo somente leitura.
+- Salvar uma cópia em local escolhido pelo usuário.
+- Selecionar memória interna, cartão SD ou pendrive OTG quando disponível no seletor do Android.
+- Compartilhar a matriz por aplicativos compatíveis.
+- Preservar o arquivo original sem alteração.
+
+## Segurança de arquivos
+
+O FioLab usa o Storage Access Framework do Android para salvar cópias. Não solicita acesso irrestrito ao armazenamento. Para compartilhamento, usa FileProvider com acesso temporário somente de leitura.
 
 ## APK
 
@@ -20,9 +27,9 @@ O GitHub Actions executa testes e compila o APK automaticamente.
 
 Após uma compilação aprovada, o APK de teste é publicado em **Releases** como:
 
-`FioLab-0.2.0-debug.apk`
+`FioLab-0.3.0-debug.apk`
 
-## Compatibilidade da v0.2.0
+## Compatibilidade da v0.3.0
 
 - Android 8.0+ (minSdk 26)
 - compileSdk/targetSdk 36
@@ -33,9 +40,8 @@ Após uma compilação aprovada, o APK de teste é publicado em **Releases** com
 
 ## Próximas etapas
 
-- 0.3: salvar/exportar no Android e pendrive OTG.
 - 0.4: novos leitores de formatos validados individualmente.
-- 0.5: conversão.
+- 0.5: conversão entre formatos.
 - 0.6: editor básico.
 - 0.7: Criar Nome e biblioteca de fontes de bordado.
 

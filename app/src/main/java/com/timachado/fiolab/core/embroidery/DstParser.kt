@@ -76,7 +76,8 @@ object DstParser {
                 stitchCount = stitchCount,
                 jumpCount = jumpCount,
                 colorChanges = colorChanges,
-                endFound = endFound
+                endFound = endFound,
+                sourceBytes = bytes.copyOf()
             )
         )
     }
