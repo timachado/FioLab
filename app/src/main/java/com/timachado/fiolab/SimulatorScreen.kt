@@ -166,14 +166,28 @@ fun SimulatorScreen(
         }
     }
 
+    val completedStitches =
+        stitchPrefix[
+            index.coerceIn(
+                0,
+                points.size
+            )
+        ]
+
     val progress =
         if (
-            points.isEmpty()
+            design.stitchCount <=
+                0
         ) {
             0f
         } else {
-            index.toFloat() /
-                points.size
+            (
+                completedStitches.toFloat() /
+                    design.stitchCount
+                ).coerceIn(
+                0f,
+                1f
+            )
         }
 
     val currentPoint =
@@ -193,14 +207,6 @@ fun SimulatorScreen(
                 ?: 0
             ) +
             1
-
-    val completedStitches =
-        stitchPrefix[
-            index.coerceIn(
-                0,
-                points.size
-            )
-        ]
 
     val remainingStitches =
         (
@@ -522,15 +528,23 @@ fun SimulatorScreen(
                             false
                         stoppedForColorChange =
                             false
-                        index =
+                        val targetStitches =
                             (
                                 it *
-                                    points.size
+                                    design.stitchCount
                                 ).toInt()
                                 .coerceIn(
                                     0,
-                                    points.size
+                                    design.stitchCount
                                 )
+
+                        index =
+                            pointIndexForStitchCount(
+                                prefix =
+                                    stitchPrefix,
+                                targetStitches =
+                                    targetStitches
+                            )
                     },
                     colors =
                         SliderDefaults.colors(
@@ -800,6 +814,54 @@ private fun mm(
         "%.0f",
         value
     )
+
+private fun pointIndexForStitchCount(
+    prefix: IntArray,
+    targetStitches: Int
+): Int {
+    if (
+        prefix.isEmpty() ||
+        targetStitches <=
+            0
+    ) {
+        return 0
+    }
+
+    var low =
+        0
+
+    var high =
+        prefix.lastIndex
+
+    while (
+        low <
+            high
+    ) {
+        val middle =
+            (
+                low +
+                    high
+                ) /
+                2
+
+        if (
+            prefix[middle] <
+                targetStitches
+        ) {
+            low =
+                middle +
+                    1
+        } else {
+            high =
+                middle
+        }
+    }
+
+    return low.coerceIn(
+        0,
+        prefix.lastIndex
+    )
+}
 
 private fun formatTime(
     seconds: Int
