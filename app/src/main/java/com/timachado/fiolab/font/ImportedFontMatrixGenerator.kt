@@ -684,82 +684,54 @@ object ImportedFontMatrixGenerator {
         val y: Int
     )
 
+    private data class SatinSampleRow(
+        val yUnits: Int,
+        val leftUnits: Int,
+        val rightUnits: Int
+    ) {
+        val centerX: Float
+            get() =
+                (
+                    leftUnits +
+                        rightUnits
+                    ) /
+                    2f
+
+        val widthUnits: Int
+            get() =
+                rightUnits -
+                    leftUnits
+    }
+
+    private data class SatinSampleColumn(
+        val rows:
+            MutableList<SatinSampleRow>
+    )
+
     private fun buildSatinByAxis(
         contours: List<SampledContour>,
         options: TextMatrixOptions
     ): MutableList<EmbroideryPoint> {
-        val allPoints =
-            contours.flatMap {
-                it.points
-            }
+        val pitchUnits =
+            (
+                options
+                    .satinDensityMm *
+                    10f
+                ).coerceIn(
+                3f,
+                9f
+            )
+
+        val rowLayers =
+            sampleSatinRows(
+                contours =
+                    contours,
+                pitchUnits =
+                    pitchUnits
+            )
 
         if (
-            allPoints.isEmpty()
-        ) {
-            return mutableListOf()
-        }
-
-        val minX =
-            allPoints.minOf {
-                it.first
-            }
-
-        val maxX =
-            allPoints.maxOf {
-                it.first
-            }
-
-        val minY =
-            allPoints.minOf {
-                it.second
-            }
-
-        val maxY =
-            allPoints.maxOf {
-                it.second
-            }
-
-        val unitsPerPixel =
-            1.0f
-
-        val padding =
-            4
-
-        val width =
-            (
-                (
-                    maxX -
-                        minX
-                    ) /
-                    unitsPerPixel
-                ).roundToInt()
-                .coerceAtLeast(
-                    1
-                ) +
-                padding *
-                    2 +
-                1
-
-        val height =
-            (
-                (
-                    maxY -
-                        minY
-                    ) /
-                    unitsPerPixel
-                ).roundToInt()
-                .coerceAtLeast(
-                    1
-                ) +
-                padding *
-                    2 +
-                1
-
-        if (
-            width >
-                1600 ||
-            height >
-                1600
+            rowLayers.isEmpty()
         ) {
             return buildRunningOutline(
                 contours =
@@ -771,265 +743,25 @@ object ImportedFontMatrixGenerator {
             )
         }
 
-        val bitmap =
-            Bitmap.createBitmap(
-                width,
-                height,
-                Bitmap.Config.ARGB_8888
+        val columns =
+            buildSatinColumns(
+                rowLayers =
+                    rowLayers,
+                pitchUnits =
+                    pitchUnits
             )
-
-        val canvas =
-            Canvas(bitmap)
-
-        val fillPaint =
-            Paint().apply {
-                isAntiAlias =
-                    false
-                style =
-                    Paint.Style.FILL
-                color =
-                    android.graphics.Color.WHITE
-            }
-
-        val rasterPath =
-            Path().apply {
-                fillType =
-                    Path.FillType.EVEN_ODD
-            }
-
-        contours.forEach {
-                contour ->
-            val first =
-                contour.points
-                    .firstOrNull()
-                    ?: return@forEach
-
-            rasterPath.moveTo(
-                (
-                    first.first -
-                        minX
-                    ) /
-                    unitsPerPixel +
-                    padding,
-                (
-                    maxY -
-                        first.second
-                    ) /
-                    unitsPerPixel +
-                    padding
-            )
-
-            contour.points
-                .drop(1)
-                .forEach {
-                        point ->
-                    rasterPath.lineTo(
-                        (
-                            point.first -
-                                minX
-                            ) /
-                            unitsPerPixel +
-                            padding,
-                        (
-                            maxY -
-                                point.second
-                            ) /
-                            unitsPerPixel +
-                            padding
+                .map {
+                    smoothSatinColumn(
+                        it
                     )
                 }
-
-            if (
-                contour.closed
-            ) {
-                rasterPath.close()
-            }
-        }
-
-        canvas.drawPath(
-            rasterPath,
-            fillPaint
-        )
-
-        val pixels =
-            IntArray(
-                width *
-                    height
-            )
-
-        bitmap.getPixels(
-            pixels,
-            0,
-            width,
-            0,
-            0,
-            width,
-            height
-        )
-
-        bitmap.recycle()
-
-        val mask =
-            BooleanArray(
-                pixels.size
-            ) {
-                    index ->
-                (
-                    pixels[index]
-                        ushr
-                        24
-                    ) >
-                    0
-            }
-
-        val skeleton =
-            thinMask(
-                mask =
-                    mask,
-                width =
-                    width,
-                height =
-                    height
-            )
-
-        val areaPixels =
-            mask.count {
-                it
-            }
-
-        var skeletonPixels =
-            0
-
-        var branchPixels =
-            0
-
-        for (
-            index in
-                skeleton.indices
-        ) {
-            if (
-                !skeleton[index]
-            ) {
-                continue
-            }
-
-            skeletonPixels++
-
-            val x =
-                index %
-                    width
-
-            val y =
-                index /
-                    width
-
-            var neighbors =
-                0
-
-            for (
-                dy in
-                    -1..1
-            ) {
-                for (
-                    dx in
-                        -1..1
-                ) {
-                    if (
-                        dx ==
-                            0 &&
-                        dy ==
-                            0
-                    ) {
-                        continue
-                    }
-
-                    val nx =
-                        x +
-                            dx
-
-                    val ny =
-                        y +
-                            dy
-
-                    if (
-                        nx in
-                            0 until
-                                width &&
-                        ny in
-                            0 until
-                                height &&
-                        skeleton[
-                            ny *
-                                width +
-                                nx
-                        ]
-                    ) {
-                        neighbors++
-                    }
-                }
-            }
-
-            if (
-                neighbors >=
-                    3
-            ) {
-                branchPixels++
-            }
-        }
-
-        val metrics =
-            ImportedGlyphMetrics(
-                areaPixels =
-                    areaPixels,
-                skeletonPixels =
-                    skeletonPixels,
-                branchPixels =
-                    branchPixels,
-                widthPixels =
-                    width,
-                heightPixels =
-                    height
-            )
-
-        val technique =
-            AdaptiveFontPolicy
-                .chooseTechnique(
-                    metrics
-                )
-
-        val rawLines =
-            traceSkeleton(
-                skeleton =
-                    skeleton,
-                width =
-                    width,
-                height =
-                    height
-            )
                 .filter {
-                    it.size >=
-                        5 &&
-                        skeletonLineLength(
-                            it
-                        ) >=
-                            if (
-                                technique ==
-                                    ImportedGlyphTechnique
-                                        .SATIN_COLUMNS_CONSERVATIVE
-                            ) {
-                                12f
-                            } else {
-                                8f
-                            }
+                    it.rows.size >=
+                        2
                 }
-
-        val lines =
-            orderSkeletonLinesByProximity(
-                rawLines
-            )
 
         if (
-            lines.isEmpty()
+            columns.isEmpty()
         ) {
             return buildRunningOutline(
                 contours =
@@ -1040,426 +772,27 @@ object ImportedFontMatrixGenerator {
                         10f
             )
         }
+
+        val routed =
+            routeSatinColumns(
+                columns
+            )
 
         val output =
             mutableListOf<
                 EmbroideryPoint
             >()
 
-        val axisStepPixels =
-            (
-                options
-                    .satinDensityMm *
-                    10f /
-                    unitsPerPixel
-                ).coerceIn(
-                3.0f,
-                7f
+        routed.forEach {
+                column ->
+            emitSatinColumn(
+                output =
+                    output,
+                column =
+                    column,
+                options =
+                    options
             )
-
-        val pullPixels =
-            options
-                .satinPullCompensationMm *
-                10f /
-                unitsPerPixel
-
-        lines.forEach {
-                rawLine ->
-            val line =
-                smoothSkeletonLine(
-                    orientSkeletonLine(
-                        rawLine
-                    ),
-                    radius =
-                        if (
-                            technique ==
-                                ImportedGlyphTechnique
-                                    .SATIN_COLUMNS_CONSERVATIVE
-                        ) {
-                            5
-                        } else {
-                            3
-                        },
-                    passes =
-                        if (
-                            technique ==
-                                ImportedGlyphTechnique
-                                    .SATIN_COLUMNS_CONSERVATIVE
-                        ) {
-                            3
-                        } else {
-                            2
-                        }
-                )
-
-            val samples =
-                sampleSkeletonLine(
-                    line =
-                        line,
-                    stepPixels =
-                        axisStepPixels
-                )
-
-            if (
-                samples.size <
-                    2
-            ) {
-                return@forEach
-            }
-
-            if (
-                output.isNotEmpty()
-            ) {
-                val last =
-                    output.last()
-
-                output +=
-                    EmbroideryPoint(
-                        last.xUnits,
-                        last.yUnits,
-                        StitchCommand.TRIM,
-                        0
-                    )
-            }
-
-            if (
-                options
-                    .satinUnderlayMode !=
-                    com.timachado.fiolab.core.embroidery.SatinUnderlayMode.NONE
-            ) {
-                val center =
-                    samples.first()
-
-                output +=
-                    EmbroideryPoint(
-                        xUnits =
-                            skeletonXToUnits(
-                                center.x.toFloat(),
-                                minX,
-                                padding,
-                                unitsPerPixel
-                            ),
-                        yUnits =
-                            skeletonYToUnits(
-                                center.y.toFloat(),
-                                maxY,
-                                padding,
-                                unitsPerPixel
-                            ),
-                        command =
-                            StitchCommand.JUMP,
-                        colorIndex =
-                            0
-                    )
-
-                var lastCenter =
-                    center
-
-                samples.drop(1)
-                    .forEach {
-                            sample ->
-                        val distance =
-                            hypot(
-                                (
-                                    sample.x -
-                                        lastCenter.x
-                                    ).toDouble(),
-                                (
-                                    sample.y -
-                                        lastCenter.y
-                                    ).toDouble()
-                            ) *
-                                unitsPerPixel
-
-                        if (
-                            distance >=
-                                16f
-                        ) {
-                            output +=
-                                EmbroideryPoint(
-                                    xUnits =
-                                        skeletonXToUnits(
-                                            sample.x.toFloat(),
-                                            minX,
-                                            padding,
-                                            unitsPerPixel
-                                        ),
-                                    yUnits =
-                                        skeletonYToUnits(
-                                            sample.y.toFloat(),
-                                            maxY,
-                                            padding,
-                                            unitsPerPixel
-                                        ),
-                                    command =
-                                        StitchCommand.STITCH,
-                                    colorIndex =
-                                        0
-                                )
-
-                            lastCenter =
-                                sample
-                        }
-                    }
-
-                val last =
-                    output.last()
-
-                output +=
-                    EmbroideryPoint(
-                        last.xUnits,
-                        last.yUnits,
-                        StitchCommand.TRIM,
-                        0
-                    )
-            }
-
-            var started =
-                false
-
-            var smoothedPositive:
-                Double? =
-                null
-
-            var smoothedNegative:
-                Double? =
-                null
-
-            samples.forEachIndexed {
-                    index,
-                    sample ->
-                val previous =
-                    samples[
-                        (
-                            index -
-                                2
-                            ).coerceAtLeast(
-                            0
-                        )
-                    ]
-
-                val next =
-                    samples[
-                        (
-                            index +
-                                2
-                            ).coerceAtMost(
-                            samples.lastIndex
-                        )
-                    ]
-
-                val tangentX =
-                    (
-                        next.x -
-                            previous.x
-                        ).toDouble()
-
-                val tangentY =
-                    (
-                        next.y -
-                            previous.y
-                        ).toDouble()
-
-                val tangentLength =
-                    sqrt(
-                        tangentX *
-                            tangentX +
-                            tangentY *
-                                tangentY
-                    )
-
-                if (
-                    tangentLength <
-                        0.001
-                ) {
-                    return@forEachIndexed
-                }
-
-                val normalX =
-                    -tangentY /
-                        tangentLength
-
-                val normalY =
-                    tangentX /
-                        tangentLength
-
-                val rawPositive =
-                    boundaryDistance(
-                        mask =
-                            mask,
-                        width =
-                            width,
-                        height =
-                            height,
-                        centerX =
-                            sample.x.toDouble(),
-                        centerY =
-                            sample.y.toDouble(),
-                        normalX =
-                            normalX,
-                        normalY =
-                            normalY,
-                        direction =
-                            1.0
-                    )
-
-                val rawNegative =
-                    boundaryDistance(
-                        mask =
-                            mask,
-                        width =
-                            width,
-                        height =
-                            height,
-                        centerX =
-                            sample.x.toDouble(),
-                        centerY =
-                            sample.y.toDouble(),
-                        normalX =
-                            normalX,
-                        normalY =
-                            normalY,
-                        direction =
-                            -1.0
-                    )
-
-                val positive =
-                    smoothedPositive
-                        ?.let {
-                            previous ->
-                            previous *
-                                0.68 +
-                                rawPositive *
-                                    0.32
-                        }
-                        ?: rawPositive
-
-                val negative =
-                    smoothedNegative
-                        ?.let {
-                            previous ->
-                            previous *
-                                0.68 +
-                                rawNegative *
-                                    0.32
-                        }
-                        ?: rawNegative
-
-                smoothedPositive =
-                    positive
-
-                smoothedNegative =
-                    negative
-
-                if (
-                    positive <
-                        0.6 ||
-                    negative <
-                        0.6
-                ) {
-                    return@forEachIndexed
-                }
-
-                val side =
-                    if (
-                        index %
-                            2 ==
-                            0
-                    ) {
-                        1.0
-                    } else {
-                        -1.0
-                    }
-
-                val distance =
-                    if (
-                        side >
-                            0.0
-                    ) {
-                        positive +
-                            pullPixels
-                    } else {
-                        negative +
-                            pullPixels
-                    }
-
-                val edgeX =
-                    sample.x +
-                        normalX *
-                            distance *
-                            side
-
-                val edgeY =
-                    sample.y +
-                        normalY *
-                            distance *
-                            side
-
-                val targetX =
-                    skeletonXToUnits(
-                        edgeX.toFloat(),
-                        minX,
-                        padding,
-                        unitsPerPixel
-                    )
-
-                val targetY =
-                    skeletonYToUnits(
-                        edgeY.toFloat(),
-                        maxY,
-                        padding,
-                        unitsPerPixel
-                    )
-
-                if (
-                    !started
-                ) {
-                    output +=
-                        EmbroideryPoint(
-                            targetX,
-                            targetY,
-                            StitchCommand.JUMP,
-                            0
-                        )
-
-                    started =
-                        true
-                } else {
-                    val previousPoint =
-                        output.lastOrNull {
-                            it.command ==
-                                StitchCommand.STITCH ||
-                                it.command ==
-                                    StitchCommand.JUMP
-                        }
-
-                    if (
-                        previousPoint !=
-                            null &&
-                        (
-                            previousPoint.xUnits !=
-                                targetX ||
-                            previousPoint.yUnits !=
-                                targetY
-                            )
-                    ) {
-                        appendSplitStitch(
-                            output =
-                                output,
-                            fromX =
-                                previousPoint.xUnits,
-                            fromY =
-                                previousPoint.yUnits,
-                            toX =
-                                targetX,
-                            toY =
-                                targetY,
-                            maxLengthUnits =
-                                90f
-                        )
-                    }
-                }
-            }
         }
 
         val quality =
@@ -1489,7 +822,7 @@ object ImportedFontMatrixGenerator {
                     output =
                         output,
                     maxLengthUnits =
-                        90f
+                        80f
                 )
             }
 
@@ -1510,6 +843,844 @@ object ImportedFontMatrixGenerator {
                         10f
             )
         }
+    }
+
+    private fun sampleSatinRows(
+        contours:
+            List<SampledContour>,
+        pitchUnits: Float
+    ): List<
+        Pair<
+            Int,
+            List<SatinSampleRow>
+        >
+    > {
+        val allPoints =
+            contours.flatMap {
+                it.points
+            }
+
+        if (
+            allPoints.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val minY =
+            allPoints.minOf {
+                it.second
+            }
+
+        val maxY =
+            allPoints.maxOf {
+                it.second
+            }
+
+        val layers =
+            mutableListOf<
+                Pair<
+                    Int,
+                    List<SatinSampleRow>
+                >
+            >()
+
+        var y =
+            minY.toFloat() +
+                pitchUnits /
+                    2f
+
+        while (
+            y <=
+                maxY.toFloat() +
+                    0.01f
+        ) {
+            val intersections =
+                mutableListOf<Float>()
+
+            contours.forEach {
+                    contour ->
+                val polygon =
+                    if (
+                        contour.closed &&
+                        contour.points
+                            .first() !=
+                            contour.points
+                                .last()
+                    ) {
+                        contour.points +
+                            contour.points
+                                .first()
+                    } else {
+                        contour.points
+                    }
+
+                for (
+                    index in
+                        1 until
+                            polygon.size
+                ) {
+                    val first =
+                        polygon[
+                            index -
+                                1
+                        ]
+
+                    val second =
+                        polygon[index]
+
+                    val y1 =
+                        first.second
+                            .toFloat()
+
+                    val y2 =
+                        second.second
+                            .toFloat()
+
+                    val crosses =
+                        (
+                            y1 <= y &&
+                                y2 > y
+                            ) ||
+                            (
+                                y2 <= y &&
+                                    y1 > y
+                                )
+
+                    if (
+                        !crosses
+                    ) {
+                        continue
+                    }
+
+                    val ratio =
+                        (
+                            y -
+                                y1
+                            ) /
+                            (
+                                y2 -
+                                    y1
+                                )
+
+                    intersections +=
+                        first.first +
+                            (
+                                second.first -
+                                    first.first
+                                ) *
+                                ratio
+                }
+            }
+
+            intersections.sort()
+
+            val rows =
+                mutableListOf<
+                    SatinSampleRow
+                >()
+
+            var index =
+                0
+
+            while (
+                index +
+                    1 <
+                    intersections.size
+            ) {
+                val left =
+                    intersections[index]
+                        .roundToInt()
+
+                val right =
+                    intersections[
+                        index +
+                            1
+                    ]
+                        .roundToInt()
+
+                if (
+                    right -
+                        left >=
+                        2
+                ) {
+                    rows +=
+                        SatinSampleRow(
+                            yUnits =
+                                y.roundToInt(),
+                            leftUnits =
+                                left,
+                            rightUnits =
+                                right
+                        )
+                }
+
+                index +=
+                    2
+            }
+
+            if (
+                rows.isNotEmpty()
+            ) {
+                layers +=
+                    Pair(
+                        y.roundToInt(),
+                        rows
+                    )
+            }
+
+            y +=
+                pitchUnits
+        }
+
+        return layers
+    }
+
+    private fun buildSatinColumns(
+        rowLayers:
+            List<
+                Pair<
+                    Int,
+                    List<SatinSampleRow>
+                >
+            >,
+        pitchUnits: Float
+    ): List<SatinSampleColumn> {
+        val finished =
+            mutableListOf<
+                SatinSampleColumn
+            >()
+
+        var active =
+            mutableListOf<
+                SatinSampleColumn
+            >()
+
+        rowLayers.forEach {
+                layer ->
+            val rows =
+                layer.second
+
+            val candidates =
+                mutableListOf<
+                    Triple<
+                        Int,
+                        Int,
+                        Float
+                    >
+                >()
+
+            active.forEachIndexed {
+                    columnIndex,
+                    column ->
+                val previous =
+                    column.rows
+                        .last()
+
+                rows.forEachIndexed {
+                        rowIndex,
+                        row ->
+                    val overlap =
+                        minOf(
+                            previous.rightUnits,
+                            row.rightUnits
+                        ) -
+                            maxOf(
+                                previous.leftUnits,
+                                row.leftUnits
+                            )
+
+                    val centerDistance =
+                        kotlin.math.abs(
+                            previous.centerX -
+                                row.centerX
+                        )
+
+                    val widthReference =
+                        maxOf(
+                            previous.widthUnits,
+                            row.widthUnits
+                        )
+                            .toFloat()
+
+                    val allowedGap =
+                        maxOf(
+                            pitchUnits *
+                                2.2f,
+                            widthReference *
+                                .42f
+                        )
+
+                    if (
+                        overlap >=
+                            -pitchUnits ||
+                        centerDistance <=
+                            allowedGap
+                    ) {
+                        val score =
+                            centerDistance -
+                                overlap
+                                    .coerceAtLeast(
+                                        0
+                                    ) *
+                                    .35f
+
+                        candidates +=
+                            Triple(
+                                columnIndex,
+                                rowIndex,
+                                score
+                            )
+                    }
+                }
+            }
+
+            val assignedColumns =
+                mutableSetOf<Int>()
+
+            val assignedRows =
+                mutableSetOf<Int>()
+
+            val nextActive =
+                mutableListOf<
+                    SatinSampleColumn
+                >()
+
+            candidates
+                .sortedBy {
+                    it.third
+                }
+                .forEach {
+                        candidate ->
+                    val columnIndex =
+                        candidate.first
+
+                    val rowIndex =
+                        candidate.second
+
+                    if (
+                        columnIndex in
+                            assignedColumns ||
+                        rowIndex in
+                            assignedRows
+                    ) {
+                        return@forEach
+                    }
+
+                    val column =
+                        active[
+                            columnIndex
+                        ]
+
+                    column.rows +=
+                        rows[
+                            rowIndex
+                        ]
+
+                    assignedColumns +=
+                        columnIndex
+
+                    assignedRows +=
+                        rowIndex
+
+                    nextActive +=
+                        column
+                }
+
+            active.forEachIndexed {
+                    index,
+                    column ->
+                if (
+                    index !in
+                        assignedColumns
+                ) {
+                    finished +=
+                        column
+                }
+            }
+
+            rows.forEachIndexed {
+                    index,
+                    row ->
+                if (
+                    index !in
+                        assignedRows
+                ) {
+                    nextActive +=
+                        SatinSampleColumn(
+                            rows =
+                                mutableListOf(
+                                    row
+                                )
+                        )
+                }
+            }
+
+            active =
+                nextActive
+                    .distinct()
+                    .toMutableList()
+        }
+
+        finished +=
+            active
+
+        return finished
+    }
+
+    private fun smoothSatinColumn(
+        source:
+            SatinSampleColumn
+    ): SatinSampleColumn {
+        val rows =
+            source.rows
+
+        if (
+            rows.size <
+                3
+        ) {
+            return source
+        }
+
+        val smoothed =
+            rows.mapIndexed {
+                    index,
+                    row ->
+                val start =
+                    (
+                        index -
+                            1
+                        ).coerceAtLeast(
+                        0
+                    )
+
+                val end =
+                    (
+                        index +
+                            1
+                        ).coerceAtMost(
+                        rows.lastIndex
+                    )
+
+                val window =
+                    rows.subList(
+                        start,
+                        end +
+                            1
+                    )
+
+                val left =
+                    window
+                        .map {
+                            it.leftUnits
+                        }
+                        .average()
+                        .roundToInt()
+
+                val right =
+                    window
+                        .map {
+                            it.rightUnits
+                        }
+                        .average()
+                        .roundToInt()
+
+                SatinSampleRow(
+                    yUnits =
+                        row.yUnits,
+                    leftUnits =
+                        minOf(
+                            left,
+                            right -
+                                1
+                        ),
+                    rightUnits =
+                        maxOf(
+                            right,
+                            left +
+                                1
+                        )
+                )
+            }
+
+        return SatinSampleColumn(
+            rows =
+                smoothed
+                    .toMutableList()
+        )
+    }
+
+    private fun routeSatinColumns(
+        source:
+            List<SatinSampleColumn>
+    ): List<SatinSampleColumn> {
+        if (
+            source.size <=
+                1
+        ) {
+            return source
+        }
+
+        val remaining =
+            source
+                .map {
+                    SatinSampleColumn(
+                        rows =
+                            it.rows
+                                .toMutableList()
+                    )
+                }
+                .toMutableList()
+
+        val ordered =
+            mutableListOf<
+                SatinSampleColumn
+            >()
+
+        var currentX =
+            remaining
+                .minOfOrNull {
+                    column ->
+                    column.rows
+                        .minOf {
+                            it.leftUnits
+                        }
+                }
+                ?.toFloat()
+                ?: 0f
+
+        var currentY =
+            remaining
+                .minOfOrNull {
+                    column ->
+                    column.rows
+                        .first()
+                        .yUnits
+                }
+                ?.toFloat()
+                ?: 0f
+
+        while (
+            remaining.isNotEmpty()
+        ) {
+            var bestIndex =
+                0
+
+            var bestReverse =
+                false
+
+            var bestDistance =
+                Double.MAX_VALUE
+
+            remaining.forEachIndexed {
+                    index,
+                    column ->
+                val first =
+                    column.rows
+                        .first()
+
+                val last =
+                    column.rows
+                        .last()
+
+                val firstDistance =
+                    hypot(
+                        (
+                            first.centerX -
+                                currentX
+                            ).toDouble(),
+                        (
+                            first.yUnits -
+                                currentY
+                            ).toDouble()
+                    )
+
+                val lastDistance =
+                    hypot(
+                        (
+                            last.centerX -
+                                currentX
+                            ).toDouble(),
+                        (
+                            last.yUnits -
+                                currentY
+                            ).toDouble()
+                    )
+
+                val reverse =
+                    lastDistance <
+                        firstDistance
+
+                val distance =
+                    minOf(
+                        firstDistance,
+                        lastDistance
+                    )
+
+                if (
+                    distance <
+                        bestDistance
+                ) {
+                    bestDistance =
+                        distance
+
+                    bestIndex =
+                        index
+
+                    bestReverse =
+                        reverse
+                }
+            }
+
+            val selected =
+                remaining.removeAt(
+                    bestIndex
+                )
+
+            val routed =
+                if (
+                    bestReverse
+                ) {
+                    SatinSampleColumn(
+                        rows =
+                            selected.rows
+                                .asReversed()
+                                .toMutableList()
+                    )
+                } else {
+                    selected
+                }
+
+            ordered +=
+                routed
+
+            val end =
+                routed.rows
+                    .last()
+
+            currentX =
+                end.centerX
+
+            currentY =
+                end.yUnits
+                    .toFloat()
+        }
+
+        return ordered
+    }
+
+    private fun emitSatinColumn(
+        output:
+            MutableList<EmbroideryPoint>,
+        column:
+            SatinSampleColumn,
+        options:
+            TextMatrixOptions
+    ) {
+        val rows =
+            column.rows
+
+        if (
+            rows.size <
+                2
+        ) {
+            return
+        }
+
+        if (
+            output.isNotEmpty()
+        ) {
+            val last =
+                output.last()
+
+            if (
+                last.command !=
+                    StitchCommand.TRIM
+            ) {
+                output +=
+                    EmbroideryPoint(
+                        last.xUnits,
+                        last.yUnits,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+        }
+
+        if (
+            options
+                .satinUnderlayMode !=
+                com.timachado
+                    .fiolab
+                    .core
+                    .embroidery
+                    .SatinUnderlayMode
+                    .NONE
+        ) {
+            val first =
+                rows.first()
+
+            output +=
+                EmbroideryPoint(
+                    first.centerX
+                        .roundToInt(),
+                    first.yUnits,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            var lastX =
+                first.centerX
+
+            var lastY =
+                first.yUnits
+                    .toFloat()
+
+            rows.drop(1)
+                .forEach {
+                        row ->
+                    val distance =
+                        hypot(
+                            (
+                                row.centerX -
+                                    lastX
+                                ).toDouble(),
+                            (
+                                row.yUnits -
+                                    lastY
+                                ).toDouble()
+                        )
+
+                    if (
+                        distance >=
+                            16f
+                    ) {
+                        output +=
+                            EmbroideryPoint(
+                                row.centerX
+                                    .roundToInt(),
+                                row.yUnits,
+                                StitchCommand.STITCH,
+                                0
+                            )
+
+                        lastX =
+                            row.centerX
+
+                        lastY =
+                            row.yUnits
+                                .toFloat()
+                    }
+                }
+
+            val last =
+                output.last()
+
+            output +=
+                EmbroideryPoint(
+                    last.xUnits,
+                    last.yUnits,
+                    StitchCommand.TRIM,
+                    0
+                )
+        }
+
+        val pull =
+            options
+                .satinPullCompensationMm *
+                10f
+
+        val first =
+            rows.first()
+
+        val firstLeft =
+            (
+                first.leftUnits -
+                    pull
+                ).roundToInt()
+
+        val firstRight =
+            (
+                first.rightUnits +
+                    pull
+                ).roundToInt()
+
+        output +=
+            EmbroideryPoint(
+                firstLeft,
+                first.yUnits,
+                StitchCommand.JUMP,
+                0
+            )
+
+        appendSplitStitch(
+            output =
+                output,
+            fromX =
+                firstLeft,
+            fromY =
+                first.yUnits,
+            toX =
+                firstRight,
+            toY =
+                first.yUnits,
+            maxLengthUnits =
+                80f
+        )
+
+        var currentX =
+            firstRight
+
+        var currentY =
+            first.yUnits
+
+        rows.drop(1)
+            .forEachIndexed {
+                    index,
+                    row ->
+                val left =
+                    (
+                        row.leftUnits -
+                            pull
+                        ).roundToInt()
+
+                val right =
+                    (
+                        row.rightUnits +
+                            pull
+                        ).roundToInt()
+
+                val targetX =
+                    if (
+                        index %
+                            2 ==
+                            0
+                    ) {
+                        left
+                    } else {
+                        right
+                    }
+
+                appendSplitStitch(
+                    output =
+                        output,
+                    fromX =
+                        currentX,
+                    fromY =
+                        currentY,
+                    toX =
+                        targetX,
+                    toY =
+                        row.yUnits,
+                    maxLengthUnits =
+                        80f
+                )
+
+                currentX =
+                    targetX
+
+                currentY =
+                    row.yUnits
+            }
     }
 
     private fun thinMask(
