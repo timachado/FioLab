@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
 private sealed interface Screen {
     data object Home : Screen
+    data object CreateName : Screen
 
     data class Viewer(
         val design: EmbroideryDesign
@@ -302,15 +303,17 @@ private fun FioLabApp() {
                             bytes =
                                 converted.bytes,
                             successMessage =
-                                if (
-                                    suffix ==
-                                        "editado"
-                                ) {
-                                    "Matriz editada salva com sucesso."
-                                } else {
-                                    "Matriz convertida para " +
-                                        converted.format +
-                                        " e salva com sucesso."
+                                when (suffix) {
+                                    "editado" ->
+                                        "Matriz editada salva com sucesso."
+
+                                    "criado" ->
+                                        "Matriz criada salva com sucesso."
+
+                                    else ->
+                                        "Matriz convertida para " +
+                                            converted.format +
+                                            " e salva com sucesso."
                                 }
                         )
 
@@ -374,7 +377,14 @@ private fun FioLabApp() {
                 targetFormat =
                     design.format,
                 suffix =
-                    "editado"
+                    if (
+                        design.sourceBytes
+                            .isEmpty()
+                    ) {
+                        "criado"
+                    } else {
+                        "editado"
+                    }
             )
 
             return
@@ -408,7 +418,14 @@ private fun FioLabApp() {
                 targetFormat =
                     design.format,
                 suffix =
-                    "editado"
+                    if (
+                        design.sourceBytes
+                            .isEmpty()
+                    ) {
+                        "criado"
+                    } else {
+                        "editado"
+                    }
             )
 
             return
@@ -447,6 +464,10 @@ private fun FioLabApp() {
                 Screen.Home -> {
                     HomeScreen(
                         recent = recent,
+                        onCreateName = {
+                            screen =
+                                Screen.CreateName
+                        },
                         onOpen = {
                             picker.launch(
                                 arrayOf("*/*")
@@ -494,6 +515,35 @@ private fun FioLabApp() {
                                         message
                                     )
                             }
+                        }
+                    )
+                }
+
+                Screen.CreateName -> {
+                    CreateNameScreen(
+                        onBack = {
+                            screen =
+                                Screen.Home
+                        },
+                        onCreate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Viewer(
+                                    created
+                                )
+                        },
+                        onSimulate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Simulator(
+                                    created
+                                )
                         }
                     )
                 }

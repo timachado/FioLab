@@ -1,6 +1,36 @@
-# FioLab 0.6.0
+# FioLab 0.7.0
 
-Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
+Aplicativo Android nativo para criar e trabalhar com matrizes de bordado diretamente pelo celular.
+
+## Criar Nome
+
+A v0.7 adiciona geração real de nomes em pontadas.
+
+Fluxo:
+
+1. Toque em **Criar nome**.
+2. Digite até 24 caracteres.
+3. Escolha o preset de fonte de bordado.
+4. Ajuste altura, espaçamento e comprimento do ponto.
+5. Escolha a cor.
+6. Escolha DST, PES ou JEF.
+7. Confira a prévia.
+8. Simule ou crie a matriz.
+9. Salve no celular, SD ou pendrive OTG.
+
+### Presets iniciais
+
+- **Fio Linha**
+- **Fio Compacta**
+- **Fio Larga**
+
+Eles usam um alfabeto desenhado especificamente como trajetórias de costura, com A–Z, números, pontuação básica e acentos do português.
+
+## Por que não usar TTF diretamente?
+
+Uma fonte de tela não contém densidade, sequência de bordado, saltos, arremates ou regras de máquina.
+
+Por isso a v0.7 começa com uma fonte de bordado própria, onde cada letra já é descrita como caminho de costura.
 
 ## Formatos liberados
 
@@ -10,20 +40,17 @@ Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pel
 
 ## Editor
 
-A v0.6.0 adiciona edição não destrutiva:
-
-- mover em X/Y;
+Matrizes abertas ou criadas podem:
+- mover;
 - redimensionar;
 - girar;
-- espelhar horizontalmente;
-- espelhar verticalmente;
-- centralizar a matriz;
-- trocar cores por bloco;
-- visualizar dimensões atualizadas em tempo real.
-
-O editor trabalha sobre o modelo normalizado do FioLab. O arquivo original nunca é sobrescrito.
-
-Ao aplicar uma edição, o FioLab mantém a matriz editada em memória e regenera um novo arquivo quando o usuário salva ou compartilha.
+- espelhar;
+- centralizar;
+- trocar cores;
+- simular;
+- converter;
+- salvar;
+- compartilhar.
 
 ## Conversor
 
@@ -31,28 +58,17 @@ Conversão disponível:
 
 **DST ⇄ PES ⇄ JEF**
 
-A edição pode ser aplicada antes da conversão.
+## Validação no CI
 
-## Fluxo mobile
-
-1. Abra a matriz.
-2. Visualize e confira dimensões.
-3. Edite se necessário.
-4. Simule a sequência.
-5. Salve no celular, SD ou pendrive OTG.
-6. Compartilhe ou converta para outro formato.
-
-## Validação
-
-O CI executa:
-- testes do parser DST;
+O pipeline exige:
+- parser DST;
 - leitura de amostras reais PES/JEF;
 - geração e reabertura DST/PES/JEF;
-- testes de escala;
-- testes de rotação;
-- testes de espelhamento;
-- testes de centralização;
-- testes de troca de cores;
+- testes do editor;
+- geração de nomes em pontadas;
+- teste de acentos;
+- teste dos presets;
+- exportação do nome para os três formatos;
 - compilação Android.
 
 ## Compatibilidade
@@ -68,12 +84,14 @@ O CI executa:
 
 Cada Release publica:
 - APK direto;
-- ZIP contendo o APK para navegadores Android que travam na finalização de downloads APK.
+- ZIP contendo o APK para navegadores Android que travam na finalização de APK.
 
 ## Próximos passos
 
-- 0.7: Criar Nome e biblioteca inicial de fontes de bordado.
-- depois: expansão para VP3, EXP, XXX, U01 e TBF.
-- depois: recursos avançados de edição e otimização.
+- ampliar a biblioteca de fontes de bordado;
+- criar monogramas;
+- adicionar bastidores e validação de tamanho;
+- expandir formatos para VP3, EXP, XXX, U01 e TBF;
+- evoluir pontos satin/tatami para criação mais avançada.
 
 Desenvolvido por **T.I. Machado — Soluções em Tecnologia**.

@@ -84,13 +84,16 @@ fun ViewerScreen(
 
                 Text(
                     design.format +
-                        if (
-                            design
-                                .isModified
-                        ) {
-                            " • edição aplicada"
-                        } else {
-                            " • original protegido"
+                        when {
+                            design.sourceBytes
+                                .isEmpty() ->
+                                " • criada no FioLab"
+
+                            design.isModified ->
+                                " • edição aplicada"
+
+                            else ->
+                                " • original protegido"
                         },
                     color =
                         FioTextMuted,
@@ -314,13 +317,16 @@ fun ViewerScreen(
                                 )
                     ) {
                         Text(
-                            if (
-                                design
-                                    .isModified
-                            ) {
-                                "Salvar edição"
-                            } else {
-                                "Salvar cópia"
+                            when {
+                                design.sourceBytes
+                                    .isEmpty() ->
+                                    "Salvar matriz"
+
+                                design.isModified ->
+                                    "Salvar edição"
+
+                                else ->
+                                    "Salvar cópia"
                             }
                         )
                     }

@@ -41,6 +41,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     recent: EmbroideryDesign?,
+    onCreateName: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
     onSimulate: () -> Unit,
@@ -62,16 +63,14 @@ fun HomeScreen(
                 bottom = 32.dp
             ),
         verticalArrangement =
-            Arrangement
-                .spacedBy(
-                    18.dp
-                )
+            Arrangement.spacedBy(
+                18.dp
+            )
     ) {
         item {
             Row(
                 verticalAlignment =
-                    Alignment
-                        .CenterVertically
+                    Alignment.CenterVertically
             ) {
                 Box(
                     Modifier
@@ -85,40 +84,30 @@ fun HomeScreen(
                 ) {
                     Text(
                         "F",
-                        color =
-                            FioBackground,
+                        color = FioBackground,
                         fontWeight =
-                            FontWeight
-                                .Black,
-                        fontSize =
-                            28.sp
+                            FontWeight.Black,
+                        fontSize = 28.sp
                     )
                 }
 
                 Spacer(
-                    Modifier.width(
-                        12.dp
-                    )
+                    Modifier.width(12.dp)
                 )
 
                 Column {
                     Text(
                         "FioLab",
-                        color =
-                            FioGoldSoft,
-                        fontSize =
-                            28.sp,
+                        color = FioGoldSoft,
+                        fontSize = 28.sp,
                         fontWeight =
-                            FontWeight
-                                .Bold
+                            FontWeight.Bold
                     )
 
                     Text(
                         "Do nome à máquina, direto pelo celular.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            12.sp
+                        color = FioTextMuted,
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -127,11 +116,10 @@ fun HomeScreen(
         item {
             Card(
                 colors =
-                    CardDefaults
-                        .cardColors(
-                            containerColor =
-                                FioSurface
-                        ),
+                    CardDefaults.cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
                 shape =
                     RoundedCornerShape(
                         24.dp
@@ -144,25 +132,19 @@ fun HomeScreen(
                 ) {
                     Text(
                         "O que vamos bordar hoje?",
-                        color =
-                            FioText,
-                        fontSize =
-                            21.sp,
+                        color = FioText,
+                        fontSize = 21.sp,
                         fontWeight =
-                            FontWeight
-                                .SemiBold
+                            FontWeight.SemiBold
                     )
 
                     Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
+                        Modifier.height(6.dp)
                     )
 
                     Text(
-                        "FioLab 0.6 abre, edita, simula e converte DST, JEF e PES.",
-                        color =
-                            FioTextMuted
+                        "FioLab 0.7 cria nomes, abre, edita, simula e converte DST, PES e JEF.",
+                        color = FioTextMuted
                     )
                 }
             }
@@ -171,31 +153,26 @@ fun HomeScreen(
         item {
             Row(
                 horizontalArrangement =
-                    Arrangement
-                        .spacedBy(
-                            12.dp
-                        )
+                    Arrangement.spacedBy(
+                        12.dp
+                    )
             ) {
                 FeatureCard(
                     modifier =
-                        Modifier
-                            .weight(1f),
+                        Modifier.weight(1f),
                     icon = "Aa",
                     title =
                         "Criar nome",
                     subtitle =
-                        "Em desenvolvimento",
-                    enabled = false
-                ) {
-                    onUnavailable(
-                        "Criar Nome entra em uma próxima versão."
-                    )
-                }
+                        "Fonte de bordado",
+                    enabled = true,
+                    onClick =
+                        onCreateName
+                )
 
                 FeatureCard(
                     modifier =
-                        Modifier
-                            .weight(1f),
+                        Modifier.weight(1f),
                     icon = "↗",
                     title =
                         "Abrir matriz",
@@ -210,15 +187,13 @@ fun HomeScreen(
         item {
             Row(
                 horizontalArrangement =
-                    Arrangement
-                        .spacedBy(
-                            12.dp
-                        )
+                    Arrangement.spacedBy(
+                        12.dp
+                    )
             ) {
                 FeatureCard(
                     modifier =
-                        Modifier
-                            .weight(1f),
+                        Modifier.weight(1f),
                     icon = "▶",
                     title =
                         "Simulador",
@@ -233,15 +208,14 @@ fun HomeScreen(
                         onSimulate()
                     } else {
                         onUnavailable(
-                            "Abra uma matriz primeiro."
+                            "Crie ou abra uma matriz primeiro."
                         )
                     }
                 }
 
                 FeatureCard(
                     modifier =
-                        Modifier
-                            .weight(1f),
+                        Modifier.weight(1f),
                     icon = "✎",
                     title =
                         "Editor",
@@ -256,7 +230,7 @@ fun HomeScreen(
                         onEdit()
                     } else {
                         onUnavailable(
-                            "Abra uma matriz primeiro."
+                            "Crie ou abra uma matriz primeiro."
                         )
                     }
                 }
@@ -266,11 +240,9 @@ fun HomeScreen(
         item {
             FeatureCard(
                 modifier =
-                    Modifier
-                        .fillMaxWidth(),
+                    Modifier.fillMaxWidth(),
                 icon = "⇄",
-                title =
-                    "Converter",
+                title = "Converter",
                 subtitle =
                     "DST ⇄ PES ⇄ JEF",
                 enabled =
@@ -282,7 +254,7 @@ fun HomeScreen(
                     onConvert()
                 } else {
                     onUnavailable(
-                        "Abra uma matriz primeiro."
+                        "Crie ou abra uma matriz primeiro."
                     )
                 }
             }
@@ -291,12 +263,10 @@ fun HomeScreen(
         item {
             Text(
                 "Recente",
-                color =
-                    FioText,
+                color = FioText,
                 fontWeight =
                     FontWeight.Bold,
-                fontSize =
-                    18.sp
+                fontSize = 18.sp
             )
         }
 
@@ -304,11 +274,10 @@ fun HomeScreen(
             if (recent == null) {
                 Card(
                     colors =
-                        CardDefaults
-                            .cardColors(
-                                containerColor =
-                                    FioSurface
-                            ),
+                        CardDefaults.cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
                     shape =
                         RoundedCornerShape(
                             20.dp
@@ -317,15 +286,12 @@ fun HomeScreen(
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(
-                                22.dp
-                            ),
+                            .padding(22.dp),
                         horizontalAlignment =
-                            Alignment
-                                .CenterHorizontally
+                            Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Nenhuma matriz aberta nesta sessão.",
+                            "Nenhuma matriz criada ou aberta nesta sessão.",
                             color =
                                 FioTextMuted
                         )
@@ -338,7 +304,7 @@ fun HomeScreen(
 
                         Button(
                             onClick =
-                                onOpen,
+                                onCreateName,
                             colors =
                                 ButtonDefaults
                                     .buttonColors(
@@ -349,10 +315,9 @@ fun HomeScreen(
                                     )
                         ) {
                             Text(
-                                "Escolher arquivo",
+                                "Criar primeiro nome",
                                 fontWeight =
-                                    FontWeight
-                                        .Bold
+                                    FontWeight.Bold
                             )
                         }
                     }
@@ -362,11 +327,10 @@ fun HomeScreen(
                     onClick =
                         onRecent,
                     colors =
-                        CardDefaults
-                            .cardColors(
-                                containerColor =
-                                    FioSurface
-                            ),
+                        CardDefaults.cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
                     shape =
                         RoundedCornerShape(
                             20.dp
@@ -375,44 +339,40 @@ fun HomeScreen(
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(
-                                18.dp
-                            )
+                            .padding(18.dp)
                     ) {
                         Text(
                             recent.fileName,
-                            color =
-                                FioText,
+                            color = FioText,
                             fontWeight =
-                                FontWeight
-                                    .SemiBold
+                                FontWeight.SemiBold
                         )
 
                         Text(
                             recent.format +
                                 " • " +
                                 formatMm(
-                                    recent
-                                        .bounds
+                                    recent.bounds
                                         .widthMm
                                 ) +
                                 " × " +
                                 formatMm(
-                                    recent
-                                        .bounds
+                                    recent.bounds
                                         .heightMm
                                 ) +
                                 " mm • " +
-                                recent
-                                    .stitchCount +
+                                recent.stitchCount +
                                 " pontos" +
-                                if (
-                                    recent
-                                        .isModified
-                                ) {
-                                    " • editada"
-                                } else {
-                                    ""
+                                when {
+                                    recent.sourceBytes
+                                        .isEmpty() ->
+                                        " • criada"
+
+                                    recent.isModified ->
+                                        " • editada"
+
+                                    else ->
+                                        ""
                                 },
                             color =
                                 FioTextMuted,
@@ -426,16 +386,13 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.6.0 • Android",
+                "FioLab 0.7.0 • Android",
                 modifier =
-                    Modifier
-                        .fillMaxWidth(),
-                color =
-                    FioTextMuted,
+                    Modifier.fillMaxWidth(),
+                color = FioTextMuted,
                 textAlign =
                     TextAlign.Center,
-                fontSize =
-                    11.sp
+                fontSize = 11.sp
             )
         }
     }
@@ -454,15 +411,14 @@ private fun FeatureCard(
         modifier = modifier,
         onClick = onClick,
         colors =
-            CardDefaults
-                .cardColors(
-                    containerColor =
-                        if (enabled) {
-                            FioSurfaceAlt
-                        } else {
-                            FioSurface
-                        }
-                ),
+            CardDefaults.cardColors(
+                containerColor =
+                    if (enabled) {
+                        FioSurfaceAlt
+                    } else {
+                        FioSurface
+                    }
+            ),
         shape =
             RoundedCornerShape(
                 20.dp
@@ -508,19 +464,15 @@ private fun FeatureCard(
 
             Text(
                 title,
-                color =
-                    FioText,
+                color = FioText,
                 fontWeight =
-                    FontWeight
-                        .SemiBold
+                    FontWeight.SemiBold
             )
 
             Text(
                 subtitle,
-                color =
-                    FioTextMuted,
-                fontSize =
-                    11.sp
+                color = FioTextMuted,
+                fontSize = 11.sp
             )
         }
     }

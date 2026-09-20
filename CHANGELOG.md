@@ -1,44 +1,60 @@
 # Changelog
 
+## 0.7.0
+
+### Adicionado
+- Criar Nome diretamente pelo Android.
+- Fonte de bordado própria baseada em caminhos de costura.
+- Alfabeto A–Z, números e sinais básicos.
+- Suporte a acentos usados em português, incluindo ã, õ e ç.
+- Três presets iniciais: Fio Linha, Fio Compacta e Fio Larga.
+- Controle de altura do nome.
+- Controle de espaçamento entre caracteres.
+- Controle de comprimento aproximado das pontadas.
+- Escolha de cor da linha.
+- Escolha do formato final DST, PES ou JEF.
+- Prévia em tempo real.
+- Simular o nome antes de salvar.
+- Salvar, editar, converter e compartilhar matrizes criadas no próprio FioLab.
+- Testes de geração de texto e exportação para todos os formatos liberados.
+
+### Importante
+- A fonte da v0.7 é uma fonte de bordado desenhada como caminhos de costura.
+- O FioLab não trata uma TTF comum como matriz pronta.
+- O arquivo criado é gerado a partir das pontadas e o original não existe até o usuário salvar.
+
 ## 0.6.0
 
 ### Adicionado
-- Editor básico de matrizes no Android.
-- Redimensionamento de 50% a 200%.
-- Rotação de -180° a 180°.
-- Movimento horizontal e vertical.
+- Editor básico de matrizes.
+- Redimensionamento, rotação e movimento.
 - Espelhamento horizontal e vertical.
-- Centralização da matriz em 0,0.
+- Centralização.
 - Troca de cores por bloco.
-- Prévia em tempo real usando os mesmos pontos do arquivo.
-- Recalculo automático de dimensões após edição.
-- Salvamento e compartilhamento da matriz editada.
-- Arquivo original preservado.
-- Testes unitários para escala, rotação, espelhamento, centralização e cores.
+- Prévia em tempo real.
+- Salvamento e compartilhamento de matriz editada.
 
 ## 0.5.0
 
 ### Adicionado
 - Conversão real entre DST, PES e JEF.
-- Tela de conversão com seleção de formato.
 - Converter e salvar.
 - Converter e compartilhar.
 - Preservação de paleta quando disponível.
-- Testes de round-trip dos formatos.
+- Testes de round-trip.
 
 ## 0.4.0
 
 ### Adicionado
-- Leitura real de matrizes JEF.
-- Leitura real de matrizes PES.
-- Testes com arquivos binários reais JEF/PES.
+- Leitura real JEF e PES.
+- Testes com arquivos binários reais.
 
 ## 0.3.0
 
 ### Adicionado
 - Salvar cópia no Android.
-- Destino em memória, SD e USB/OTG.
-- Compartilhamento seguro via FileProvider.
+- SD e USB/OTG.
+- Compartilhamento seguro.
 
 ## 0.2.0
 
