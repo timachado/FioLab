@@ -5,7 +5,9 @@ object DstParser {
 
     fun parse(fileName: String, bytes: ByteArray): EmbroideryLoadResult {
         if (bytes.size < HEADER_SIZE + 3) {
-            return EmbroideryLoadResult.Error("O arquivo DST parece incompleto ou inválido.")
+            return EmbroideryLoadResult.Error(
+                "O arquivo DST parece incompleto ou inválido."
+            )
         }
 
         val label = parseLabel(bytes)
@@ -30,7 +32,12 @@ object DstParser {
             offset += 3
 
             if (b2 == 0xF3) {
-                points += EmbroideryPoint(x, y, StitchCommand.END, colorIndex)
+                points += EmbroideryPoint(
+                    x,
+                    y,
+                    StitchCommand.END,
+                    colorIndex
+                )
                 endFound = true
                 break
             }
@@ -52,7 +59,7 @@ object DstParser {
                     colorChanges++
                     colorIndex++
                 }
-                StitchCommand.SEQUIN, StitchCommand.END -> Unit
+                else -> Unit
             }
 
             points += EmbroideryPoint(x, y, command, colorIndex)
@@ -63,7 +70,9 @@ object DstParser {
         }
 
         if (points.isEmpty()) {
-            return EmbroideryLoadResult.Error("Nenhuma pontada foi encontrada no arquivo.")
+            return EmbroideryLoadResult.Error(
+                "Nenhuma pontada foi encontrada no arquivo."
+            )
         }
 
         return EmbroideryLoadResult.Success(

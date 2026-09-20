@@ -1,36 +1,39 @@
 # Changelog
 
+## 0.4.0
+
+### Adicionado
+- Leitura real de matrizes Janome/Elna JEF.
+- Leitura real de matrizes Brother PES.
+- Nova camada de compatibilidade baseada em EmbroideryIO para formatos complexos.
+- Normalização de pontos JEF/PES para o modelo interno do FioLab.
+- Tratamento de STITCH, JUMP, TRIM, STOP, COLOR_CHANGE, SEQUIN e END.
+- Testes automatizados com arquivos JEF e PES binários reais.
+- Identificação do formato na Home e no visualizador.
+- Avisos de licença/atribuição de dependências MIT.
+
+### Preservado
+- Parser DST próprio do FioLab.
+- Visualizador e zoom.
+- Simulador progressivo.
+- Salvar cópia em armazenamento/OTG.
+- Compartilhamento Android.
+- Arquivo original protegido.
+
 ## 0.3.0
 
 ### Adicionado
 - Salvar uma cópia da matriz pelo seletor nativo do Android.
 - Escolha de destino compatível com memória interna, cartão SD e USB/pendrive OTG quando disponível no Android.
-- Compartilhamento da matriz por aplicativos instalados, incluindo mensageiros e e-mail.
+- Compartilhamento da matriz por aplicativos instalados.
 - FileProvider seguro para compartilhamento sem expor caminhos internos.
-- Sanitização do nome do arquivo antes de criar cópias temporárias.
-- Testes unitários para nomes de arquivo seguros.
-
-### Preservado
-- Leitura real DST.
-- Visualizador com zoom e movimentação.
-- Simulador progressivo.
-- Informações de pontos, dimensões e blocos.
-- Estimativa de linha.
-- Arquivo original sem alteração.
+- Sanitização do nome do arquivo.
 
 ## 0.2.0
 
 ### Adicionado
 - Simulador progressivo de pontadas DST.
 - Play e pausa.
-- Avanço e retrocesso de 50 eventos.
-- Controle de velocidade de 0,5× a 5×.
-- Barra de progresso e percentual concluído.
-- Bloco de cor atual.
-- Estimativa inicial de consumo de linha.
-- Pipeline GitHub Actions para testes e geração do APK.
-
-### Preservado
-- Leitor DST da 0.1.
-- Visualizador, zoom e movimentação.
-- Arquivo original somente leitura.
+- Avanço e retrocesso.
+- Controle de velocidade.
+- Estimativa de consumo de linha.

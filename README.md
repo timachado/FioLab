@@ -1,48 +1,50 @@
-# FioLab 0.3.0
+# FioLab 0.4.0
 
 Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
 
+## Formatos liberados
+
+- DST — parser próprio FioLab.
+- JEF — Janome/Elna.
+- PES — Brother.
+
+JEF e PES são normalizados para o mesmo modelo interno usado pelo visualizador e simulador do FioLab.
+
 ## Funcional nesta versão
 
-- Abrir arquivos Tajima DST pelo seletor nativo do Android.
-- Visualizar a matriz com zoom e arraste.
-- Mostrar dimensões, total de pontos e blocos de cor.
-- Simular a sequência progressiva do bordado.
-- Play, pausa, avanço e retrocesso.
-- Controle de velocidade de 0,5× a 5×.
-- Mostrar percentual concluído e bloco atual.
-- Estimativa inicial de consumo de linha.
-- Salvar uma cópia em local escolhido pelo usuário.
-- Selecionar memória interna, cartão SD ou pendrive OTG quando disponível no seletor do Android.
-- Compartilhar a matriz por aplicativos compatíveis.
-- Preservar o arquivo original sem alteração.
+- Abrir DST, JEF e PES pelo seletor nativo do Android.
+- Visualizar matriz com zoom e arraste.
+- Mostrar dimensões, pontos e blocos de cor.
+- Simular sequência progressiva de bordado.
+- Play, pausa, avanço, retrocesso e velocidade.
+- Estimar consumo de linha.
+- Salvar cópia na memória, SD ou pendrive OTG quando disponível.
+- Compartilhar matriz por aplicativos compatíveis.
+- Preservar arquivo original.
 
-## Segurança de arquivos
+## Validação de formatos
 
-O FioLab usa o Storage Access Framework do Android para salvar cópias. Não solicita acesso irrestrito ao armazenamento. Para compartilhamento, usa FileProvider com acesso temporário somente de leitura.
+O CI inclui arquivos binários reais JEF e PES e exige que ambos sejam lidos antes de publicar o APK.
 
-## APK
+## Engine de compatibilidade
 
-O GitHub Actions executa testes e compila o APK automaticamente.
+Para formatos complexos, o FioLab usa EmbroideryIO, biblioteca Java/Android sob licença MIT, mantendo uma camada própria de normalização e renderização.
 
-Após uma compilação aprovada, o APK de teste é publicado em **Releases** como:
+Consulte `THIRD_PARTY_NOTICES.md`.
 
-`FioLab-0.3.0-debug.apk`
+## Compatibilidade
 
-## Compatibilidade da v0.3.0
+- Android 8.0+.
+- minSdk 26.
+- compileSdk/targetSdk 36.
+- JDK 17.
+- Gradle 9.6.0.
+- Jetpack Compose.
 
-- Android 8.0+ (minSdk 26)
-- compileSdk/targetSdk 36
-- JDK 17
-- Android Gradle Plugin 9.4.0
-- Gradle 9.6.0
-- Jetpack Compose
+## Próximos passos
 
-## Próximas etapas
-
-- 0.4: novos leitores de formatos validados individualmente.
-- 0.5: conversão entre formatos.
+- 0.5: conversão real entre formatos.
 - 0.6: editor básico.
-- 0.7: Criar Nome e biblioteca de fontes de bordado.
+- 0.7: Criar Nome e fontes de bordado.
 
 Desenvolvido por **T.I. Machado — Soluções em Tecnologia**.

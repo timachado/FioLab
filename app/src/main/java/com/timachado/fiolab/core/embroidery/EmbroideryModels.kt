@@ -1,6 +1,14 @@
 package com.timachado.fiolab.core.embroidery
 
-enum class StitchCommand { STITCH, JUMP, COLOR_CHANGE, SEQUIN, END }
+enum class StitchCommand {
+    STITCH,
+    JUMP,
+    TRIM,
+    STOP,
+    COLOR_CHANGE,
+    SEQUIN,
+    END
+}
 
 data class EmbroideryPoint(
     val xUnits: Int,
@@ -36,5 +44,8 @@ data class EmbroideryDesign(
 
 sealed interface EmbroideryLoadResult {
     data class Success(val design: EmbroideryDesign) : EmbroideryLoadResult
-    data class Error(val userMessage: String, val technicalMessage: String? = null) : EmbroideryLoadResult
+    data class Error(
+        val userMessage: String,
+        val technicalMessage: String? = null
+    ) : EmbroideryLoadResult
 }

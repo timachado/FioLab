@@ -42,8 +42,13 @@ fun EmbroideryCanvas(
     pointLimit: Int = design.points.size,
     interactive: Boolean = false
 ) {
-    var zoom by remember(design.fileName) { mutableFloatStateOf(1f) }
-    var offset by remember(design.fileName) { mutableStateOf(Offset.Zero) }
+    var zoom by remember(design.fileName) {
+        mutableFloatStateOf(1f)
+    }
+
+    var offset by remember(design.fileName) {
+        mutableStateOf(Offset.Zero)
+    }
 
     val gestures = if (interactive) {
         Modifier.pointerInput(design.fileName) {
@@ -58,27 +63,47 @@ fun EmbroideryCanvas(
 
     Box(
         modifier
-            .border(1.dp, Color(0xFF243340), RoundedCornerShape(24.dp))
+            .border(
+                1.dp,
+                Color(0xFF243340),
+                RoundedCornerShape(24.dp)
+            )
             .then(gestures)
     ) {
         Canvas(Modifier.fillMaxSize()) {
             drawGrid()
-            drawDesign(design, pointLimit, zoom, offset)
+            drawDesign(
+                design,
+                pointLimit,
+                zoom,
+                offset
+            )
         }
     }
 }
 
 private fun DrawScope.drawGrid() {
     val step = 32.dp.toPx()
+
     var x = 0f
     while (x < size.width) {
-        drawLine(Color(0x152F4858), Offset(x, 0f), Offset(x, size.height), 1f)
+        drawLine(
+            Color(0x152F4858),
+            Offset(x, 0f),
+            Offset(x, size.height),
+            1f
+        )
         x += step
     }
 
     var y = 0f
     while (y < size.height) {
-        drawLine(Color(0x152F4858), Offset(0f, y), Offset(size.width, y), 1f)
+        drawLine(
+            Color(0x152F4858),
+            Offset(0f, y),
+            Offset(size.width, y),
+            1f
+        )
         y += step
     }
 }
@@ -90,9 +115,17 @@ private fun DrawScope.drawDesign(
     userOffset: Offset
 ) {
     val bounds = design.bounds
-    val widthUnits = (bounds.maxXUnits - bounds.minXUnits).coerceAtLeast(1)
-    val heightUnits = (bounds.maxYUnits - bounds.minYUnits).coerceAtLeast(1)
+
+    val widthUnits =
+        (bounds.maxXUnits - bounds.minXUnits)
+            .coerceAtLeast(1)
+
+    val heightUnits =
+        (bounds.maxYUnits - bounds.minYUnits)
+            .coerceAtLeast(1)
+
     val padding = 36.dp.toPx()
+
     val baseScale = minOf(
         (size.width - padding * 2) / widthUnits,
         (size.height - padding * 2) / heightUnits
@@ -101,14 +134,27 @@ private fun DrawScope.drawDesign(
     val scale = baseScale * userScale
     val contentWidth = widthUnits * scale
     val contentHeight = heightUnits * scale
-    val originX = (size.width - contentWidth) / 2f - bounds.minXUnits * scale + userOffset.x
-    val originY = (size.height - contentHeight) / 2f + bounds.maxYUnits * scale + userOffset.y
+
+    val originX =
+        (size.width - contentWidth) / 2f -
+            bounds.minXUnits * scale +
+            userOffset.x
+
+    val originY =
+        (size.height - contentHeight) / 2f +
+            bounds.maxYUnits * scale +
+            userOffset.y
 
     var previous: Offset? = null
     var colorIndex = 0
 
     design.points
-        .take(pointLimit.coerceIn(0, design.points.size))
+        .take(
+            pointLimit.coerceIn(
+                0,
+                design.points.size
+            )
+        )
         .forEach { point ->
             val current = Offset(
                 originX + point.xUnits * scale,
@@ -120,11 +166,21 @@ private fun DrawScope.drawDesign(
                     colorIndex = point.colorIndex
                     previous = current
                 }
-                StitchCommand.END -> Unit
+
+                StitchCommand.END,
+                StitchCommand.TRIM,
+                StitchCommand.STOP -> {
+                    previous = current
+                }
+
                 StitchCommand.STITCH -> {
                     previous?.let {
                         drawLine(
-                            color = palette[colorIndex % palette.size],
+                            color =
+                                palette[
+                                    colorIndex %
+                                        palette.size
+                                ],
                             start = it,
                             end = current,
                             strokeWidth = 1.8.dp.toPx(),
@@ -133,6 +189,7 @@ private fun DrawScope.drawDesign(
                     }
                     previous = current
                 }
+
                 StitchCommand.JUMP -> {
                     previous?.let {
                         drawLine(
@@ -144,12 +201,15 @@ private fun DrawScope.drawDesign(
                     }
                     previous = current
                 }
+
                 StitchCommand.SEQUIN -> {
                     drawCircle(
                         color = FioGold,
                         radius = 2.2.dp.toPx(),
                         center = current,
-                        style = Stroke(1.dp.toPx())
+                        style = Stroke(
+                            1.dp.toPx()
+                        )
                     )
                     previous = current
                 }

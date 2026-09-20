@@ -42,34 +42,56 @@ fun ViewerScreen(
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    Column(
+        Modifier.fillMaxSize()
+    ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 12.dp,
+                    vertical = 6.dp
+                ),
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) {
-                Text("‹ Voltar", color = FioGold)
+            TextButton(
+                onClick = onBack
+            ) {
+                Text(
+                    "‹ Voltar",
+                    color = FioGold
+                )
             }
 
             Column(
                 Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
             ) {
                 Text(
                     design.fileName,
                     color = FioText,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight =
+                        FontWeight.SemiBold,
                     maxLines = 1
                 )
+
                 Text(
-                    "DST • original protegido",
+                    design.format +
+                        " • original protegido",
                     color = FioTextMuted,
                     fontSize = 11.sp
                 )
             }
 
-            TextButton(onClick = onOpen) {
-                Text("Abrir", color = FioGold)
+            TextButton(
+                onClick = onOpen
+            ) {
+                Text(
+                    "Abrir",
+                    color = FioGold
+                )
             }
         }
 
@@ -87,15 +109,25 @@ fun ViewerScreen(
         )
 
         Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = FioSurface),
-            shape = RoundedCornerShape(24.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor =
+                        FioSurface
+                ),
+            shape =
+                RoundedCornerShape(24.dp)
         ) {
-            Column(Modifier.padding(18.dp)) {
+            Column(
+                Modifier.padding(18.dp)
+            ) {
                 Text(
                     "Informações da matriz",
                     color = FioText,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight =
+                        FontWeight.Bold,
                     fontSize = 18.sp
                 )
 
@@ -107,65 +139,102 @@ fun ViewerScreen(
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(
+                    Modifier.height(12.dp)
+                )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(8.dp)
+                ) {
                     InfoChip(
-                        design.stitchCount.toString(),
+                        design.stitchCount
+                            .toString(),
                         "pontos",
                         Modifier.weight(1f)
                     )
+
                     InfoChip(
-                        mm(design.bounds.widthMm) + " × " +
-                            mm(design.bounds.heightMm),
+                        mm(
+                            design.bounds
+                                .widthMm
+                        ) +
+                            " × " +
+                            mm(
+                                design.bounds
+                                    .heightMm
+                            ),
                         "mm",
                         Modifier.weight(1f)
                     )
+
                     InfoChip(
-                        design.colorCount.toString(),
+                        design.colorCount
+                            .toString(),
                         "blocos",
                         Modifier.weight(1f)
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(
+                    Modifier.height(12.dp)
+                )
 
                 Button(
                     onClick = onSimulate,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = FioGold,
-                        contentColor = FioBackground
-                    )
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    colors =
+                        ButtonDefaults
+                            .buttonColors(
+                                containerColor =
+                                    FioGold,
+                                contentColor =
+                                    FioBackground
+                            )
                 ) {
                     Text(
                         "▶ Simular bordado",
-                        fontWeight = FontWeight.Bold
+                        fontWeight =
+                            FontWeight.Bold
                     )
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(
+                    Modifier.height(8.dp)
+                )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedButton(
                         onClick = onSaveCopy,
-                        modifier = Modifier.weight(1f)
+                        modifier =
+                            Modifier.weight(1f)
                     ) {
-                        Text("Salvar cópia")
+                        Text(
+                            "Salvar cópia"
+                        )
                     }
 
                     OutlinedButton(
                         onClick = onShare,
-                        modifier = Modifier.weight(1f)
+                        modifier =
+                            Modifier.weight(1f)
                     ) {
-                        Text("Compartilhar")
+                        Text(
+                            "Compartilhar"
+                        )
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(
+                    Modifier.height(8.dp)
+                )
 
                 Text(
-                    "Salvar cópia abre o seletor do Android. Nele você pode escolher memória interna, cartão SD ou pendrive OTG disponível.",
+                    "Salvar cópia abre o seletor do Android. Você pode escolher memória interna, cartão SD ou pendrive OTG disponível.",
                     color = FioTextMuted,
                     fontSize = 10.sp
                 )
@@ -182,22 +251,32 @@ fun InfoChip(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = FioSurfaceAlt),
-        shape = RoundedCornerShape(16.dp)
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    FioSurfaceAlt
+            ),
+        shape =
+            RoundedCornerShape(16.dp)
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(
-                vertical = 10.dp,
-                horizontal = 6.dp
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    vertical = 10.dp,
+                    horizontal = 6.dp
+                ),
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
             Text(
                 value,
                 color = FioText,
-                fontWeight = FontWeight.Bold,
+                fontWeight =
+                    FontWeight.Bold,
                 fontSize = 13.sp
             )
+
             Text(
                 label,
                 color = FioTextMuted,
@@ -207,5 +286,11 @@ fun InfoChip(
     }
 }
 
-private fun mm(value: Float): String =
-    String.format(Locale("pt", "BR"), "%.1f", value)
+private fun mm(
+    value: Float
+): String =
+    String.format(
+        Locale("pt", "BR"),
+        "%.1f",
+        value
+    )

@@ -47,41 +47,88 @@ fun HomeScreen(
     onUnavailable: (String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(
+            top = 24.dp,
+            bottom = 32.dp
+        ),
+        verticalArrangement =
+            Arrangement.spacedBy(18.dp)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
                 Box(
-                    Modifier.size(46.dp).background(FioGold, CircleShape),
-                    contentAlignment = Alignment.Center
+                    Modifier
+                        .size(46.dp)
+                        .background(
+                            FioGold,
+                            CircleShape
+                        ),
+                    contentAlignment =
+                        Alignment.Center
                 ) {
-                    Text("F", color = FioBackground, fontWeight = FontWeight.Black, fontSize = 28.sp)
+                    Text(
+                        "F",
+                        color = FioBackground,
+                        fontWeight =
+                            FontWeight.Black,
+                        fontSize = 28.sp
+                    )
                 }
-                Spacer(Modifier.width(12.dp))
+
+                Spacer(
+                    Modifier.width(12.dp)
+                )
+
                 Column {
-                    Text("FioLab", color = FioGoldSoft, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text("Do nome à máquina, direto pelo celular.", color = FioTextMuted, fontSize = 12.sp)
+                    Text(
+                        "FioLab",
+                        color = FioGoldSoft,
+                        fontSize = 28.sp,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                    Text(
+                        "Do nome à máquina, direto pelo celular.",
+                        color = FioTextMuted,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
 
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = FioSurface),
-                shape = RoundedCornerShape(24.dp)
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+                shape =
+                    RoundedCornerShape(24.dp)
             ) {
-                Column(Modifier.padding(20.dp)) {
+                Column(
+                    Modifier.padding(20.dp)
+                ) {
                     Text(
                         "O que vamos bordar hoje?",
                         color = FioText,
                         fontSize = 21.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight =
+                            FontWeight.SemiBold
                     )
-                    Spacer(Modifier.height(6.dp))
+
+                    Spacer(
+                        Modifier.height(6.dp)
+                    )
+
                     Text(
-                        "FioLab 0.2 abre, visualiza e simula matrizes DST no Android.",
+                        "FioLab 0.4 abre, visualiza e simula DST, JEF e PES.",
                         color = FioTextMuted
                     )
                 }
@@ -89,21 +136,31 @@ fun HomeScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
                 FeatureCard(
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier.weight(1f),
                     icon = "Aa",
                     title = "Criar nome",
-                    subtitle = "Em desenvolvimento",
+                    subtitle =
+                        "Em desenvolvimento",
                     enabled = false
                 ) {
-                    onUnavailable("Criar Nome entra em uma próxima versão.")
+                    onUnavailable(
+                        "Criar Nome entra em uma próxima versão."
+                    )
                 }
+
                 FeatureCard(
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier.weight(1f),
                     icon = "↗",
                     title = "Abrir matriz",
-                    subtitle = "DST funcional",
+                    subtitle =
+                        "DST • JEF • PES",
                     enabled = true,
                     onClick = onOpen
                 )
@@ -111,67 +168,142 @@ fun HomeScreen(
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
                 FeatureCard(
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier.weight(1f),
                     icon = "▶",
                     title = "Simulador",
-                    subtitle = "Sequência real",
+                    subtitle =
+                        "Sequência real",
                     enabled = recent != null
                 ) {
-                    if (recent != null) onSimulate() else onUnavailable("Abra uma matriz DST primeiro.")
+                    if (recent != null) {
+                        onSimulate()
+                    } else {
+                        onUnavailable(
+                            "Abra uma matriz primeiro."
+                        )
+                    }
                 }
+
                 FeatureCard(
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier.weight(1f),
                     icon = "⇄",
                     title = "Converter",
-                    subtitle = "Em desenvolvimento",
+                    subtitle =
+                        "Em desenvolvimento",
                     enabled = false
                 ) {
-                    onUnavailable("Conversão entra após validação dos formatos.")
+                    onUnavailable(
+                        "Conversão entra após validação dos formatos."
+                    )
                 }
             }
         }
 
         item {
-            Text("Recentes", color = FioText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(
+                "Recentes",
+                color = FioText,
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize = 18.sp
+            )
         }
 
         item {
             if (recent == null) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = FioSurface),
-                    shape = RoundedCornerShape(20.dp)
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
+                    shape =
+                        RoundedCornerShape(
+                            20.dp
+                        )
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
                     ) {
-                        Text("Nenhuma matriz aberta nesta sessão.", color = FioTextMuted)
-                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Nenhuma matriz aberta nesta sessão.",
+                            color = FioTextMuted
+                        )
+
+                        Spacer(
+                            Modifier.height(12.dp)
+                        )
+
                         Button(
                             onClick = onOpen,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = FioGold,
-                                contentColor = FioBackground
-                            )
+                            colors =
+                                ButtonDefaults
+                                    .buttonColors(
+                                        containerColor =
+                                            FioGold,
+                                        contentColor =
+                                            FioBackground
+                                    )
                         ) {
-                            Text("Escolher arquivo", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Escolher arquivo",
+                                fontWeight =
+                                    FontWeight.Bold
+                            )
                         }
                     }
                 }
             } else {
                 Card(
                     onClick = onRecent,
-                    colors = CardDefaults.cardColors(containerColor = FioSurface),
-                    shape = RoundedCornerShape(20.dp)
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
+                    shape =
+                        RoundedCornerShape(
+                            20.dp
+                        )
                 ) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                        Text(recent.fileName, color = FioText, fontWeight = FontWeight.SemiBold)
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp)
+                    ) {
                         Text(
-                            formatMm(recent.bounds.widthMm) + " × " +
-                                formatMm(recent.bounds.heightMm) + " mm • " +
-                                recent.stitchCount + " pontos",
+                            recent.fileName,
+                            color = FioText,
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+
+                        Text(
+                            recent.format +
+                                " • " +
+                                formatMm(
+                                    recent.bounds
+                                        .widthMm
+                                ) +
+                                " × " +
+                                formatMm(
+                                    recent.bounds
+                                        .heightMm
+                                ) +
+                                " mm • " +
+                                recent.stitchCount +
+                                " pontos",
                             color = FioTextMuted,
                             fontSize = 12.sp
                         )
@@ -182,10 +314,12 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.2.0 • Android",
-                modifier = Modifier.fillMaxWidth(),
+                "FioLab 0.4.0 • Android",
+                modifier =
+                    Modifier.fillMaxWidth(),
                 color = FioTextMuted,
-                textAlign = TextAlign.Center,
+                textAlign =
+                    TextAlign.Center,
                 fontSize = 11.sp
             )
         }
@@ -204,30 +338,73 @@ private fun FeatureCard(
     Card(
         modifier = modifier,
         onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = if (enabled) FioSurfaceAlt else FioSurface
-        ),
-        shape = RoundedCornerShape(20.dp)
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (enabled) {
+                        FioSurfaceAlt
+                    } else {
+                        FioSurface
+                    }
+            ),
+        shape =
+            RoundedCornerShape(20.dp)
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Column(
+            Modifier.padding(18.dp)
+        ) {
             Box(
                 Modifier
                     .size(42.dp)
-                    .background(if (enabled) FioGold else FioSurfaceAlt, CircleShape),
-                contentAlignment = Alignment.Center
+                    .background(
+                        if (enabled) {
+                            FioGold
+                        } else {
+                            FioSurfaceAlt
+                        },
+                        CircleShape
+                    ),
+                contentAlignment =
+                    Alignment.Center
             ) {
                 Text(
                     icon,
-                    color = if (enabled) FioBackground else FioGold,
-                    fontWeight = FontWeight.Bold
+                    color =
+                        if (enabled) {
+                            FioBackground
+                        } else {
+                            FioGold
+                        },
+                    fontWeight =
+                        FontWeight.Bold
                 )
             }
-            Spacer(Modifier.height(18.dp))
-            Text(title, color = FioText, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = FioTextMuted, fontSize = 11.sp)
+
+            Spacer(
+                Modifier.height(18.dp)
+            )
+
+            Text(
+                title,
+                color = FioText,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+
+            Text(
+                subtitle,
+                color = FioTextMuted,
+                fontSize = 11.sp
+            )
         }
     }
 }
 
-private fun formatMm(value: Float): String =
-    String.format(Locale("pt", "BR"), "%.1f", value)
+private fun formatMm(
+    value: Float
+): String =
+    String.format(
+        Locale("pt", "BR"),
+        "%.1f",
+        value
+    )
