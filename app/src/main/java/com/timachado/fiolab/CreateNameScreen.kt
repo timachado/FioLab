@@ -1080,7 +1080,10 @@ fun CreateNameScreen(
                         .forEach {
                                 option ->
                             val selected =
-                                font == option
+                                importedFontId ==
+                                    null &&
+                                    font ==
+                                        option
 
                             Card(
                                 onClick = {
