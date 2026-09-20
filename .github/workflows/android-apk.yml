@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/alliby-satin-smoothing-0224"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
