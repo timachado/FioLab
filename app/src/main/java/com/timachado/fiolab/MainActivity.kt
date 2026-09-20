@@ -29,6 +29,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
+import com.timachado.fiolab.core.project.ProjectBackupStore
 import com.timachado.fiolab.core.project.ProjectStore
 import com.timachado.fiolab.core.project.SavedProjectSummary
 import com.timachado.fiolab.ui.theme.FioBackground
@@ -225,6 +226,85 @@ private fun FioLabApp() {
                     onFailure = {
                         snackbar.showSnackbar(
                             "Não foi possível salvar o arquivo."
+                        )
+                    }
+                )
+            }
+        }
+
+    val restoreBackupLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .OpenDocument()
+        ) {
+                uri: Uri? ->
+            if (
+                uri ==
+                    null
+            ) {
+                return@rememberLauncherForActivityResult
+            }
+
+            scope.launch {
+                loading = true
+
+                val result =
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        runCatching {
+                            val bytes =
+                                context
+                                    .contentResolver
+                                    .openInputStream(
+                                        uri
+                                    )
+                                    ?.use {
+                                        it.readBytes()
+                                    }
+                                    ?: error(
+                                        "Não foi possível ler o backup."
+                                    )
+
+                            val count =
+                                ProjectBackupStore
+                                    .restoreBackup(
+                                        context,
+                                        bytes
+                                    )
+                                    .getOrThrow()
+
+                            val projects =
+                                ProjectStore
+                                    .list(
+                                        context
+                                    )
+                                    .getOrThrow()
+
+                            Pair(
+                                count,
+                                projects
+                            )
+                        }
+                    }
+
+                loading = false
+
+                result.fold(
+                    onSuccess = {
+                            restored ->
+                        savedProjects =
+                            restored.second
+
+                        snackbar.showSnackbar(
+                            restored.first
+                                .toString() +
+                                " matriz(es) restaurada(s)."
+                        )
+                    },
+                    onFailure = {
+                        snackbar.showSnackbar(
+                            "Não foi possível restaurar este backup."
                         )
                     }
                 )
@@ -467,6 +547,53 @@ private fun FioLabApp() {
                     design.sourceBytes
             )
         )
+    }
+
+    fun createLibraryBackup() {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ProjectBackupStore
+                        .exportBackup(
+                            context
+                        )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                        bytes ->
+                    val fileName =
+                        "FioLab-backup.fiolab-backup"
+
+                    pendingDocument =
+                        PendingDocument(
+                            fileName =
+                                fileName,
+                            bytes =
+                                bytes,
+                            successMessage =
+                                "Backup de Minhas Matrizes salvo com sucesso."
+                        )
+
+                    saveDocumentLauncher
+                        .launch(
+                            fileName
+                        )
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        it.message
+                            ?: "Não foi possível criar o backup."
+                    )
+                }
+            )
+        }
     }
 
     fun openProjectLibrary() {
@@ -761,6 +888,19 @@ private fun FioLabApp() {
                             deleteProject(
                                 project
                             )
+                        },
+                        onBackup = {
+                            createLibraryBackup()
+                        },
+                        onRestore = {
+                            restoreBackupLauncher
+                                .launch(
+                                    arrayOf(
+                                        "application/zip",
+                                        "application/octet-stream",
+                                        "*/*"
+                                    )
+                                )
                         }
                     )
                 }

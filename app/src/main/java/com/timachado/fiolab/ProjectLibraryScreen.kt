@@ -42,7 +42,9 @@ fun ProjectLibraryScreen(
     onBack: () -> Unit,
     onOpen: (SavedProjectSummary) -> Unit,
     onTransfer: (SavedProjectSummary) -> Unit,
-    onDelete: (SavedProjectSummary) -> Unit
+    onDelete: (SavedProjectSummary) -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit
 ) {
     Column(
         Modifier
@@ -97,6 +99,70 @@ fun ProjectLibraryScreen(
                 )
             }
         }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top =
+                        8.dp,
+                    bottom =
+                        8.dp
+                ),
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+            OutlinedButton(
+                onClick =
+                    onBackup,
+                enabled =
+                    projects.isNotEmpty(),
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+                Text(
+                    "Backup"
+                )
+            }
+
+            Button(
+                onClick =
+                    onRestore,
+                modifier =
+                    Modifier.weight(
+                        1f
+                    ),
+                colors =
+                    ButtonDefaults
+                        .buttonColors(
+                            containerColor =
+                                FioGold,
+                            contentColor =
+                                FioBackground
+                        )
+            ) {
+                Text(
+                    "Restaurar"
+                )
+            }
+        }
+
+        Text(
+            "O backup pode ser salvo em Downloads ou pendrive OTG e restaurado em outro aparelho.",
+            color =
+                FioTextMuted,
+            fontSize =
+                10.sp,
+            modifier =
+                Modifier.padding(
+                    bottom =
+                        6.dp
+                )
+        )
 
         if (
             projects.isEmpty()

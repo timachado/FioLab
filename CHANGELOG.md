@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.20.0
+
+### Backup e restauração
+- Backup de todas as matrizes salvas em um único arquivo portátil.
+- Botão Backup em Minhas Matrizes.
+- Botão Restaurar em Minhas Matrizes.
+- O arquivo pode ser salvo em Downloads, cartão/armazenamento disponível ou pendrive OTG pelo seletor do Android.
+- O backup pode ser levado para outro aparelho e restaurado.
+- Projetos restaurados voltam para a biblioteca local e continuam exportáveis em DST/PES/JEF.
+- Matrizes com o mesmo identificador são atualizadas durante a restauração em vez de duplicadas.
+
+### Segurança do backup
+- Formato de backup versionado.
+- Manifesto interno identifica backups válidos do FioLab.
+- Cada projeto é validado pelo codec antes de entrar no backup.
+- Restauração rejeita backup incompleto, corrompido ou com versão não suportada.
+- Proteções de quantidade e tamanho evitam arquivos ZIP malformados/excessivos.
+- Caminhos suspeitos dentro do ZIP são rejeitados.
+
+### Testes
+- Round-trip de múltiplas matrizes em um backup.
+- Backup vazio válido no codec.
+- Arquivo arbitrário é rejeitado.
+- Projeto corrompido não entra no backup.
+
+
 ## 0.19.0
 
 ### Minhas Matrizes
