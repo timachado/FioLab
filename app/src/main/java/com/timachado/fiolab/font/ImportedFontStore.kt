@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.File
+import java.io.FileInputStream
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -42,16 +43,15 @@ object ImportedFontStore {
             val sourceName =
                 queryDisplayName(context, uri)
                     ?: uri.lastPathSegment
-                    ?: "fonte.ttf"
+                    ?: "fonte"
 
-            val extension =
+            val declaredExtension =
                 sourceName
                     .substringAfterLast('.', "")
                     .lowercase(Locale.ROOT)
-
-            require(extension in allowedExtensions) {
-                "Selecione uma fonte TTF ou OTF."
-            }
+                    .takeIf {
+                        it in allowedExtensions
+                    }
 
             val directory =
                 fontDirectory(context)
@@ -59,7 +59,7 @@ object ImportedFontStore {
             val temp =
                 File.createTempFile(
                     "fiolab-font-",
-                    ".$extension",
+                    ".font",
                     directory
                 )
 
@@ -115,6 +115,21 @@ object ImportedFontStore {
                     "O arquivo de fonte está vazio."
                 }
 
+                val detectedExtension =
+                    detectFontExtension(
+                        temp
+                    )
+
+                val extension =
+                    detectedExtension
+                        ?: declaredExtension
+
+                require(
+                    extension in allowedExtensions
+                ) {
+                    "O arquivo selecionado não é uma fonte TTF/OTF válida."
+                }
+
                 Typeface.createFromFile(temp)
 
                 val hash =
@@ -124,10 +139,20 @@ object ImportedFontStore {
                         }
                         .take(10)
 
-                val safeBase =
-                    sanitizeBaseName(
+                val baseName =
+                    if (
+                        declaredExtension !=
+                            null
+                    ) {
                         sourceName
                             .substringBeforeLast('.')
+                    } else {
+                        sourceName
+                    }
+
+                val safeBase =
+                    sanitizeBaseName(
+                        baseName
                     )
 
                 val existing =
@@ -136,10 +161,11 @@ object ImportedFontStore {
                         .orEmpty()
                         .firstOrNull {
                             it.isFile &&
-                                it.name.endsWith(
-                                    "-$hash.$extension",
-                                    ignoreCase = true
-                                )
+                                it.nameWithoutExtension
+                                    .endsWith(
+                                        "-$hash",
+                                        ignoreCase = true
+                                    )
                         }
 
                 if (existing != null) {
@@ -213,6 +239,51 @@ object ImportedFontStore {
 
             Typeface.createFromFile(file)
         }
+
+    private fun detectFontExtension(
+        file: File
+    ): String? =
+        runCatching {
+            val header =
+                ByteArray(4)
+
+            FileInputStream(file)
+                .use {
+                    if (
+                        it.read(header) !=
+                            header.size
+                    ) {
+                        return@runCatching null
+                    }
+                }
+
+            when {
+                header.contentEquals(
+                    byteArrayOf(
+                        0x00,
+                        0x01,
+                        0x00,
+                        0x00
+                    )
+                ) ->
+                    "ttf"
+
+                String(
+                    header,
+                    Charsets.US_ASCII
+                ) == "true" ->
+                    "ttf"
+
+                String(
+                    header,
+                    Charsets.US_ASCII
+                ) == "OTTO" ->
+                    "otf"
+
+                else ->
+                    null
+            }
+        }.getOrNull()
 
     private fun fontDirectory(
         context: Context
