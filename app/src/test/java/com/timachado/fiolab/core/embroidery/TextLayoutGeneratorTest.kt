@@ -249,4 +249,176 @@ class TextLayoutGeneratorTest {
                 )
             }
     }
+    @Test
+    fun perLetterColorsCreateRealColorChangeBlocks() {
+        val gold =
+            0xE6BE70
+
+        val blue =
+            0x457B9D
+
+        val red =
+            0xE63946
+
+        val design =
+            TextLayoutGenerator
+                .generate(
+                    TextLayoutOptions(
+                        textOptions =
+                            base("ABC")
+                                .copy(
+                                    color =
+                                        gold
+                                ),
+                        letterAdjustments =
+                            listOf(
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        1,
+                                    color =
+                                        blue
+                                ),
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        2,
+                                    color =
+                                        red
+                                )
+                            )
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            design.colorChanges ==
+                2
+        )
+
+        assertTrue(
+            design.threadColors ==
+                listOf(
+                    gold,
+                    blue,
+                    red
+                )
+        )
+
+        assertTrue(
+            design.points
+                .count {
+                    it.command ==
+                        StitchCommand
+                            .COLOR_CHANGE
+                } ==
+                2
+        )
+
+        assertTrue(
+            design.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+                .map {
+                    it.colorIndex
+                }
+                .toSet()
+                .containsAll(
+                    setOf(
+                        0,
+                        1,
+                        2
+                    )
+                )
+        )
+    }
+
+    @Test
+    fun adjacentSameColorStaysInSameBlock() {
+        val gold =
+            0xE6BE70
+
+        val design =
+            TextLayoutGenerator
+                .generate(
+                    TextLayoutOptions(
+                        textOptions =
+                            base("ABC")
+                                .copy(
+                                    color =
+                                        gold
+                                ),
+                        letterAdjustments =
+                            listOf(
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        1,
+                                    color =
+                                        gold
+                                )
+                            )
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            design.colorChanges ==
+                0
+        )
+
+        assertTrue(
+            design.threadColors ==
+                listOf(
+                    gold
+                )
+        )
+    }
+
+    @Test
+    fun multicolorTextExportsToReleasedFormats() {
+        val design =
+            TextLayoutGenerator
+                .generate(
+                    TextLayoutOptions(
+                        textOptions =
+                            base("FIO"),
+                        letterAdjustments =
+                            listOf(
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        1,
+                                    color =
+                                        0x457B9D
+                                ),
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        2,
+                                    color =
+                                        0xE63946
+                                )
+                            )
+                    )
+                )
+                .getOrThrow()
+
+        MatrixConverter
+            .supportedFormats
+            .forEach {
+                    format ->
+                val converted =
+                    MatrixConverter
+                        .convert(
+                            design,
+                            format,
+                            "multicor"
+                        )
+                        .getOrThrow()
+
+                assertTrue(
+                    converted.bytes
+                        .isNotEmpty()
+                )
+            }
+    }
+
 }

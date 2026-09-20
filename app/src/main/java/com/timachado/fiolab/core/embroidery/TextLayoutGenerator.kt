@@ -20,7 +20,8 @@ data class LetterAdjustment(
     val offsetXmm: Float = 0f,
     val offsetYmm: Float = 0f,
     val rotationDegrees: Float = 0f,
-    val spacingAfterMm: Float = 0f
+    val spacingAfterMm: Float = 0f,
+    val color: Int? = null
 )
 
 data class TextLayoutOptions(
@@ -215,6 +216,18 @@ object TextLayoutGenerator {
             var lastY = 0
             var hasLast = false
 
+            val threadSequence =
+                mutableListOf<Int>()
+
+            var currentBlockColor:
+                Int? = null
+
+            var currentColorIndex =
+                -1
+
+            var colorChanges =
+                0
+
             units.forEachIndexed {
                     visibleIndex,
                     unit ->
@@ -225,6 +238,50 @@ object TextLayoutGenerator {
                         sourceIndex =
                             unit.sourceIndex
                     )
+
+                val letterColor =
+                    adjustment.color
+                        ?: options
+                            .textOptions
+                            .color
+
+                if (
+                    currentBlockColor ==
+                        null
+                ) {
+                    threadSequence +=
+                        letterColor
+
+                    currentBlockColor =
+                        letterColor
+
+                    currentColorIndex =
+                        0
+                } else if (
+                    currentBlockColor !=
+                        letterColor
+                ) {
+                    currentColorIndex++
+
+                    threadSequence +=
+                        letterColor
+
+                    if (hasLast) {
+                        merged +=
+                            EmbroideryPoint(
+                                lastX,
+                                lastY,
+                                StitchCommand
+                                    .COLOR_CHANGE,
+                                currentColorIndex
+                            )
+                    }
+
+                    currentBlockColor =
+                        letterColor
+
+                    colorChanges++
+                }
 
                 val previousSourceIndex =
                     if (
@@ -435,6 +492,8 @@ object TextLayoutGenerator {
                                         cosine
 
                             point.copy(
+                                colorIndex =
+                                    currentColorIndex,
                                 xUnits =
                                     (
                                         rotatedX +
@@ -478,7 +537,7 @@ object TextLayoutGenerator {
                                 lastX,
                                 lastY,
                                 StitchCommand.TRIM,
-                                0
+                                currentColorIndex
                             )
 
                         trims++
@@ -685,16 +744,13 @@ object TextLayoutGenerator {
                         stitches,
                     jumpCount =
                         jumps,
-                    colorChanges = 0,
+                    colorChanges =
+                        colorChanges,
                     endFound = true,
                     sourceBytes =
                         ByteArray(0),
                     threadColors =
-                        listOf(
-                            options
-                                .textOptions
-                                .color
-                        ),
+                        threadSequence,
                     isModified = true,
                     hoopProfile =
                         options

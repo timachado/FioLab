@@ -26,6 +26,8 @@ data class MonogramOptions(
     val satinUnderlayMode: SatinUnderlayMode =
         SatinUnderlayMode.BOTH,
     val color: Int = 0xE6BE70,
+    val initialColors: List<Int> =
+        emptyList(),
     val font: EmbroideryFontPreset =
         EmbroideryFontPreset.LINE,
     val outputFormat: String = "DST",
@@ -41,7 +43,8 @@ object MonogramGenerator {
     private data class LetterPlacement(
         val design: EmbroideryDesign,
         val centerXUnits: Float,
-        val centerYUnits: Float
+        val centerYUnits: Float,
+        val color: Int
     )
 
     fun generate(
@@ -129,7 +132,13 @@ object MonogramGenerator {
                                     options
                                         .satinUnderlayMode,
                                 color =
-                                    options.color,
+                                    options
+                                        .initialColors
+                                        .getOrNull(
+                                            index
+                                        )
+                                        ?: options
+                                            .color,
                                 font =
                                     options.font,
                                 outputFormat =
@@ -181,8 +190,60 @@ object MonogramGenerator {
             var lastY = 0
             var hasLast = false
 
+            val threadSequence =
+                mutableListOf<Int>()
+
+            var currentBlockColor:
+                Int? = null
+
+            var currentColorIndex =
+                -1
+
+            var colorChanges =
+                0
+
             placements.forEach {
                     placement ->
+                val letterColor =
+                    placement.color
+
+                if (
+                    currentBlockColor ==
+                        null
+                ) {
+                    threadSequence +=
+                        letterColor
+
+                    currentBlockColor =
+                        letterColor
+
+                    currentColorIndex =
+                        0
+                } else if (
+                    currentBlockColor !=
+                        letterColor
+                ) {
+                    currentColorIndex++
+
+                    threadSequence +=
+                        letterColor
+
+                    if (hasLast) {
+                        mergedPoints +=
+                            EmbroideryPoint(
+                                lastX,
+                                lastY,
+                                StitchCommand
+                                    .COLOR_CHANGE,
+                                currentColorIndex
+                            )
+                    }
+
+                    currentBlockColor =
+                        letterColor
+
+                    colorChanges++
+                }
                 val source =
                     placement.design
 
@@ -213,6 +274,8 @@ object MonogramGenerator {
                         .map {
                                 point ->
                             point.copy(
+                                colorIndex =
+                                    currentColorIndex,
                                 xUnits =
                                     (
                                         point.xUnits -
@@ -258,7 +321,7 @@ object MonogramGenerator {
                                 lastX,
                                 lastY,
                                 StitchCommand.TRIM,
-                                0
+                                currentColorIndex
                             )
                     }
                 }
@@ -384,14 +447,13 @@ object MonogramGenerator {
                         stitchCount,
                     jumpCount =
                         jumpCount,
-                    colorChanges = 0,
+                    colorChanges =
+                        colorChanges,
                     endFound = true,
                     sourceBytes =
                         ByteArray(0),
                     threadColors =
-                        listOf(
-                            options.color
-                        ),
+                        threadSequence,
                     isModified = true,
                     hoopProfile =
                         options
@@ -530,7 +592,11 @@ object MonogramGenerator {
                 centerXUnits =
                     center,
                 centerYUnits =
-                    0f
+                    0f,
+                color =
+                    design.threadColors
+                        .firstOrNull()
+                        ?: 0xE6BE70
             )
         }
     }
@@ -584,7 +650,11 @@ object MonogramGenerator {
                 centerXUnits =
                     0f,
                 centerYUnits =
-                    center
+                    center,
+                color =
+                    design.threadColors
+                        .firstOrNull()
+                        ?: 0xE6BE70
             )
         }
     }

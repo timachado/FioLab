@@ -181,4 +181,43 @@ class MonogramGeneratorTest {
                 )
             }
     }
+    @Test
+    fun monogramInitialColorsCreateColorChanges() {
+        val design =
+            MonogramGenerator
+                .generate(
+                    MonogramOptions(
+                        initials =
+                            "ABC",
+                        initialColors =
+                            listOf(
+                                0xE6BE70,
+                                0x457B9D,
+                                0xE63946
+                            )
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            design.colorChanges ==
+                2
+        )
+
+        assertTrue(
+            design.threadColors.size ==
+                3
+        )
+
+        assertTrue(
+            design.points
+                .count {
+                    it.command ==
+                        StitchCommand
+                            .COLOR_CHANGE
+                } ==
+                2
+        )
+    }
+
 }

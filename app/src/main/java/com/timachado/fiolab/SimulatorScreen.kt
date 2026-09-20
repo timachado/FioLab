@@ -110,6 +110,12 @@ fun SimulatorScreen(
         mutableFloatStateOf(1f)
     }
 
+    var stoppedForColorChange by remember(
+        design.fileName
+    ) {
+        mutableStateOf(false)
+    }
+
     LaunchedEffect(
         playing,
         speed,
@@ -140,6 +146,19 @@ fun SimulatorScreen(
                     ).coerceAtMost(
                         points.size
                     )
+
+            if (
+                command ==
+                    StitchCommand.COLOR_CHANGE
+            ) {
+                stoppedForColorChange =
+                    true
+
+                playing =
+                    false
+
+                break
+            }
         }
 
         if (
@@ -591,11 +610,36 @@ fun SimulatorScreen(
                     )
                 }
 
+                if (
+                    stoppedForColorChange
+                ) {
+                    Text(
+                        "Troca de linha • coloque a cor do bloco " +
+                            block +
+                            " e toque em Continuar.",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.SemiBold,
+                        fontSize =
+                            11.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            6.dp
+                        )
+                    )
+                }
+
                 Slider(
                     value =
                         progress,
                     onValueChange = {
                         playing =
+                            false
+
+                        stoppedForColorChange =
                             false
 
                         index =
@@ -671,8 +715,18 @@ fun SimulatorScreen(
                                 index = 0
                             }
 
-                            playing =
-                                !playing
+                            if (
+                                stoppedForColorChange
+                            ) {
+                                stoppedForColorChange =
+                                    false
+
+                                playing =
+                                    true
+                            } else {
+                                playing =
+                                    !playing
+                            }
                         },
                         modifier =
                             Modifier.weight(
@@ -688,12 +742,15 @@ fun SimulatorScreen(
                                 )
                     ) {
                         Text(
-                            if (
-                                playing
-                            ) {
-                                "Ⅱ Pausar"
-                            } else {
-                                "▶ Reproduzir"
+                            when {
+                                stoppedForColorChange ->
+                                    "▶ Continuar"
+
+                                playing ->
+                                    "Ⅱ Pausar"
+
+                                else ->
+                                    "▶ Reproduzir"
                             },
                             fontWeight =
                                 FontWeight.Bold
@@ -704,6 +761,10 @@ fun SimulatorScreen(
                         onClick = {
                             playing =
                                 false
+
+                            stoppedForColorChange =
+                                false
+
                             index = 0
                         },
                         modifier =

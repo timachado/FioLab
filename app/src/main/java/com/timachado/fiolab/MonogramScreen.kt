@@ -144,6 +144,16 @@ fun MonogramScreen(
         )
     }
 
+    var selectedInitial by remember {
+        mutableIntStateOf(0)
+    }
+
+    var initialColors by remember {
+        mutableStateOf<
+            Map<Int, Int>
+        >(emptyMap())
+    }
+
     val result =
         MonogramGenerator.generate(
             MonogramOptions(
@@ -162,6 +172,14 @@ fun MonogramScreen(
                 satinUnderlayMode =
                     satinUnderlayMode,
                 color = color,
+                initialColors =
+                    initials.indices
+                        .map {
+                                index ->
+                            initialColors[
+                                index
+                            ] ?: color
+                        },
                 font = font,
                 outputFormat =
                     outputFormat,
@@ -320,6 +338,12 @@ fun MonogramScreen(
                                             "pt-BR"
                                         )
                                 )
+
+                        selectedInitial =
+                            0
+
+                        initialColors =
+                            emptyMap()
                     },
                     modifier =
                         Modifier
@@ -336,6 +360,170 @@ fun MonogramScreen(
                     },
                     singleLine = true
                 )
+
+                Spacer(
+                    Modifier.height(
+                        12.dp
+                    )
+                )
+
+                Text(
+                    "Cores das iniciais",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                if (
+                    initials.isNotEmpty()
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                vertical =
+                                    8.dp
+                            ),
+                        horizontalArrangement =
+                            Arrangement
+                                .spacedBy(
+                                    8.dp
+                                )
+                    ) {
+                        initials
+                            .forEachIndexed {
+                                    index,
+                                    initial ->
+                                val selected =
+                                    selectedInitial ==
+                                        index
+
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedInitial =
+                                            index
+                                    },
+                                    colors =
+                                        ButtonDefaults
+                                            .outlinedButtonColors(
+                                                contentColor =
+                                                    if (
+                                                        selected
+                                                    ) {
+                                                        FioGold
+                                                    } else {
+                                                        FioText
+                                                    }
+                                            )
+                                ) {
+                                    Text(
+                                        (
+                                            index +
+                                                1
+                                            ).toString() +
+                                            " • " +
+                                            initial
+                                    )
+                                }
+                            }
+                    }
+
+                    val selectedInitialColor =
+                        initialColors[
+                            selectedInitial
+                        ] ?: color
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                vertical =
+                                    6.dp
+                            ),
+                        horizontalArrangement =
+                            Arrangement
+                                .spacedBy(
+                                    9.dp
+                                )
+                    ) {
+                        monogramPalette
+                            .forEach {
+                                    rawColor ->
+                                val selected =
+                                    rawColor ==
+                                        selectedInitialColor
+
+                                Box(
+                                    Modifier
+                                        .size(
+                                            36.dp
+                                        )
+                                        .background(
+                                            Color(
+                                                0xFF000000 or
+                                                    rawColor
+                                                        .toLong()
+                                            ),
+                                            CircleShape
+                                        )
+                                        .border(
+                                            if (
+                                                selected
+                                            ) {
+                                                3.dp
+                                            } else {
+                                                1.dp
+                                            },
+                                            if (
+                                                selected
+                                            ) {
+                                                FioGold
+                                            } else {
+                                                Color(
+                                                    0xFF52616B
+                                                )
+                                            },
+                                            CircleShape
+                                        )
+                                        .clickable {
+                                            initialColors =
+                                                initialColors +
+                                                    (
+                                                        selectedInitial to
+                                                            rawColor
+                                                        )
+                                        }
+                                )
+                            }
+                    }
+
+                    if (
+                        initialColors
+                            .containsKey(
+                                selectedInitial
+                            )
+                    ) {
+                        TextButton(
+                            onClick = {
+                                initialColors =
+                                    initialColors -
+                                        selectedInitial
+                            }
+                        ) {
+                            Text(
+                                "Usar cor geral nesta inicial",
+                                color =
+                                    FioGold
+                            )
+                        }
+                    }
+                }
 
                 Spacer(
                     Modifier.height(

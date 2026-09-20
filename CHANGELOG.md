@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.15.0
+
+### Multicor real
+- Cor individual por letra no Criar Nome.
+- Cor individual por inicial no Criar Monograma.
+- Cores iguais consecutivas permanecem no mesmo bloco.
+- Quando a cor muda, o FioLab insere COLOR_CHANGE real na sequência.
+- Se uma cor voltar depois de outro bloco, uma nova troca é criada.
+- Cada ponto recebe o índice de cor correspondente ao bloco.
+- Paleta da sequência preservada no modelo da matriz.
+
+### Simulação
+- A Simulação de Máquina pausa automaticamente em COLOR_CHANGE.
+- O app informa o bloco seguinte.
+- Botão Continuar retoma a costura após a troca de linha.
+- Marcador e pontadas usam a cor real do bloco.
+
+### Exportação
+- PES e JEF recebem a sequência de fios/paleta.
+- DST preserva os comandos de troca de cor, embora o formato não carregue uma paleta RGB completa.
+- Testes multicor para nomes e monogramas.
+- Exportação multicor validada em DST, PES e JEF.
+
+
 ## 0.14.0
 
 ### Texto Curvo

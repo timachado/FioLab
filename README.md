@@ -1,4 +1,4 @@
-# FioLab 0.14.0
+# FioLab 0.15.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,19 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Multicor por Letra e Bloco
+
+A v0.15 permite escolher cores diferentes para letras do nome e iniciais do monograma.
+
+O FioLab agrupa letras consecutivas da mesma cor no mesmo bloco. Quando a cor muda, a própria matriz recebe um comando **COLOR_CHANGE**.
+
+Na Simulação de Máquina:
+- a costura para no COLOR_CHANGE;
+- o próximo bloco/cor é mostrado;
+- o usuário toca em **Continuar** depois de trocar a linha.
+
+PES e JEF carregam a sequência de cores. DST mantém a sequência de paradas/trocas, mas não possui uma paleta RGB completa como os formatos mais ricos.
 
 ## Texto Curvo e Ajuste por Letra
 

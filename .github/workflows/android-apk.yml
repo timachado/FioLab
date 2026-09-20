@@ -44,24 +44,24 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.14.0-debug.apk
-          zip -9 FioLab-0.14.0-debug.zip FioLab-0.14.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.15.0-debug.apk
+          zip -9 FioLab-0.15.0-debug.zip FioLab-0.15.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.14.0-downloads
+          name: FioLab-0.15.0-downloads
           path: |
-            FioLab-0.14.0-debug.apk
-            FioLab-0.14.0-debug.zip
+            FioLab-0.15.0-debug.apk
+            FioLab-0.15.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.14.0 >/dev/null 2>&1; then
-            gh release upload v0.14.0               FioLab-0.14.0-debug.apk               FioLab-0.14.0-debug.zip               --clobber
+          if gh release view v0.15.0 >/dev/null 2>&1; then
+            gh release upload v0.15.0               FioLab-0.15.0-debug.apk               FioLab-0.15.0-debug.zip               --clobber
           else
-            gh release create v0.14.0               FioLab-0.14.0-debug.apk               FioLab-0.14.0-debug.zip               --target main               --title "FioLab 0.14.0"               --notes "FioLab 0.14.0: texto reto/arco para cima/arco para baixo, ajuste individual de posição/rotação/espaçamento por letra, recentralização automática e exportação DST/PES/JEF."
+            gh release create v0.15.0               FioLab-0.15.0-debug.apk               FioLab-0.15.0-debug.zip               --target main               --title "FioLab 0.15.0"               --notes "FioLab 0.15.0: multicor real por letra/inicial, COLOR_CHANGE real, pausa automática na troca de linha, paleta por bloco e exportação DST/PES/JEF."
           fi

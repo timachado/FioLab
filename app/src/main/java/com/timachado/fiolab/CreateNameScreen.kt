@@ -550,6 +550,10 @@ fun CreateNameScreen(
                         selectedAdjustment !=
                             null
                     ) {
+                        val selectedLetterColor =
+                            selectedAdjustment.color
+                                ?: color
+
                         Text(
                             "Mover X " +
                                 mm(
@@ -680,6 +684,109 @@ fun CreateNameScreen(
                             valueRange =
                                 -3f..8f
                         )
+
+                        Text(
+                            "Cor da letra",
+                            color = FioText,
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(
+                                    rememberScrollState()
+                                )
+                                .padding(
+                                    vertical = 8.dp
+                                ),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    9.dp
+                                )
+                        ) {
+                            namePalette.forEach {
+                                    rawColor ->
+                                val selected =
+                                    rawColor ==
+                                        selectedLetterColor
+
+                                Box(
+                                    Modifier
+                                        .size(
+                                            36.dp
+                                        )
+                                        .background(
+                                            Color(
+                                                0xFF000000 or
+                                                    rawColor
+                                                        .toLong()
+                                            ),
+                                            CircleShape
+                                        )
+                                        .border(
+                                            if (
+                                                selected
+                                            ) {
+                                                3.dp
+                                            } else {
+                                                1.dp
+                                            },
+                                            if (
+                                                selected
+                                            ) {
+                                                FioGold
+                                            } else {
+                                                Color(
+                                                    0xFF52616B
+                                                )
+                                            },
+                                            CircleShape
+                                        )
+                                        .clickable {
+                                            letterAdjustments =
+                                                letterAdjustments +
+                                                    (
+                                                        selectedAdjustment
+                                                            .sourceIndex to
+                                                            selectedAdjustment
+                                                                .copy(
+                                                                    color =
+                                                                        rawColor
+                                                                )
+                                                        )
+                                        }
+                                )
+                            }
+                        }
+
+                        if (
+                            selectedAdjustment.color !=
+                                null
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    letterAdjustments =
+                                        letterAdjustments +
+                                            (
+                                                selectedAdjustment
+                                                    .sourceIndex to
+                                                    selectedAdjustment
+                                                        .copy(
+                                                            color =
+                                                                null
+                                                        )
+                                                )
+                                }
+                            ) {
+                                Text(
+                                    "Usar cor geral",
+                                    color =
+                                        FioGold
+                                )
+                            }
+                        }
 
                         OutlinedButton(
                             onClick = {
