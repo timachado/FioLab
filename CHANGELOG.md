@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.4
+
+### Fidelidade de fontes importadas
+- Ajustado o Satin por eixo para fontes cursivas e caligráficas como Alliby.
+- O eixo central extraído da letra passa por suavização antes do cálculo das pontadas.
+- Ramificações curtas do esqueleto são descartadas para evitar dentes e desvios falsos.
+- A direção do Satin usa uma janela maior do eixo para reduzir mudanças bruscas entre pixels.
+- A largura das duas bordas é suavizada ao longo do traço para reduzir picos.
+- A rasterização interna passa de 1,5 para 1,0 unidade por pixel, melhorando a precisão de curvas.
+- Mantidos o reconhecimento de matrizes por conteúdo, matriz ativa persistente e o Material 3 Expressive.
+
 ## 0.22.3
 
 ### Matrizes e simulação
