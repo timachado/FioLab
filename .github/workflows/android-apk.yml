@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/satin-row-columns-0250"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
