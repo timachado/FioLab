@@ -1,64 +1,61 @@
 # Changelog
 
+## 0.8.0
+
+### Adicionado
+- Simulação de máquina redesenhada com referência visual completa ao fundo.
+- Pontadas reais surgindo progressivamente sobre a referência.
+- Marcador visual da posição atual da agulha.
+- Canvas claro com grade e bastidor tracejado.
+- Velocidades 1×, 2× e 4×.
+- Ritmo base de aproximadamente 750 pontos/minuto em 1×.
+- Tempo restante estimado durante a costura.
+- Tempo total estimado.
+- Contagem de pontos concluídos.
+- Bloco/cor atual.
+- Retorno de 10% da simulação.
+- Botão parar e reiniciar.
+- Saltos, cortes e trocas de cor com tempos visuais diferentes.
+- Testes unitários do modelo de tempo da simulação.
+
+### Comportamento importante
+- O simulador representa as pontadas que realmente existem na matriz.
+- Uma matriz satin aparece preenchendo progressivamente as letras.
+- Uma matriz de ponto corrido permanece como ponto corrido.
+- O FioLab não desenha preenchimento falso que não exista no arquivo.
+
 ## 0.7.0
 
 ### Adicionado
 - Criar Nome diretamente pelo Android.
 - Fonte de bordado própria baseada em caminhos de costura.
-- Alfabeto A–Z, números e sinais básicos.
-- Suporte a acentos usados em português, incluindo ã, õ e ç.
-- Três presets iniciais: Fio Linha, Fio Compacta e Fio Larga.
-- Controle de altura do nome.
-- Controle de espaçamento entre caracteres.
-- Controle de comprimento aproximado das pontadas.
-- Escolha de cor da linha.
-- Escolha do formato final DST, PES ou JEF.
-- Prévia em tempo real.
-- Simular o nome antes de salvar.
-- Salvar, editar, converter e compartilhar matrizes criadas no próprio FioLab.
-- Testes de geração de texto e exportação para todos os formatos liberados.
-
-### Importante
-- A fonte da v0.7 é uma fonte de bordado desenhada como caminhos de costura.
-- O FioLab não trata uma TTF comum como matriz pronta.
-- O arquivo criado é gerado a partir das pontadas e o original não existe até o usuário salvar.
+- A–Z, números, sinais básicos e acentos do português.
+- Presets Fio Linha, Fio Compacta e Fio Larga.
+- Controle de altura, espaçamento, ponto, cor e formato.
+- Prévia, simulação e exportação DST/PES/JEF.
 
 ## 0.6.0
 
 ### Adicionado
 - Editor básico de matrizes.
-- Redimensionamento, rotação e movimento.
-- Espelhamento horizontal e vertical.
-- Centralização.
-- Troca de cores por bloco.
-- Prévia em tempo real.
-- Salvamento e compartilhamento de matriz editada.
+- Redimensionamento, rotação, movimento, espelhamento e cores.
 
 ## 0.5.0
 
 ### Adicionado
-- Conversão real entre DST, PES e JEF.
-- Converter e salvar.
-- Converter e compartilhar.
-- Preservação de paleta quando disponível.
-- Testes de round-trip.
+- Conversão real DST ⇄ PES ⇄ JEF.
 
 ## 0.4.0
 
 ### Adicionado
-- Leitura real JEF e PES.
-- Testes com arquivos binários reais.
+- Leitura real JEF/PES.
 
 ## 0.3.0
 
 ### Adicionado
-- Salvar cópia no Android.
-- SD e USB/OTG.
-- Compartilhamento seguro.
+- Salvar no Android, SD/OTG e compartilhar.
 
 ## 0.2.0
 
 ### Adicionado
-- Simulador progressivo de pontadas.
-- Play, pausa, avanço, retrocesso e velocidade.
-- Estimativa de consumo de linha.
+- Primeiro simulador progressivo.

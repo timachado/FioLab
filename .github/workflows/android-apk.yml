@@ -44,24 +44,24 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.7.0-debug.apk
-          zip -9 FioLab-0.7.0-debug.zip FioLab-0.7.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.8.0-debug.apk
+          zip -9 FioLab-0.8.0-debug.zip FioLab-0.8.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.7.0-downloads
+          name: FioLab-0.8.0-downloads
           path: |
-            FioLab-0.7.0-debug.apk
-            FioLab-0.7.0-debug.zip
+            FioLab-0.8.0-debug.apk
+            FioLab-0.8.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.7.0 >/dev/null 2>&1; then
-            gh release upload v0.7.0               FioLab-0.7.0-debug.apk               FioLab-0.7.0-debug.zip               --clobber
+          if gh release view v0.8.0 >/dev/null 2>&1; then
+            gh release upload v0.8.0               FioLab-0.8.0-debug.apk               FioLab-0.8.0-debug.zip               --clobber
           else
-            gh release create v0.7.0               FioLab-0.7.0-debug.apk               FioLab-0.7.0-debug.zip               --target main               --title "FioLab 0.7.0"               --notes "FioLab 0.7.0: Criar Nome com fonte de bordado própria em pontadas, presets Fio Linha/Compacta/Larga, acentos do português, prévia, simulador, editor e exportação DST/PES/JEF."
+            gh release create v0.8.0               FioLab-0.8.0-debug.apk               FioLab-0.8.0-debug.zip               --target main               --title "FioLab 0.8.0"               --notes "FioLab 0.8.0: Simulação de Máquina com matriz fantasma, pontadas reais progressivas, marcador de agulha, 1×/2×/4×, pontos e tempo restante; DST/PES/JEF."
           fi

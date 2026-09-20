@@ -1,7 +1,9 @@
 package com.timachado.fiolab
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.SimulationTiming
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.core.embroidery.estimateThreadMeters
 import com.timachado.fiolab.ui.theme.FioBackground
@@ -49,182 +54,802 @@ fun SimulatorScreen(
     design: EmbroideryDesign,
     onBack: () -> Unit
 ) {
-    val points = remember(design) {
-        design.points.filter { it.command != StitchCommand.END }
-    }
-    var index by remember(design.fileName) { mutableIntStateOf(0) }
-    var playing by remember(design.fileName) { mutableStateOf(false) }
-    var speed by remember(design.fileName) { mutableFloatStateOf(1f) }
-
-    LaunchedEffect(playing, speed, design.fileName) {
-        while (playing && index < points.size) {
-            val step = when {
-                speed >= 4f -> 20
-                speed >= 2f -> 8
-                else -> 2
-            }
-            index = (index + step).coerceAtMost(points.size)
-            delay((35f / speed).toLong().coerceAtLeast(8))
+    val points =
+        remember(design) {
+            design.points
+                .filter {
+                    it.command !=
+                        StitchCommand.END
+                }
         }
-        if (index >= points.size) {
+
+    val stitchPrefix =
+        remember(points) {
+            IntArray(
+                points.size +
+                    1
+            ).also {
+                    prefix ->
+                points.forEachIndexed {
+                        index,
+                        point ->
+                    prefix[
+                        index +
+                            1
+                    ] =
+                        prefix[
+                            index
+                        ] +
+                        if (
+                            point.command ==
+                                StitchCommand.STITCH
+                        ) {
+                            1
+                        } else {
+                            0
+                        }
+                }
+            }
+        }
+
+    var index by remember(
+        design.fileName
+    ) {
+        mutableIntStateOf(0)
+    }
+
+    var playing by remember(
+        design.fileName
+    ) {
+        mutableStateOf(false)
+    }
+
+    var speed by remember(
+        design.fileName
+    ) {
+        mutableFloatStateOf(1f)
+    }
+
+    LaunchedEffect(
+        playing,
+        speed,
+        design.fileName
+    ) {
+        while (
+            playing &&
+            index <
+                points.size
+        ) {
+            val command =
+                points[
+                    index
+                ].command
+
+            delay(
+                SimulationTiming
+                    .eventDelayMs(
+                        command,
+                        speed
+                    )
+            )
+
+            index =
+                (
+                    index +
+                        1
+                    ).coerceAtMost(
+                        points.size
+                    )
+        }
+
+        if (
+            index >=
+                points.size
+        ) {
             playing = false
         }
     }
 
-    val progress = if (points.isEmpty()) 0f else index.toFloat() / points.size
-    val point = points.getOrNull((index - 1).coerceAtLeast(0))
-    val block = (point?.colorIndex ?: 0) + 1
-    val thread = remember(design) { estimateThreadMeters(design) }
-
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val progress =
+        if (
+            points.isEmpty()
         ) {
-            TextButton(onClick = onBack) {
-                Text("‹ Voltar", color = FioGold)
-            }
-            Column(
-                Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Simular bordado",
-                    color = FioText,
-                    fontWeight = FontWeight.SemiBold
+            0f
+        } else {
+            index.toFloat() /
+                points.size
+        }
+
+    val currentPoint =
+        points.getOrNull(
+            (
+                index -
+                    1
+                ).coerceAtLeast(
+                    0
                 )
-                Text(
-                    ((progress * 100).toInt()).toString() + "% concluído",
-                    color = FioTextMuted,
-                    fontSize = 11.sp
-                )
-            }
-            Text(
-                block.toString() + "/" + design.colorCount,
-                color = FioGold,
-                fontWeight = FontWeight.Bold
+        )
+
+    val block =
+        (
+            currentPoint
+                ?.colorIndex
+                ?: 0
+            ) +
+            1
+
+    val completedStitches =
+        stitchPrefix[
+            index.coerceIn(
+                0,
+                points.size
+            )
+        ]
+
+    val remainingStitches =
+        (
+            design.stitchCount -
+                completedStitches
+            ).coerceAtLeast(
+                0
+            )
+
+    val remainingSeconds =
+        SimulationTiming
+            .estimatedSeconds(
+                stitches =
+                    remainingStitches,
+                speedMultiplier =
+                    speed
+            )
+
+    val totalSeconds =
+        SimulationTiming
+            .estimatedSeconds(
+                stitches =
+                    design.stitchCount,
+                speedMultiplier =
+                    speed
+            )
+
+    val thread =
+        remember(design) {
+            estimateThreadMeters(
+                design
             )
         }
 
-        EmbroideryCanvas(
-            design = design,
-            pointLimit = index,
-            modifier = Modifier
+    val currentThreadColor =
+        remember(
+            design.threadColors,
+            block
+        ) {
+            val raw =
+                design.threadColors
+                    .getOrNull(
+                        (
+                            block -
+                                1
+                            ).coerceAtLeast(
+                                0
+                            )
+                    )
+                    ?: 0xE6BE70
+
+            Color(
+                0xFF000000 or
+                    raw.toLong()
+            )
+        }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+        Row(
+            Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp)
-                .background(Color(0xFF071017), RoundedCornerShape(24.dp))
-        )
+                .padding(
+                    horizontal =
+                        10.dp,
+                    vertical =
+                        6.dp
+                ),
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick =
+                    onBack
+            ) {
+                Text(
+                    "‹ Voltar",
+                    color =
+                        FioGold
+                )
+            }
+
+            Text(
+                "Simulação",
+                modifier =
+                    Modifier.weight(
+                        1f
+                    ),
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize =
+                    18.sp
+            )
+
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        4.dp
+                    )
+            ) {
+                listOf(
+                    1f,
+                    2f,
+                    4f
+                ).forEach {
+                        option ->
+                    val selected =
+                        speed ==
+                            option
+
+                    Card(
+                        modifier =
+                            Modifier
+                                .clickable {
+                                    speed =
+                                        option
+                                },
+                        colors =
+                            CardDefaults
+                                .cardColors(
+                                    containerColor =
+                                        if (
+                                            selected
+                                        ) {
+                                            FioGold
+                                        } else {
+                                            FioSurfaceAlt
+                                        }
+                                ),
+                        shape =
+                            RoundedCornerShape(
+                                10.dp
+                            )
+                    ) {
+                        Text(
+                            option
+                                .toInt()
+                                .toString() +
+                                "×",
+                            modifier =
+                                Modifier.padding(
+                                    horizontal =
+                                        10.dp,
+                                    vertical =
+                                        7.dp
+                                ),
+                            color =
+                                if (
+                                    selected
+                                ) {
+                                    FioBackground
+                                } else {
+                                    FioTextMuted
+                                },
+                            fontWeight =
+                                FontWeight.Bold,
+                            fontSize =
+                                11.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(
+                        horizontal =
+                            14.dp
+                    )
+        ) {
+            MachineSimulationCanvas(
+                design = design,
+                pointLimit =
+                    index,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+            )
+
+            Card(
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.TopStart
+                        )
+                        .padding(
+                            10.dp
+                        ),
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                Color(
+                                    0xCC25272A
+                                )
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        14.dp
+                    )
+            ) {
+                Text(
+                    (
+                        progress *
+                            100f
+                        ).toInt()
+                        .toString() +
+                        "%",
+                    modifier =
+                        Modifier.padding(
+                            horizontal =
+                                10.dp,
+                            vertical =
+                                6.dp
+                        ),
+                    color =
+                        Color.White,
+                    fontSize =
+                        11.sp,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
+            Card(
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.TopEnd
+                        )
+                        .padding(
+                            10.dp
+                        ),
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                Color(
+                                    0xCC25272A
+                                )
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        14.dp
+                    )
+            ) {
+                Text(
+                    mm(
+                        design.bounds
+                            .widthMm
+                    ) +
+                        " × " +
+                        mm(
+                            design.bounds
+                                .heightMm
+                        ) +
+                        " mm",
+                    modifier =
+                        Modifier.padding(
+                            horizontal =
+                                10.dp,
+                            vertical =
+                                6.dp
+                        ),
+                    color =
+                        Color.White,
+                    fontSize =
+                        11.sp,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+            }
+        }
 
         Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = FioSurface),
-            shape = RoundedCornerShape(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        14.dp
+                    ),
+            colors =
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+            shape =
+                RoundedCornerShape(
+                    24.dp
+                )
         ) {
-            Column(Modifier.padding(18.dp)) {
-                Slider(
-                    value = progress,
-                    onValueChange = {
-                        playing = false
-                        index = (it * points.size).toInt().coerceIn(0, points.size)
-                    },
-                    colors = SliderDefaults.colors(
-                        thumbColor = FioGold,
-                        activeTrackColor = FioGold,
-                        inactiveTrackColor = FioSurfaceAlt
+            Column(
+                Modifier.padding(
+                    16.dp
+                )
+            ) {
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(
+                                34.dp
+                            )
+                            .background(
+                                currentThreadColor,
+                                CircleShape
+                            )
+                    )
+
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(
+                                    1f
+                                )
+                                .padding(
+                                    start =
+                                        10.dp
+                                )
+                    ) {
+                        Text(
+                            "Linha " +
+                                block,
+                            color =
+                                FioText,
+                            fontWeight =
+                                FontWeight.SemiBold
+                        )
+
+                        Text(
+                            "Bloco " +
+                                block +
+                                " de " +
+                                design.colorCount,
+                            color =
+                                FioTextMuted,
+                            fontSize =
+                                10.sp
+                        )
+                    }
+
+                    Text(
+                        "Fio " +
+                            block +
+                            "/" +
+                            design.colorCount,
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                }
+
+                Spacer(
+                    Modifier.height(
+                        10.dp
                     )
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        completedStitches
+                            .toString() +
+                            "/" +
+                            design.stitchCount +
+                            " pts",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
+                    )
+
+                    Text(
+                        if (
+                            remainingStitches >
+                                0
+                        ) {
+                            "Restante: " +
+                                formatTime(
+                                    remainingSeconds
+                                )
+                        } else {
+                            "Concluído"
+                        },
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
+                    )
+                }
+
+                Slider(
+                    value =
+                        progress,
+                    onValueChange = {
+                        playing =
+                            false
+
+                        index =
+                            (
+                                it *
+                                    points.size
+                                ).toInt()
+                                .coerceIn(
+                                    0,
+                                    points.size
+                                )
+                    },
+                    colors =
+                        SliderDefaults
+                            .colors(
+                                thumbColor =
+                                    FioGold,
+                                activeTrackColor =
+                                    FioGold,
+                                inactiveTrackColor =
+                                    FioSurfaceAlt
+                            )
+                )
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(),
+                    horizontalArrangement =
+                        Arrangement
+                            .spacedBy(
+                                8.dp
+                            ),
+                    verticalAlignment =
+                        Alignment.CenterVertically
                 ) {
                     TextButton(
                         onClick = {
-                            playing = false
-                            index = (index - 50).coerceAtLeast(0)
-                        }
+                            playing =
+                                false
+
+                            index =
+                                (
+                                    index -
+                                        (
+                                            points.size *
+                                                .10f
+                                            ).toInt()
+                                    ).coerceAtLeast(
+                                        0
+                                    )
+                        },
+                        modifier =
+                            Modifier.weight(
+                                .8f
+                            )
                     ) {
-                        Text("−50", color = FioGold)
+                        Text(
+                            "⏮ −10%",
+                            color =
+                                FioGold,
+                            fontWeight =
+                                FontWeight.Bold
+                        )
                     }
 
                     Button(
                         onClick = {
-                            if (index >= points.size) {
+                            if (
+                                index >=
+                                    points.size
+                            ) {
                                 index = 0
                             }
-                            playing = !playing
+
+                            playing =
+                                !playing
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FioGold,
-                            contentColor = FioBackground
-                        )
+                        modifier =
+                            Modifier.weight(
+                                1.7f
+                            ),
+                        colors =
+                            ButtonDefaults
+                                .buttonColors(
+                                    containerColor =
+                                        FioGold,
+                                    contentColor =
+                                        FioBackground
+                                )
                     ) {
                         Text(
-                            if (playing) "Ⅱ Pausar" else "▶ Reproduzir",
-                            fontWeight = FontWeight.Bold
+                            if (
+                                playing
+                            ) {
+                                "Ⅱ Pausar"
+                            } else {
+                                "▶ Reproduzir"
+                            },
+                            fontWeight =
+                                FontWeight.Bold
                         )
                     }
 
                     TextButton(
                         onClick = {
-                            playing = false
-                            index = (index + 50).coerceAtMost(points.size)
-                        }
+                            playing =
+                                false
+                            index = 0
+                        },
+                        modifier =
+                            Modifier.weight(
+                                .8f
+                            )
                     ) {
-                        Text("+50", color = FioGold)
+                        Text(
+                            "■ Parar",
+                            color =
+                                Color(
+                                    0xFFFF9F9A
+                                ),
+                            fontWeight =
+                                FontWeight.Bold
+                        )
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Velocidade " + oneDecimal(speed) + "×",
-                    color = FioTextMuted,
-                    fontSize = 11.sp
-                )
-                Slider(
-                    value = speed,
-                    onValueChange = { speed = it },
-                    valueRange = 0.5f..5f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = FioGold,
-                        activeTrackColor = FioGold,
-                        inactiveTrackColor = FioSurfaceAlt
+                Spacer(
+                    Modifier.height(
+                        8.dp
                     )
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
                     InfoChip(
-                        index.toString() + "/" + points.size,
-                        "eventos",
-                        Modifier.weight(1f)
+                        value =
+                            (
+                                SimulationTiming
+                                    .BASE_STITCHES_PER_MINUTE *
+                                    speed
+                                ).toInt()
+                                .toString(),
+                        label = "pts/min",
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            )
                     )
+
                     InfoChip(
-                        block.toString() + "/" + design.colorCount,
-                        "bloco",
-                        Modifier.weight(1f)
+                        value =
+                            formatTime(
+                                totalSeconds
+                            ),
+                        label =
+                            "tempo estimado",
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            )
                     )
+
                     InfoChip(
-                        twoDecimals(thread) + " m",
-                        "linha est.",
-                        Modifier.weight(1f)
+                        value =
+                            twoDecimals(
+                                thread
+                            ) +
+                            " m",
+                        label =
+                            "linha est.",
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            )
                     )
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(
+                    Modifier.height(
+                        6.dp
+                    )
+                )
+
                 Text(
-                    "Estimativa de linha: trajeto de costura × 2,2. O consumo real varia por tecido, tensão e máquina.",
-                    color = FioTextMuted,
-                    fontSize = 10.sp
+                    "A prévia clara mostra o caminho completo. As pontadas fortes representam o que a máquina já teria costurado; o marcador indica a posição atual da agulha.",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
                 )
             }
         }
     }
 }
 
-private fun oneDecimal(value: Float): String =
-    String.format(Locale("pt", "BR"), "%.1f", value)
+private fun mm(
+    value: Float
+): String =
+    String.format(
+        Locale.forLanguageTag(
+            "pt-BR"
+        ),
+        "%.0f",
+        value
+    )
 
-private fun twoDecimals(value: Double): String =
-    String.format(Locale("pt", "BR"), "%.2f", value)
+private fun twoDecimals(
+    value: Double
+): String =
+    String.format(
+        Locale.forLanguageTag(
+            "pt-BR"
+        ),
+        "%.2f",
+        value
+    )
+
+private fun formatTime(
+    seconds: Int
+): String {
+    val safe =
+        seconds.coerceAtLeast(
+            0
+        )
+
+    val minutes =
+        safe /
+            60
+
+    val rest =
+        safe %
+            60
+
+    return if (
+        minutes > 0
+    ) {
+        minutes
+            .toString() +
+            "m " +
+            rest
+                .toString()
+                .padStart(
+                    2,
+                    '0'
+                ) +
+            "s"
+    } else {
+        rest
+            .toString() +
+            "s"
+    }
+}

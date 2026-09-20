@@ -1,0 +1,701 @@
+package com.timachado.fiolab
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
+import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.EmbroideryPoint
+import com.timachado.fiolab.core.embroidery.StitchCommand
+
+private val simulationPalette =
+    listOf(
+        Color(0xFFE6BE70),
+        Color(0xFFE76F51),
+        Color(0xFF2A9D8F),
+        Color(0xFF457B9D),
+        Color(0xFF9B5DE5),
+        Color(0xFFF4A261),
+        Color(0xFFF4A7B9),
+        Color(0xFF6D597A)
+    )
+
+@Composable
+fun MachineSimulationCanvas(
+    design: EmbroideryDesign,
+    pointLimit: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier =
+            modifier
+                .background(
+                    Color(
+                        0xFFF3EFE5
+                    ),
+                    RoundedCornerShape(
+                        24.dp
+                    )
+                )
+    ) {
+        Canvas(
+            Modifier.fillMaxSize()
+        ) {
+            val transform =
+                SimulationTransform(
+                    design =
+                        design,
+                    canvasWidth =
+                        size.width,
+                    canvasHeight =
+                        size.height,
+                    padding =
+                        38.dp.toPx()
+                )
+
+            drawFabricGrid(
+                transform
+            )
+
+            drawHoop()
+
+            drawStitches(
+                design =
+                    design,
+                transform =
+                    transform,
+                pointLimit =
+                    design.points.size,
+                ghost = true
+            )
+
+            drawStitches(
+                design =
+                    design,
+                transform =
+                    transform,
+                pointLimit =
+                    pointLimit,
+                ghost = false
+            )
+
+            val visiblePoints =
+                design.points
+                    .filter {
+                        it.command !=
+                            StitchCommand.END
+                    }
+
+            val current =
+                visiblePoints
+                    .getOrNull(
+                        (
+                            pointLimit -
+                                1
+                            ).coerceAtLeast(
+                                0
+                            )
+                    )
+
+            if (
+                pointLimit > 0 &&
+                current != null
+            ) {
+                drawNeedle(
+                    point = current,
+                    transform =
+                        transform,
+                    color =
+                        threadColor(
+                            design,
+                            current
+                                .colorIndex
+                        )
+                )
+            }
+        }
+    }
+}
+
+private data class SimulationTransform(
+    val design: EmbroideryDesign,
+    val canvasWidth: Float,
+    val canvasHeight: Float,
+    val padding: Float
+) {
+    private val widthUnits =
+        (
+            design.bounds
+                .maxXUnits -
+                design.bounds
+                    .minXUnits
+            ).coerceAtLeast(1)
+
+    private val heightUnits =
+        (
+            design.bounds
+                .maxYUnits -
+                design.bounds
+                    .minYUnits
+            ).coerceAtLeast(1)
+
+    val scale: Float =
+        minOf(
+            (
+                canvasWidth -
+                    padding * 2f
+                ) /
+                widthUnits,
+            (
+                canvasHeight -
+                    padding * 2f
+                ) /
+                heightUnits
+        ).coerceAtLeast(
+            0.01f
+        )
+
+    private val contentWidth =
+        widthUnits *
+            scale
+
+    private val contentHeight =
+        heightUnits *
+            scale
+
+    private val originX =
+        (
+            canvasWidth -
+                contentWidth
+            ) /
+            2f -
+            design.bounds
+                .minXUnits *
+                scale
+
+    private val originY =
+        (
+            canvasHeight -
+                contentHeight
+            ) /
+            2f +
+            design.bounds
+                .maxYUnits *
+                scale
+
+    fun point(
+        embroideryPoint:
+            EmbroideryPoint
+    ): Offset =
+        Offset(
+            x =
+                originX +
+                    embroideryPoint
+                        .xUnits *
+                    scale,
+            y =
+                originY -
+                    embroideryPoint
+                        .yUnits *
+                    scale
+        )
+
+    fun unitsToPx(
+        units: Float
+    ): Float =
+        units *
+            scale
+}
+
+private fun DrawScope.drawFabricGrid(
+    transform:
+        SimulationTransform
+) {
+    val minor =
+        transform
+            .unitsToPx(
+                50f
+            )
+            .coerceIn(
+                18.dp.toPx(),
+                54.dp.toPx()
+            )
+
+    val major =
+        minor *
+            2f
+
+    var x = 0f
+    var index = 0
+
+    while (
+        x <= size.width
+    ) {
+        drawLine(
+            color =
+                if (
+                    index %
+                        2 ==
+                        0
+                ) {
+                    Color(
+                        0x2A8C877C
+                    )
+                } else {
+                    Color(
+                        0x168C877C
+                    )
+                },
+            start =
+                Offset(
+                    x,
+                    0f
+                ),
+            end =
+                Offset(
+                    x,
+                    size.height
+                ),
+            strokeWidth =
+                if (
+                    index %
+                        2 ==
+                        0
+                ) {
+                    1.2f
+                } else {
+                    0.8f
+                }
+        )
+
+        index++
+        x += minor
+    }
+
+    var y = 0f
+    index = 0
+
+    while (
+        y <= size.height
+    ) {
+        drawLine(
+            color =
+                if (
+                    index %
+                        2 ==
+                        0
+                ) {
+                    Color(
+                        0x2A8C877C
+                    )
+                } else {
+                    Color(
+                        0x168C877C
+                    )
+                },
+            start =
+                Offset(
+                    0f,
+                    y
+                ),
+            end =
+                Offset(
+                    size.width,
+                    y
+                ),
+            strokeWidth =
+                if (
+                    index %
+                        2 ==
+                        0
+                ) {
+                    1.2f
+                } else {
+                    0.8f
+                }
+        )
+
+        index++
+        y += minor
+    }
+
+    drawLine(
+        color =
+            Color(
+                0x33958E80
+            ),
+        start =
+            Offset(
+                0f,
+                size.height /
+                    2f
+            ),
+        end =
+            Offset(
+                size.width,
+                size.height /
+                    2f
+            ),
+        strokeWidth =
+            1.2f
+    )
+
+    drawLine(
+        color =
+            Color(
+                0x33958E80
+            ),
+        start =
+            Offset(
+                size.width /
+                    2f,
+                0f
+            ),
+        end =
+            Offset(
+                size.width /
+                    2f,
+                size.height
+            ),
+        strokeWidth =
+            1.2f
+    )
+}
+
+private fun DrawScope.drawHoop() {
+    val inset =
+        13.dp.toPx()
+
+    drawRoundRect(
+        color =
+            Color(
+                0xAA34373B
+            ),
+        topLeft =
+            Offset(
+                inset,
+                inset
+            ),
+        size =
+            androidx.compose.ui.geometry.Size(
+                width =
+                    size.width -
+                        inset * 2f,
+                height =
+                    size.height -
+                        inset * 2f
+            ),
+        cornerRadius =
+            CornerRadius(
+                18.dp.toPx(),
+                18.dp.toPx()
+            ),
+        style =
+            Stroke(
+                width =
+                    1.5.dp.toPx(),
+                pathEffect =
+                    PathEffect
+                        .dashPathEffect(
+                            floatArrayOf(
+                                9.dp.toPx(),
+                                7.dp.toPx()
+                            )
+                        )
+            )
+    )
+}
+
+private fun DrawScope.drawStitches(
+    design: EmbroideryDesign,
+    transform:
+        SimulationTransform,
+    pointLimit: Int,
+    ghost: Boolean
+) {
+    var previous:
+        EmbroideryPoint? =
+        null
+
+    val limit =
+        pointLimit
+            .coerceIn(
+                0,
+                design.points.size
+            )
+
+    for (
+        index in
+            0 until limit
+    ) {
+        val point =
+            design.points[
+                index
+            ]
+
+        when (
+            point.command
+        ) {
+            StitchCommand.COLOR_CHANGE,
+            StitchCommand.TRIM,
+            StitchCommand.STOP,
+            StitchCommand.END -> {
+                previous =
+                    point
+            }
+
+            StitchCommand.JUMP -> {
+                if (
+                    !ghost &&
+                    previous != null
+                ) {
+                    drawLine(
+                        color =
+                            Color(
+                                0x33756F66
+                            ),
+                        start =
+                            transform
+                                .point(
+                                    previous!!
+                                ),
+                        end =
+                            transform
+                                .point(
+                                    point
+                                ),
+                        strokeWidth =
+                            0.8.dp
+                                .toPx()
+                    )
+                }
+
+                previous =
+                    point
+            }
+
+            StitchCommand.SEQUIN -> {
+                val color =
+                    threadColor(
+                        design,
+                        point.colorIndex
+                    )
+
+                drawCircle(
+                    color =
+                        if (ghost) {
+                            color.copy(
+                                alpha =
+                                    0.10f
+                            )
+                        } else {
+                            color
+                        },
+                    radius =
+                        if (ghost) {
+                            1.2.dp
+                                .toPx()
+                        } else {
+                            2.4.dp
+                                .toPx()
+                        },
+                    center =
+                        transform
+                            .point(
+                                point
+                            )
+                )
+
+                previous =
+                    point
+            }
+
+            StitchCommand.STITCH -> {
+                val before =
+                    previous
+
+                if (
+                    before != null
+                ) {
+                    val baseColor =
+                        threadColor(
+                            design,
+                            point
+                                .colorIndex
+                        )
+
+                    val color =
+                        if (ghost) {
+                            baseColor
+                                .copy(
+                                    alpha =
+                                        0.10f
+                                )
+                        } else {
+                            baseColor
+                                .copy(
+                                    alpha =
+                                        0.98f
+                                )
+                        }
+
+                    drawLine(
+                        color =
+                            color,
+                        start =
+                            transform
+                                .point(
+                                    before
+                                ),
+                        end =
+                            transform
+                                .point(
+                                    point
+                                ),
+                        strokeWidth =
+                            if (ghost) {
+                                1.1.dp
+                                    .toPx()
+                            } else {
+                                1.55.dp
+                                    .toPx()
+                            },
+                        cap =
+                            StrokeCap.Round
+                    )
+
+                    if (
+                        !ghost
+                    ) {
+                        drawLine(
+                            color =
+                                Color.White
+                                    .copy(
+                                        alpha =
+                                            0.10f
+                                    ),
+                            start =
+                                transform
+                                    .point(
+                                        before
+                                    ),
+                            end =
+                                transform
+                                    .point(
+                                        point
+                                    ),
+                            strokeWidth =
+                                0.45.dp
+                                    .toPx(),
+                            cap =
+                                StrokeCap.Round
+                        )
+                    }
+                }
+
+                previous =
+                    point
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawNeedle(
+    point: EmbroideryPoint,
+    transform:
+        SimulationTransform,
+    color: Color
+) {
+    val center =
+        transform.point(
+            point
+        )
+
+    drawLine(
+        color =
+            Color(
+                0x88434446
+            ),
+        start =
+            Offset(
+                center.x,
+                center.y -
+                    20.dp
+                        .toPx()
+            ),
+        end =
+            Offset(
+                center.x,
+                center.y -
+                    4.dp
+                        .toPx()
+            ),
+        strokeWidth =
+            1.6.dp.toPx(),
+        cap =
+            StrokeCap.Round
+    )
+
+    drawCircle(
+        color =
+            Color.White,
+        radius =
+            6.dp.toPx(),
+        center =
+            center
+    )
+
+    drawCircle(
+        color =
+            color,
+        radius =
+            4.2.dp.toPx(),
+        center =
+            center
+    )
+
+    drawCircle(
+        color =
+            Color.White,
+        radius =
+            1.4.dp.toPx(),
+        center =
+            center
+    )
+}
+
+private fun threadColor(
+    design: EmbroideryDesign,
+    colorIndex: Int
+): Color {
+    val raw =
+        design.threadColors
+            .getOrNull(
+                colorIndex
+            )
+
+    return if (
+        raw != null
+    ) {
+        Color(
+            0xFF000000 or
+                raw.toLong()
+        )
+    } else {
+        simulationPalette[
+            colorIndex %
+                simulationPalette.size
+        ]
+    }
+}
