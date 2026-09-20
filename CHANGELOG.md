@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.3
+
+### Matrizes e simulação
+- O carregador deixa de depender apenas da extensão mostrada pelo Android.
+- PES e DST passam a ser reconhecidos por assinatura do conteúdo; JEF também é tentado quando o nome vem sem extensão.
+- A matriz aberta/criada/editada passa a ser persistida como matriz ativa para continuar disponível na Home e no Simulador.
+- Fontes TTF/OTF em Satin deixam de usar preenchimento por varredura horizontal.
+- Novo gerador rasteriza o glifo, extrai o eixo central do traço e alterna as pontadas entre as duas bordas ao longo desse eixo.
+- A sequência avança pelas hastes e curvas da letra, aproximando o comportamento visual do vídeo de referência.
+- Mantidos TRIM/JUMP sem linhas falsas na simulação e a interface Material 3 Expressive.
+
 ## 0.22.2
 
 ### Fontes TTF/OTF e simulação
