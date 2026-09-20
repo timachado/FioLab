@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.12.0
+
+### Monogramas
+- Novo fluxo Criar Monograma.
+- 1, 2 ou 3 iniciais.
+- Estilo Linear.
+- Estilo Clássico com inicial central maior em monogramas de 3 letras.
+- Estilo Empilhado.
+- Geração Satin real por inicial.
+- TRIM automático quando a distância entre letras exige deslocamento maior.
+- Seleção de fonte de bordado.
+- Altura e espaçamento configuráveis.
+- Largura, densidade, compensação, short stitches e underlay Satin.
+- Perfis de tecido e bastidor reaproveitados da v0.11.
+- Validação de área segura antes de Criar/Simular.
+- Prévia em escala de bastidor.
+- Simulação da sequência real de costura.
+- Exportação DST, PES e JEF.
+- Testes para 1, 2 e 3 iniciais, layouts, bastidor e exportação.
+
+
 ## 0.11.0
 
 ### Bastidores

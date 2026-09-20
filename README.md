@@ -1,4 +1,4 @@
-# FioLab 0.11.0
+# FioLab 0.12.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,25 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Monogramas
+
+A v0.12 adiciona **Criar Monograma** com 1, 2 ou 3 iniciais.
+
+Estilos:
+- **Linear** — todas as letras com proporção semelhante;
+- **Clássico** — em 3 iniciais, a letra central recebe maior destaque;
+- **Empilhado** — composição vertical compacta.
+
+Cada inicial é gerada como Satin real e depois posicionada na composição. O monograma usa os mesmos controles de tecido, bastidor, densidade, compensação, short stitches e underlay disponíveis no Criar Nome.
+
+O resultado pode ser:
+- visualizado;
+- simulado;
+- editado;
+- convertido;
+- salvo;
+- compartilhado em DST, PES ou JEF.
 
 ## Bastidores e Perfis de Tecido
 

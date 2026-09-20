@@ -42,6 +42,7 @@ import java.util.Locale
 fun HomeScreen(
     recent: EmbroideryDesign?,
     onCreateName: () -> Unit,
+    onCreateMonogram: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
     onSimulate: () -> Unit,
@@ -143,7 +144,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.11 cria nomes com bastidor e tecido, edita, simula e converte DST, PES e JEF.",
+                        "FioLab 0.12 cria nomes e monogramas em Satin, com bastidor, tecido, simulação e exportação.",
                         color = FioTextMuted
                     )
                 }
@@ -164,7 +165,7 @@ fun HomeScreen(
                     title =
                         "Criar nome",
                     subtitle =
-                        "Fonte de bordado",
+                        "Satin ou ponto corrido",
                     enabled = true,
                     onClick =
                         onCreateName
@@ -173,13 +174,14 @@ fun HomeScreen(
                 FeatureCard(
                     modifier =
                         Modifier.weight(1f),
-                    icon = "↗",
+                    icon = "ABC",
                     title =
-                        "Abrir matriz",
+                        "Monograma",
                     subtitle =
-                        "DST • JEF • PES",
+                        "1 • 2 • 3 iniciais",
                     enabled = true,
-                    onClick = onOpen
+                    onClick =
+                        onCreateMonogram
                 )
             }
         }
@@ -191,6 +193,18 @@ fun HomeScreen(
                         12.dp
                     )
             ) {
+                FeatureCard(
+                    modifier =
+                        Modifier.weight(1f),
+                    icon = "↗",
+                    title =
+                        "Abrir matriz",
+                    subtitle =
+                        "DST • JEF • PES",
+                    enabled = true,
+                    onClick = onOpen
+                )
+
                 FeatureCard(
                     modifier =
                         Modifier.weight(1f),
@@ -212,7 +226,16 @@ fun HomeScreen(
                         )
                     }
                 }
+            }
+        }
 
+        item {
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        12.dp
+                    )
+            ) {
                 FeatureCard(
                     modifier =
                         Modifier.weight(1f),
@@ -234,28 +257,26 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-        }
 
-        item {
-            FeatureCard(
-                modifier =
-                    Modifier.fillMaxWidth(),
-                icon = "⇄",
-                title = "Converter",
-                subtitle =
-                    "DST ⇄ PES ⇄ JEF",
-                enabled =
-                    recent != null
-            ) {
-                if (
-                    recent != null
+                FeatureCard(
+                    modifier =
+                        Modifier.weight(1f),
+                    icon = "⇄",
+                    title = "Converter",
+                    subtitle =
+                        "DST ⇄ PES ⇄ JEF",
+                    enabled =
+                        recent != null
                 ) {
-                    onConvert()
-                } else {
-                    onUnavailable(
-                        "Crie ou abra uma matriz primeiro."
-                    )
+                    if (
+                        recent != null
+                    ) {
+                        onConvert()
+                    } else {
+                        onUnavailable(
+                            "Crie ou abra uma matriz primeiro."
+                        )
+                    }
                 }
             }
         }
@@ -386,7 +407,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.11.0 • Android",
+                "FioLab 0.12.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

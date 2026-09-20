@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
 private sealed interface Screen {
     data object Home : Screen
     data object CreateName : Screen
+    data object CreateMonogram : Screen
 
     data class Viewer(
         val design: EmbroideryDesign
@@ -468,6 +469,10 @@ private fun FioLabApp() {
                             screen =
                                 Screen.CreateName
                         },
+                        onCreateMonogram = {
+                            screen =
+                                Screen.CreateMonogram
+                        },
                         onOpen = {
                             picker.launch(
                                 arrayOf("*/*")
@@ -521,6 +526,35 @@ private fun FioLabApp() {
 
                 Screen.CreateName -> {
                     CreateNameScreen(
+                        onBack = {
+                            screen =
+                                Screen.Home
+                        },
+                        onCreate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Viewer(
+                                    created
+                                )
+                        },
+                        onSimulate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Simulator(
+                                    created
+                                )
+                        }
+                    )
+                }
+
+                Screen.CreateMonogram -> {
+                    MonogramScreen(
                         onBack = {
                             screen =
                                 Screen.Home
