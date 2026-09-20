@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.23.0
+
+### Motor adaptativo TTF/OTF
+- Removida a abordagem de corrigir comportamento para uma família de fonte específica.
+- Cada glifo importado passa a ser analisado geometricamente antes da digitalização.
+- O motor mede área, comprimento do esqueleto, ramificações, largura estimada e proporção do desenho.
+- Fontes finas, cursivas e de traço contínuo usam Satin pelo eixo quando a geometria é adequada.
+- Fontes muito grossas, display, decorativas ou com ramificações excessivas usam preenchimento de área como fallback seguro.
+- O resultado passa por preflight automático antes de ser aceito.
+- O preflight rejeita trajetórias com pontos excessivamente longos, repetições degeneradas e proporção anormal de saltos.
+- Se o Satin por eixo falhar no preflight, o gerador refaz o glifo automaticamente com a técnica segura.
+- A decisão não usa nome, fabricante ou família da fonte; depende apenas da geometria real do glifo.
+- Adicionados testes de regressão para perfis fino/cursivo, grosso/display, decorativo, degenerado e trajetórias inválidas.
+
 ## 0.22.4
 
 ### Fidelidade de fontes importadas
