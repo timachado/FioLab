@@ -646,53 +646,88 @@ private fun DrawScope.drawStitches(
                                 )
                         }
 
-                    drawLine(
-                        color =
-                            color,
-                        start =
-                            transform
-                                .point(
-                                    before
-                                ),
-                        end =
-                            transform
-                                .point(
-                                    point
-                                ),
-                        strokeWidth =
-                            if (ghost) {
-                                1.1.dp
-                                    .toPx()
-                            } else {
-                                1.55.dp
-                                    .toPx()
-                            },
-                        cap =
-                            StrokeCap.Round
-                    )
+                    val start =
+                        transform
+                            .point(
+                                before
+                            )
+
+                    val end =
+                        transform
+                            .point(
+                                point
+                            )
 
                     if (
-                        !ghost
+                        ghost
                     ) {
+                        drawLine(
+                            color =
+                                color,
+                            start =
+                                start,
+                            end =
+                                end,
+                            strokeWidth =
+                                1.05.dp
+                                    .toPx(),
+                            cap =
+                                StrokeCap.Round
+                        )
+                    } else {
+                        drawLine(
+                            color =
+                                Color.Black
+                                    .copy(
+                                        alpha =
+                                            0.22f
+                                    ),
+                            start =
+                                start +
+                                    Offset(
+                                        0.7.dp.toPx(),
+                                        0.7.dp.toPx()
+                                    ),
+                            end =
+                                end +
+                                    Offset(
+                                        0.7.dp.toPx(),
+                                        0.7.dp.toPx()
+                                    ),
+                            strokeWidth =
+                                2.9.dp
+                                    .toPx(),
+                            cap =
+                                StrokeCap.Round
+                        )
+
+                        drawLine(
+                            color =
+                                color,
+                            start =
+                                start,
+                            end =
+                                end,
+                            strokeWidth =
+                                2.35.dp
+                                    .toPx(),
+                            cap =
+                                StrokeCap.Round
+                        )
+
                         drawLine(
                             color =
                                 Color.White
                                     .copy(
                                         alpha =
-                                            0.10f
+                                            0.18f
                                     ),
                             start =
-                                transform
-                                    .point(
-                                        before
-                                    ),
+                                start,
                             end =
-                                transform
-                                    .point(
-                                        point
-                                    ),
+                                end,
                             strokeWidth =
-                                0.45.dp
+                                0.55.dp
                                     .toPx(),
                             cap =
                                 StrokeCap.Round
