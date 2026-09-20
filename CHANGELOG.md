@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.25.0
+
+### Novo digitalizador Satin para fontes
+- Removido do caminho principal o esqueleto rasterizado que quebrava curvas, junções e letras cursivas.
+- Implementado gerador baseado em SatinRow e SatinColumn, seguindo a arquitetura observada no comportamento do Mão Design sem copiar código proprietário.
+- Cada linha interna do glifo é calculada diretamente pelas interseções com o contorno vetorial da TTF/OTF.
+- As faixas são agrupadas verticalmente por sobreposição e proximidade, formando colunas contínuas de bordado.
+- Mudanças de topologia criam novas colunas em vez de fragmentar a letra em ramos serrilhados.
+- As bordas de cada coluna recebem suavização local antes da geração dos pontos.
+- As colunas são roteadas pela extremidade mais próxima para reduzir saltos e manter uma ordem natural.
+- Underlay central é calculado por coluna.
+- Pontos Satin largos continuam sendo divididos em comprimentos seguros.
+- A simulação continua reproduzindo a sequência real de pontos e não desenha JUMP/TRIM como costura.
+
 ## 0.24.0
 
 ### Satin de fontes e simulação
