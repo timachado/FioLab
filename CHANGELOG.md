@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.21.7
+
+### Fontes importadas
+- Fontes TTF/OTF passam a usar o contorno vetorial da palavra inteira no fluxo normal de Criar Nome, preservando melhor a forma original, kerning e fontes manuscritas/ligadas.
+- Caracteres ausentes deixam de cair silenciosamente em glifos de substituição; o app tenta uma versão sem diacrítico e, se ainda não existir, mostra um erro claro.
+- Importador reconhece TTF/OTF pelo cabeçalho real do arquivo e aceita fontes válidas mesmo quando o Android entrega o documento sem extensão no nome.
+- Ajustes individuais por letra e texto curvo continuam disponíveis usando o modo por glifo quando necessário.
+
+### Home
+- Removidos os cards Monograma e Desenho/logo da grade principal.
+- Adicionado card Fontes no lugar, com acesso direto às fontes nativas e importadas.
+- As implementações de Monograma e Desenho permanecem preservadas no código para não perder trabalho existente.
+
+### Simulador
+- Matrizes pequenas deixam de ser reduzidas ao tamanho físico completo do bastidor na prévia.
+- Zoom automático enquadra a área real do bordado com margem visual e limite de ampliação.
+- Dimensão do bastidor e sequência real de pontos continuam preservadas.
+
 ## 0.21.6
 
 ### Navegação e Home
