@@ -8,7 +8,7 @@
 - Barra inferior mantém cinco destinos e passa a usar ícones vetoriais reais em vez de caracteres de texto.
 - Ícones importados do conjunto oficial Material Symbols Rounded do Google para Início, Criar, Matrizes, Fontes, Conta, Abrir, Simular, Editar, Converter e Enviar.
 - Tema FioLab passa a definir escala própria de shapes e tipografia Material 3, preservando a identidade dourado + azul-escuro.
-- Compose BOM atualizado para 2026.09.00 para alinhar o app à linha atual estável do Material 3.
+- Mantida a base Compose compatível com o SDK 36 atual do projeto, aplicando a linguagem visual M3 Expressive sem quebrar a pipeline.
 
 ## 0.22.0
 
