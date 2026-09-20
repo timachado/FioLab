@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/ttf-otf-fonts-0215"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
