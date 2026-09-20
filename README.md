@@ -22,10 +22,10 @@ Após uma compilação aprovada, o APK de teste é publicado em **Releases** com
 
 `FioLab-0.2.0-debug.apk`
 
-## Compatibilidade da base
+## Compatibilidade da v0.2.0
 
 - Android 8.0+ (minSdk 26)
-- compileSdk 37
+- compileSdk/targetSdk 36
 - JDK 17
 - Android Gradle Plugin 9.4.0
 - Gradle 9.6.0
