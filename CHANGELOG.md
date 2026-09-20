@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.21.0
+
+### Minha Conta
+- Nova área "Minha Conta" na Home.
+- Cadastro por nome, e-mail e senha.
+- Login por e-mail e senha.
+- Sessão persistida pelo cliente Supabase no Android.
+- Perfil com nome editável.
+- Logout.
+- Conta não envia automaticamente "Minhas Matrizes" para a nuvem.
+
+### Assinatura preparada
+- Cartão "Minha assinatura" dentro da conta.
+- Exibe plano atual.
+- Exibe status: ativa, teste, pendente, cancelada ou expirada.
+- Exibe validade/próxima renovação quando existir.
+- Conta nova começa no plano gratuito.
+- O aplicativo tem apenas leitura da assinatura; não consegue se autoatribuir plano pago.
+
+### Backend
+- Tabelas próprias public.fiolab_profiles e public.fiolab_subscriptions.
+- RLS habilitado.
+- Usuário só lê/edita o próprio perfil.
+- Usuário só lê a própria assinatura.
+- Nenhuma permissão de escrita de assinatura para o cliente Android.
+- Perfil/assinatura padrão são criados para cadastros identificados com app_slug=fiolab.
+- Estrutura versionada em supabase/fiolab_account_schema.sql.
+
+### Dependências
+- supabase-kt 3.8.0.
+- Auth e PostgREST.
+- Ktor Android 3.5.1.
+
+
 ## 0.20.0
 
 ### Backup e restauração

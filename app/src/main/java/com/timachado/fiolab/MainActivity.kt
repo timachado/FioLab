@@ -23,6 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.timachado.fiolab.core.account.AccountSnapshot
+import com.timachado.fiolab.core.account.FioLabAccountService
+import com.timachado.fiolab.core.account.SignUpOutcome
 import com.timachado.fiolab.core.embroidery.ConvertedMatrix
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
@@ -58,6 +61,7 @@ private sealed interface Screen {
     data object CreateDrawing : Screen
     data object FontLibrary : Screen
     data object ProjectLibrary : Screen
+    data object Account : Screen
 
     data class Transfer(
         val design: EmbroideryDesign
@@ -121,6 +125,12 @@ private fun FioLabApp() {
         mutableStateOf<
             List<SavedProjectSummary>
         >(emptyList())
+    }
+
+    var account by remember {
+        mutableStateOf<
+            AccountSnapshot?
+        >(null)
     }
 
     var loading by remember {
@@ -549,6 +559,233 @@ private fun FioLabApp() {
         )
     }
 
+    fun openAccount() {
+        screen =
+            Screen.Account
+
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .currentAccount()
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                        current ->
+                    account =
+                        current
+                },
+                onFailure = {
+                    snackbar
+                        .showSnackbar(
+                            "Não foi possível atualizar sua conta."
+                        )
+                }
+            )
+        }
+    }
+
+    fun signInAccount(
+        email: String,
+        password: String
+    ) {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .signIn(
+                            email,
+                            password
+                        )
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                        signedIn ->
+                    account =
+                        signedIn
+
+                    snackbar
+                        .showSnackbar(
+                            "Conta conectada."
+                        )
+                },
+                onFailure = {
+                        error ->
+                    snackbar
+                        .showSnackbar(
+                            error.message
+                                ?: "Não foi possível entrar."
+                        )
+                }
+            )
+        }
+    }
+
+    fun signUpAccount(
+        displayName: String,
+        email: String,
+        password: String
+    ) {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .signUp(
+                            displayName,
+                            email,
+                            password
+                        )
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                        outcome ->
+                    when (
+                        outcome
+                    ) {
+                        is SignUpOutcome
+                            .SignedIn -> {
+                            account =
+                                outcome
+                                    .account
+
+                            snackbar
+                                .showSnackbar(
+                                    "Conta criada e conectada."
+                                )
+                        }
+
+                        is SignUpOutcome
+                            .ConfirmationRequired -> {
+                            account =
+                                null
+
+                            snackbar
+                                .showSnackbar(
+                                    "Conta criada. Confira o e-mail " +
+                                        outcome.email +
+                                        " antes de entrar."
+                                )
+                        }
+                    }
+                },
+                onFailure = {
+                        error ->
+                    snackbar
+                        .showSnackbar(
+                            error.message
+                                ?: "Não foi possível criar a conta."
+                        )
+                }
+            )
+        }
+    }
+
+    fun saveAccountName(
+        displayName: String
+    ) {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .updateDisplayName(
+                            displayName
+                        )
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                        updated ->
+                    account =
+                        updated
+
+                    snackbar
+                        .showSnackbar(
+                            "Nome atualizado."
+                        )
+                },
+                onFailure = {
+                        error ->
+                    snackbar
+                        .showSnackbar(
+                            error.message
+                                ?: "Não foi possível atualizar o nome."
+                        )
+                }
+            )
+        }
+    }
+
+    fun signOutAccount() {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .signOut()
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                    account =
+                        null
+
+                    snackbar
+                        .showSnackbar(
+                            "Você saiu da conta."
+                        )
+                },
+                onFailure = {
+                    snackbar
+                        .showSnackbar(
+                            "Não foi possível sair da conta."
+                        )
+                }
+            )
+        }
+    }
+
     fun createLibraryBackup() {
         scope.launch {
             loading = true
@@ -800,6 +1037,9 @@ private fun FioLabApp() {
                         onProjects = {
                             openProjectLibrary()
                         },
+                        onAccount = {
+                            openAccount()
+                        },
                         onTransfer = {
                             recent?.let {
                                 screen =
@@ -855,6 +1095,44 @@ private fun FioLabApp() {
                                         message
                                     )
                             }
+                        }
+                    )
+                }
+
+                Screen.Account -> {
+                    AccountScreen(
+                        account =
+                            account,
+                        onBack = {
+                            screen =
+                                Screen.Home
+                        },
+                        onSignIn = {
+                                email,
+                                password ->
+                            signInAccount(
+                                email,
+                                password
+                            )
+                        },
+                        onSignUp = {
+                                name,
+                                email,
+                                password ->
+                            signUpAccount(
+                                name,
+                                email,
+                                password
+                            )
+                        },
+                        onSaveName = {
+                                name ->
+                            saveAccountName(
+                                name
+                            )
+                        },
+                        onSignOut = {
+                            signOutAccount()
                         }
                     )
                 }

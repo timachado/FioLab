@@ -46,6 +46,7 @@ fun HomeScreen(
     onCreateDrawing: () -> Unit,
     onFonts: () -> Unit,
     onProjects: () -> Unit,
+    onAccount: () -> Unit,
     onTransfer: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
@@ -148,7 +149,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.19 salva suas matrizes no celular para reabrir e enviar novamente à bordadeira.",
+                        "FioLab 0.21 adiciona Minha Conta e prepara o acompanhamento seguro das assinaturas.",
                         color = FioTextMuted
                     )
                 }
@@ -202,6 +203,21 @@ fun HomeScreen(
                 enabled = true,
                 onClick =
                     onCreateDrawing
+            )
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                icon = "☺",
+                title =
+                    "Minha Conta",
+                subtitle =
+                    "Perfil • plano • status da assinatura",
+                enabled = true,
+                onClick =
+                    onAccount
             )
         }
 
@@ -480,7 +496,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.19.0 • Android",
+                "FioLab 0.21.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,
