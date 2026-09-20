@@ -2,24 +2,27 @@
 
 Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
 
-## Estado atual
+## Funcional nesta versão
 
-A v0.2.0 inclui:
-- leitura real de matrizes Tajima DST;
-- visualização em Canvas com zoom e arraste;
-- dimensões, pontos e blocos de cor;
-- simulador progressivo de bordado;
-- play/pausa, avanço e retrocesso;
-- controle de velocidade de 0,5× a 5×;
-- progresso e bloco atual;
-- estimativa inicial de consumo de linha;
-- seleção de arquivos pelo mecanismo nativo do Android.
+- Abrir arquivos Tajima DST pelo seletor nativo do Android.
+- Visualizar a matriz com zoom e arraste.
+- Mostrar dimensões, total de pontos e blocos de cor.
+- Simular a sequência progressiva do bordado.
+- Play, pausa, avanço e retrocesso.
+- Controle de velocidade de 0,5× a 5×.
+- Mostrar percentual concluído e bloco atual.
+- Estimativa inicial de consumo de linha.
+- Arquivo original preservado em modo somente leitura.
 
 ## APK
 
-O APK de teste é compilado automaticamente pelo GitHub Actions e publicado em **Releases** como `FioLab-0.2.0-debug.apk`.
+O GitHub Actions executa testes e compila o APK automaticamente.
 
-## Compatibilidade
+Após uma compilação aprovada, o APK de teste é publicado em **Releases** como:
+
+`FioLab-0.2.0-debug.apk`
+
+## Compatibilidade da base
 
 - Android 8.0+ (minSdk 26)
 - compileSdk 37
@@ -28,16 +31,10 @@ O APK de teste é compilado automaticamente pelo GitHub Actions e publicado em *
 - Gradle 9.6.0
 - Jetpack Compose
 
-## Código-fonte
-
-O pacote integral desta versão está em:
-
-`source/FioLab-0.2.0-source.zip`
-
 ## Próximas etapas
 
 - 0.3: salvar/exportar no Android e pendrive OTG.
-- 0.4: novos leitores de formatos, validados individualmente.
+- 0.4: novos leitores de formatos validados individualmente.
 - 0.5: conversão.
 - 0.6: editor básico.
 - 0.7: Criar Nome e biblioteca de fontes de bordado.

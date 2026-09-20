@@ -17,11 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract FioLab source
-        run: |
-          mkdir appsrc
-          unzip source/FioLab-0.2.0-source.zip -d appsrc
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -40,15 +35,13 @@ jobs:
           gradle-version: "9.6.0"
 
       - name: Unit tests
-        working-directory: appsrc
         run: gradle :app:testDebugUnitTest --stacktrace
 
       - name: Build debug APK
-        working-directory: appsrc
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp appsrc/app/build/outputs/apk/debug/app-debug.apk FioLab-0.2.0-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.2.0-debug.apk
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -64,5 +57,5 @@ jobs:
           if gh release view v0.2.0 >/dev/null 2>&1; then
             gh release upload v0.2.0 FioLab-0.2.0-debug.apk --clobber
           else
-            gh release create v0.2.0 FioLab-0.2.0-debug.apk               --target main               --title "FioLab 0.2.0"               --notes "APK de desenvolvimento do FioLab 0.2.0. Inclui leitor/visualizador DST e simulador progressivo. Build debug para testes em Android 8.0+."
+            gh release create v0.2.0 FioLab-0.2.0-debug.apk --target main --title "FioLab 0.2.0" --notes "APK de desenvolvimento do FioLab 0.2.0. Leitor/visualizador DST e simulador progressivo. Android 8.0+."
           fi
