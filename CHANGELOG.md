@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.1
+
+### Material 3 Expressive
+- Home reformulada com hierarquia visual mais clara e ação principal "Criar nome" em destaque.
+- Cards secundários reorganizados com shapes maiores, elevação tonal e estados habilitado/desabilitado mais claros.
+- Barra inferior mantém cinco destinos e passa a usar ícones vetoriais reais em vez de caracteres de texto.
+- Ícones importados do conjunto oficial Material Symbols Rounded do Google para Início, Criar, Matrizes, Fontes, Conta, Abrir, Simular, Editar, Converter e Enviar.
+- Tema FioLab passa a definir escala própria de shapes e tipografia Material 3, preservando a identidade dourado + azul-escuro.
+- Compose BOM atualizado para 2026.09.00 para alinhar o app à linha atual estável do Material 3.
+
 ## 0.22.0
 
 ### Criar Nome
