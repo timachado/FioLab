@@ -43,6 +43,7 @@ fun HomeScreen(
     recent: EmbroideryDesign?,
     onCreateName: () -> Unit,
     onCreateMonogram: () -> Unit,
+    onCreateDrawing: () -> Unit,
     onFonts: () -> Unit,
     onTransfer: () -> Unit,
     onOpen: () -> Unit,
@@ -146,7 +147,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.17 mantém o foco simples: criar a matriz e enviar para a bordadeira por OTG ou app/rede.",
+                        "FioLab 0.18 cria nomes, monogramas e desenhos/logos para enviar à bordadeira por OTG ou app/rede.",
                         color = FioTextMuted
                     )
                 }
@@ -186,6 +187,21 @@ fun HomeScreen(
                         onCreateMonogram
                 )
             }
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                icon = "✦",
+                title =
+                    "Criar desenho/logo",
+                subtitle =
+                    "SVG simples • desenhar com o dedo",
+                enabled = true,
+                onClick =
+                    onCreateDrawing
+            )
         }
 
         item {
@@ -448,7 +464,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.17.0 • Android",
+                "FioLab 0.18.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

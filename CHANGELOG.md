@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.18.0
+
+### Criar desenho/logo
+- Novo fluxo "Criar desenho/logo" na Home.
+- Importação de SVG simples pelo seletor de arquivos do Android.
+- Desenho à mão livre diretamente na tela.
+- Cada traço vira um caminho real de bordado.
+- Controle de largura em milímetros.
+- Cor da linha.
+- Ponto corrido.
+- Satin aplicado sobre o traço.
+- Escolha de bastidor.
+- Exportação DST, PES e JEF.
+- Integração com Viewer, Simulador e Enviar para máquina.
+
+### SVG inicial
+- path com M/L/H/V/C/S/Q/T/Z.
+- line.
+- polyline.
+- polygon.
+- rect.
+- circle.
+- ellipse.
+- Curvas cúbicas e quadráticas são amostradas em pontos antes da geração da matriz.
+- Arcos SVG (A/a) e transforms complexos ainda não são aceitos.
+- A v0.18 trabalha o contorno/traço; não faz preenchimento automático de áreas complexas.
+
+### Qualidade
+- SVG limitado a 2 MB nesta versão.
+- Desenho é normalizado para tamanho físico em milímetros.
+- Acabamento de máquina continua automático por baixo.
+- Testes cobrem parsing, ponto corrido, Satin e exportação DST/PES/JEF.
+
+
 ## 0.17.0
 
 ### Foco do produto

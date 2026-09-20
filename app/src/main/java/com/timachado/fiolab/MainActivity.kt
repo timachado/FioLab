@@ -52,6 +52,7 @@ private sealed interface Screen {
     data object Home : Screen
     data object CreateName : Screen
     data object CreateMonogram : Screen
+    data object CreateDrawing : Screen
     data object FontLibrary : Screen
 
     data class Transfer(
@@ -488,6 +489,10 @@ private fun FioLabApp() {
                             screen =
                                 Screen.CreateMonogram
                         },
+                        onCreateDrawing = {
+                            screen =
+                                Screen.CreateDrawing
+                        },
                         onFonts = {
                             screen =
                                 Screen.FontLibrary
@@ -562,6 +567,35 @@ private fun FioLabApp() {
 
                 Screen.CreateName -> {
                     CreateNameScreen(
+                        onBack = {
+                            screen =
+                                Screen.Home
+                        },
+                        onCreate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Viewer(
+                                    created
+                                )
+                        },
+                        onSimulate = {
+                                created ->
+                            recent =
+                                created
+
+                            screen =
+                                Screen.Simulator(
+                                    created
+                                )
+                        }
+                    )
+                }
+
+                Screen.CreateDrawing -> {
+                    CreateDrawingScreen(
                         onBack = {
                             screen =
                                 Screen.Home

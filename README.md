@@ -1,4 +1,4 @@
-# FioLab 0.17.0
+# FioLab 0.18.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,20 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Criar desenho/logo
+
+A v0.18 fecha o terceiro pilar do FioLab: além de nomes e monogramas, o usuário pode criar uma matriz a partir de um **SVG simples** ou desenhar diretamente com o dedo.
+
+Fluxo:
+1. importar SVG ou desenhar;
+2. escolher largura;
+3. escolher ponto corrido ou Satin sobre o traço;
+4. escolher cor, bastidor e DST/PES/JEF;
+5. visualizar/simular;
+6. enviar por Pendrive OTG ou Wi-Fi/app compatível.
+
+O suporte SVG inicial entende caminhos com linhas e curvas Bézier, além de formas básicas. Esta versão não tenta preencher automaticamente logos complexos e não promete abrir todo SVG existente.
 
 ## Objetivo do FioLab
 
