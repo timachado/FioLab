@@ -172,109 +172,29 @@ object ImportedFontMatrixGenerator {
                 targetHeightUnits /
                     pathBounds.height()
 
-            val sampled =
-                samplePath(path)
+            val glyphGroups =
+                sampleGlyphGroups(
+                    paint = paint,
+                    text = renderableText,
+                    pathBounds = pathBounds,
+                    scale = scale,
+                    spacingMm =
+                        options.spacingMm
+                )
 
             require(
-                sampled.isNotEmpty()
-            ) {
-                "Não foi possível interpretar o contorno da fonte."
-            }
-
-            val transformed =
-                sampled.map {
-                        contour ->
-                    SampledContour(
-                        points =
-                            contour.points
-                                .map {
-                                    point ->
-                                    Pair(
-                                        (
-                                            (
-                                                point.first -
-                                                    pathBounds
-                                                        .centerX()
-                                                ) *
-                                                scale
-                                            ).roundToInt(),
-                                        (
-                                            (
-                                                pathBounds
-                                                    .centerY() -
-                                                    point.second
-                                                ) *
-                                                scale
-                                            ).roundToInt()
-                                    )
-                                }
-                                .fold(
-                                    mutableListOf<
-                                        Pair<Int, Int>
-                                    >()
-                                ) {
-                                    acc,
-                                    point ->
-                                    if (
-                                        acc.lastOrNull() !=
-                                            point
-                                    ) {
-                                        acc +=
-                                            point
-                                    }
-
-                                    acc
-                                },
-                        closed =
-                            contour.closed
-                    )
-                }
-                .filter {
-                    it.points.size >=
-                        2
-                }
-
-            require(
-                transformed.isNotEmpty()
+                glyphGroups.isNotEmpty()
             ) {
                 "A fonte não gerou contornos válidos."
             }
 
             val points =
-                when (
-                    options.style
-                ) {
-                    TextStitchStyle.RUNNING ->
-                        buildRunningOutline(
-                            contours =
-                                transformed,
-                            stitchLengthUnits =
-                                options
-                                    .stitchLengthMm *
-                                    10f
-                        )
-
-                    TextStitchStyle.SATIN ->
-                        buildFilledText(
-                            contours =
-                                transformed,
-                            rowStepUnits =
-                                options
-                                    .satinDensityMm *
-                                    10f,
-                            pullCompensationUnits =
-                                options
-                                    .satinPullCompensationMm *
-                                    10f,
-                            maxStitchUnits =
-                                max(
-                                    45f,
-                                    options
-                                        .satinWidthMm *
-                                        10f
-                                )
-                        )
-                }
+                buildTextInReadingOrder(
+                    glyphGroups =
+                        glyphGroups,
+                    options =
+                        options
+                )
 
             require(
                 points.any {
@@ -460,6 +380,225 @@ object ImportedFontMatrixGenerator {
 
             design
         }
+
+    private fun sampleGlyphGroups(
+        paint: Paint,
+        text: String,
+        pathBounds: RectF,
+        scale: Float,
+        spacingMm: Float
+    ): List<List<SampledContour>> {
+        val groups =
+            mutableListOf<
+                List<SampledContour>
+            >()
+
+        val extraSpacingRaw =
+            if (
+                scale >
+                    0.0001f
+            ) {
+                spacingMm *
+                    10f /
+                    scale
+            } else {
+                0f
+            }
+
+        text.forEachIndexed {
+                index,
+                char ->
+            if (
+                char.isWhitespace()
+            ) {
+                return@forEachIndexed
+            }
+
+            val glyphPath =
+                Path()
+
+            val prefixAdvance =
+                if (
+                    index ==
+                        0
+                ) {
+                    0f
+                } else {
+                    paint.measureText(
+                        text,
+                        0,
+                        index
+                    )
+                }
+
+            val glyphX =
+                prefixAdvance +
+                    extraSpacingRaw *
+                        index
+
+            paint.getTextPath(
+                text,
+                index,
+                index +
+                    1,
+                glyphX,
+                0f,
+                glyphPath
+            )
+
+            if (
+                glyphPath.isEmpty
+            ) {
+                return@forEachIndexed
+            }
+
+            val transformed =
+                samplePath(
+                    glyphPath
+                )
+                    .map {
+                            contour ->
+                        SampledContour(
+                            points =
+                                contour.points
+                                    .map {
+                                        point ->
+                                        Pair(
+                                            (
+                                                (
+                                                    point.first -
+                                                        pathBounds
+                                                            .centerX()
+                                                    ) *
+                                                    scale
+                                                ).roundToInt(),
+                                            (
+                                                (
+                                                    pathBounds
+                                                        .centerY() -
+                                                        point.second
+                                                    ) *
+                                                    scale
+                                                ).roundToInt()
+                                        )
+                                    }
+                                    .fold(
+                                        mutableListOf<
+                                            Pair<Int, Int>
+                                        >()
+                                    ) {
+                                        acc,
+                                        point ->
+                                        if (
+                                            acc.lastOrNull() !=
+                                                point
+                                        ) {
+                                            acc +=
+                                                point
+                                        }
+
+                                        acc
+                                    },
+                            closed =
+                                contour.closed
+                        )
+                    }
+                    .filter {
+                        it.points.size >=
+                            2
+                    }
+
+            if (
+                transformed.isNotEmpty()
+            ) {
+                groups +=
+                    transformed
+            }
+        }
+
+        return groups
+    }
+
+    private fun buildTextInReadingOrder(
+        glyphGroups:
+            List<List<SampledContour>>,
+        options: TextMatrixOptions
+    ): MutableList<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        glyphGroups.forEach {
+                contours ->
+            val glyphPoints =
+                when (
+                    options.style
+                ) {
+                    TextStitchStyle.RUNNING ->
+                        buildRunningOutline(
+                            contours =
+                                contours,
+                            stitchLengthUnits =
+                                options
+                                    .stitchLengthMm *
+                                    10f
+                        )
+
+                    TextStitchStyle.SATIN ->
+                        buildFilledText(
+                            contours =
+                                contours,
+                            rowStepUnits =
+                                options
+                                    .satinDensityMm *
+                                    10f,
+                            pullCompensationUnits =
+                                options
+                                    .satinPullCompensationMm *
+                                    10f,
+                            maxStitchUnits =
+                                max(
+                                    45f,
+                                    options
+                                        .satinWidthMm *
+                                        10f
+                                )
+                        )
+                }
+
+            if (
+                glyphPoints.isEmpty()
+            ) {
+                return@forEach
+            }
+
+            if (
+                output.isNotEmpty()
+            ) {
+                val last =
+                    output.last()
+
+                if (
+                    last.command !=
+                        StitchCommand.TRIM
+                ) {
+                    output +=
+                        EmbroideryPoint(
+                            last.xUnits,
+                            last.yUnits,
+                            StitchCommand.TRIM,
+                            0
+                        )
+                }
+            }
+
+            output +=
+                glyphPoints
+        }
+
+        return output
+    }
 
     private fun buildRunningOutline(
         contours: List<SampledContour>,
