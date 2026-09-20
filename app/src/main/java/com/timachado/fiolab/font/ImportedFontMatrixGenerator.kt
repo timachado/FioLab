@@ -25,6 +25,31 @@ object ImportedFontMatrixGenerator {
         char: Char,
         options: TextMatrixOptions
     ): Result<EmbroideryDesign> =
+        generateTextInternal(
+            font = font,
+            sourceText = char.toString(),
+            options = options,
+            filePrefix = "fonte"
+        )
+
+    fun generateText(
+        font: ImportedFont,
+        text: String,
+        options: TextMatrixOptions
+    ): Result<EmbroideryDesign> =
+        generateTextInternal(
+            font = font,
+            sourceText = text,
+            options = options,
+            filePrefix = "nome"
+        )
+
+    private fun generateTextInternal(
+        font: ImportedFont,
+        sourceText: String,
+        options: TextMatrixOptions,
+        filePrefix: String
+    ): Result<EmbroideryDesign> =
         runCatching {
             require(
                 options.heightMm in 4f..40f
@@ -56,6 +81,17 @@ object ImportedFontMatrixGenerator {
                 "A compensação de repuxo deve ficar entre 0 e 1 mm."
             }
 
+            val text =
+                sourceText
+                    .trim()
+                    .take(24)
+
+            require(
+                text.isNotBlank()
+            ) {
+                "Digite um nome."
+            }
+
             val outputFormat =
                 options.outputFormat
                     .uppercase(Locale.ROOT)
@@ -84,23 +120,30 @@ object ImportedFontMatrixGenerator {
                         Paint.Style.FILL
                 }
 
-            val glyph =
-                char.toString()
+            val renderableText =
+                text.map {
+                        char ->
+                    resolveCharacter(
+                        paint = paint,
+                        font = font,
+                        char = char
+                    )
+                }.joinToString("")
 
             val path =
                 Path()
 
             paint.getTextPath(
-                glyph,
+                renderableText,
                 0,
-                glyph.length,
+                renderableText.length,
                 0f,
                 0f,
                 path
             )
 
             require(!path.isEmpty) {
-                "A fonte não possui desenho para este caractere."
+                "A fonte não gerou um contorno utilizável para este texto."
             }
 
             val metrics =
@@ -305,14 +348,6 @@ object ImportedFontMatrixGenerator {
                 "A fonte não gerou pontadas."
             }
 
-            points +=
-                EmbroideryPoint(
-                    currentX,
-                    currentY,
-                    StitchCommand.END,
-                    0
-                )
-
             val coordinates =
                 points.filter {
                     it.command !=
@@ -339,12 +374,89 @@ object ImportedFontMatrixGenerator {
                     it.yUnits
                 }
 
+            val centerX =
+                (
+                    minX +
+                        maxX
+                    ) /
+                    2f
+
+            val centerY =
+                (
+                    minY +
+                        maxY
+                    ) /
+                    2f
+
+            val centered =
+                points.map {
+                        point ->
+                    point.copy(
+                        xUnits =
+                            (
+                                point.xUnits -
+                                    centerX
+                                ).roundToInt(),
+                        yUnits =
+                            (
+                                point.yUnits -
+                                    centerY
+                                ).roundToInt()
+                    )
+                }.toMutableList()
+
+            val endPoint =
+                centered
+                    .lastOrNull()
+                    ?: error(
+                        "A fonte não gerou pontadas."
+                    )
+
+            centered +=
+                EmbroideryPoint(
+                    endPoint.xUnits,
+                    endPoint.yUnits,
+                    StitchCommand.END,
+                    0
+                )
+
+            val centeredCoordinates =
+                centered.filter {
+                    it.command !=
+                        StitchCommand.END
+                }
+
+            val bounds =
+                EmbroideryBounds(
+                    minXUnits =
+                        centeredCoordinates
+                            .minOf {
+                                it.xUnits
+                            },
+                    maxXUnits =
+                        centeredCoordinates
+                            .maxOf {
+                                it.xUnits
+                            },
+                    minYUnits =
+                        centeredCoordinates
+                            .minOf {
+                                it.yUnits
+                            },
+                    maxYUnits =
+                        centeredCoordinates
+                            .maxOf {
+                                it.yUnits
+                            }
+                )
+
             val design =
                 EmbroideryDesign(
                     fileName =
-                        "fonte-" +
+                        filePrefix +
+                            "-" +
                             safeName(
-                                glyph
+                                text
                             ) +
                             "." +
                             outputFormat
@@ -354,27 +466,18 @@ object ImportedFontMatrixGenerator {
                     format =
                         outputFormat,
                     label =
-                        glyph,
+                        text,
                     points =
-                        points,
+                        centered,
                     bounds =
-                        EmbroideryBounds(
-                            minXUnits =
-                                minX,
-                            maxXUnits =
-                                maxX,
-                            minYUnits =
-                                minY,
-                            maxYUnits =
-                                maxY
-                        ),
+                        bounds,
                     stitchCount =
-                        points.count {
+                        centered.count {
                             it.command ==
                                 StitchCommand.STITCH
                         },
                     jumpCount =
-                        points.count {
+                        centered.count {
                             it.command ==
                                 StitchCommand.JUMP
                         },
@@ -421,6 +524,57 @@ object ImportedFontMatrixGenerator {
             design
         }
 
+    private fun resolveCharacter(
+        paint: Paint,
+        font: ImportedFont,
+        char: Char
+    ): String {
+        if (
+            char.isWhitespace()
+        ) {
+            return char.toString()
+        }
+
+        val original =
+            char.toString()
+
+        if (
+            paint.hasGlyph(
+                original
+            )
+        ) {
+            return original
+        }
+
+        val normalized =
+            Normalizer
+                .normalize(
+                    original,
+                    Normalizer.Form.NFD
+                )
+                .replace(
+                    Regex("\p{M}+"),
+                    ""
+                )
+
+        if (
+            normalized.isNotBlank() &&
+            paint.hasGlyph(
+                normalized
+            )
+        ) {
+            return normalized
+        }
+
+        error(
+            "A fonte " +
+                font.displayName +
+                " não possui o caractere \"" +
+                char +
+                "\"."
+        )
+    }
+
     private data class SampledContour(
         val points:
             List<Pair<Float, Float>>,
@@ -455,10 +609,10 @@ object ImportedFontMatrixGenerator {
             val step =
                 (
                     length /
-                        96f
+                        128f
                     ).coerceIn(
-                    2f,
-                    18f
+                    1.5f,
+                    14f
                 )
 
             val contour =
@@ -599,7 +753,7 @@ object ImportedFontMatrixGenerator {
                 Normalizer.Form.NFD
             )
             .replace(
-                Regex("\\p{M}+"),
+                Regex("\p{M}+"),
                 ""
             )
             .replace(
@@ -609,6 +763,6 @@ object ImportedFontMatrixGenerator {
             .trim('_')
             .take(24)
             .ifBlank {
-                "glifo"
+                "texto"
             }
 }
