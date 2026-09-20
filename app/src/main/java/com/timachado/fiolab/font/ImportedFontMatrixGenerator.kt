@@ -794,87 +794,668 @@ object ImportedFontMatrixGenerator {
         contours: List<SampledContour>,
         options: TextMatrixOptions
     ): MutableList<EmbroideryPoint> {
-        val pitchUnits =
+        val allPoints =
+            contours.flatMap {
+                it.points
+            }
+
+        if (
+            allPoints.isEmpty()
+        ) {
+            return mutableListOf()
+        }
+
+        val minX =
+            allPoints.minOf {
+                it.first
+            }
+
+        val maxX =
+            allPoints.maxOf {
+                it.first
+            }
+
+        val minY =
+            allPoints.minOf {
+                it.second
+            }
+
+        val maxY =
+            allPoints.maxOf {
+                it.second
+            }
+
+        /*
+         * O contorno vetorial continua sendo a fonte da forma.
+         * A máscara/esqueleto serve somente para estimar a direção local
+         * do traço. As bordas Satin são recalculadas contra a máscara em
+         * cada amostra, portanto não usamos o esqueleto como desenho.
+         */
+        val unitsPerPixel =
+            0.75f
+
+        val padding =
+            6
+
+        val width =
+            (
+                (
+                    maxX -
+                        minX
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        val height =
+            (
+                (
+                    maxY -
+                        minY
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        if (
+            width >
+                1800 ||
+            height >
+                1800
+        ) {
+            return buildRunningOutline(
+                contours =
+                    contours,
+                stitchLengthUnits =
+                    options
+                        .stitchLengthMm *
+                        10f
+            )
+        }
+
+        val bitmap =
+            Bitmap.createBitmap(
+                width,
+                height,
+                Bitmap.Config.ARGB_8888
+            )
+
+        val canvas =
+            Canvas(
+                bitmap
+            )
+
+        val fillPaint =
+            Paint().apply {
+                isAntiAlias =
+                    false
+
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    android.graphics
+                        .Color.WHITE
+            }
+
+        val rasterPath =
+            Path().apply {
+                fillType =
+                    Path.FillType.EVEN_ODD
+            }
+
+        contours.forEach {
+                contour ->
+            val first =
+                contour.points
+                    .firstOrNull()
+                    ?: return@forEach
+
+            rasterPath.moveTo(
+                (
+                    first.first -
+                        minX
+                    ) /
+                    unitsPerPixel +
+                    padding,
+                (
+                    maxY -
+                        first.second
+                    ) /
+                    unitsPerPixel +
+                    padding
+            )
+
+            contour.points
+                .drop(1)
+                .forEach {
+                        point ->
+                    rasterPath.lineTo(
+                        (
+                            point.first -
+                                minX
+                            ) /
+                                unitsPerPixel +
+                                padding,
+                        (
+                            maxY -
+                                point.second
+                            ) /
+                                unitsPerPixel +
+                                padding
+                    )
+                }
+
+            if (
+                contour.closed
+            ) {
+                rasterPath.close()
+            }
+        }
+
+        canvas.drawPath(
+            rasterPath,
+            fillPaint
+        )
+
+        val pixels =
+            IntArray(
+                width *
+                    height
+            )
+
+        bitmap.getPixels(
+            pixels,
+            0,
+            width,
+            0,
+            0,
+            width,
+            height
+        )
+
+        bitmap.recycle()
+
+        val mask =
+            BooleanArray(
+                pixels.size
+            ) {
+                    index ->
+                (
+                    pixels[index]
+                        ushr
+                        24
+                    ) >
+                    0
+            }
+
+        val skeleton =
+            thinMask(
+                mask =
+                    mask,
+                width =
+                    width,
+                height =
+                    height
+            )
+
+        val rawLines =
+            traceSkeleton(
+                skeleton =
+                    skeleton,
+                width =
+                    width,
+                height =
+                    height
+            )
+                .filter {
+                    it.size >=
+                        5 &&
+                        skeletonLineLength(
+                            it
+                        ) >=
+                            7f
+                }
+
+        val lines =
+            orderSkeletonLinesByProximity(
+                rawLines
+            )
+
+        if (
+            lines.isEmpty()
+        ) {
+            return buildRunningOutline(
+                contours =
+                    contours,
+                stitchLengthUnits =
+                    options
+                        .stitchLengthMm *
+                        10f
+            )
+        }
+
+        val stepPixels =
             (
                 options
                     .satinDensityMm *
-                    10f
+                    10f /
+                    unitsPerPixel
                 ).coerceIn(
-                3f,
-                9f
+                2.4f,
+                7.5f
             )
 
-        val rowLayers =
-            sampleSatinRows(
-                contours =
-                    contours,
-                pitchUnits =
-                    pitchUnits
-            )
-
-        if (
-            rowLayers.isEmpty()
-        ) {
-            return buildRunningOutline(
-                contours =
-                    contours,
-                stitchLengthUnits =
-                    options
-                        .stitchLengthMm *
-                        10f
-            )
-        }
-
-        val columns =
-            buildSatinColumns(
-                rowLayers =
-                    rowLayers,
-                pitchUnits =
-                    pitchUnits
-            )
-                .map {
-                    smoothSatinColumn(
-                        it
-                    )
-                }
-                .filter {
-                    it.rows.size >=
-                        2
-                }
-
-        if (
-            columns.isEmpty()
-        ) {
-            return buildRunningOutline(
-                contours =
-                    contours,
-                stitchLengthUnits =
-                    options
-                        .stitchLengthMm *
-                        10f
-            )
-        }
-
-        val routed =
-            routeSatinColumns(
-                columns
-            )
+        val pullPixels =
+            options
+                .satinPullCompensationMm *
+                10f /
+                unitsPerPixel
 
         val output =
             mutableListOf<
                 EmbroideryPoint
             >()
 
-        routed.forEach {
-                column ->
-            emitSatinColumn(
-                output =
-                    output,
-                column =
-                    column,
-                options =
-                    options
-            )
+        lines.forEach {
+                rawLine ->
+            val line =
+                smoothSkeletonLine(
+                    source =
+                        rawLine,
+                    radius =
+                        4,
+                    passes =
+                        3
+                )
+
+            val samples =
+                sampleSkeletonLine(
+                    line =
+                        line,
+                    stepPixels =
+                        stepPixels
+                )
+
+            if (
+                samples.size <
+                    2
+            ) {
+                return@forEach
+            }
+
+            if (
+                output.isNotEmpty()
+            ) {
+                val last =
+                    output.last()
+
+                if (
+                    last.command !=
+                        StitchCommand.TRIM
+                ) {
+                    output +=
+                        EmbroideryPoint(
+                            last.xUnits,
+                            last.yUnits,
+                            StitchCommand.TRIM,
+                            0
+                        )
+                }
+            }
+
+            if (
+                options
+                    .satinUnderlayMode !=
+                    com.timachado
+                        .fiolab
+                        .core
+                        .embroidery
+                        .SatinUnderlayMode
+                        .NONE
+            ) {
+                val first =
+                    samples.first()
+
+                output +=
+                    EmbroideryPoint(
+                        skeletonXToUnits(
+                            first.x
+                                .toFloat(),
+                            minX,
+                            padding,
+                            unitsPerPixel
+                        ),
+                        skeletonYToUnits(
+                            first.y
+                                .toFloat(),
+                            maxY,
+                            padding,
+                            unitsPerPixel
+                        ),
+                        StitchCommand.JUMP,
+                        0
+                    )
+
+                var previous =
+                    first
+
+                samples.drop(1)
+                    .forEach {
+                            sample ->
+                        val distance =
+                            pointDistance(
+                                previous,
+                                sample
+                            ) *
+                                unitsPerPixel
+
+                        if (
+                            distance >=
+                                14f
+                        ) {
+                            output +=
+                                EmbroideryPoint(
+                                    skeletonXToUnits(
+                                        sample.x
+                                            .toFloat(),
+                                        minX,
+                                        padding,
+                                        unitsPerPixel
+                                    ),
+                                    skeletonYToUnits(
+                                        sample.y
+                                            .toFloat(),
+                                        maxY,
+                                        padding,
+                                        unitsPerPixel
+                                    ),
+                                    StitchCommand.STITCH,
+                                    0
+                                )
+
+                            previous =
+                                sample
+                        }
+                    }
+
+                val last =
+                    output.last()
+
+                output +=
+                    EmbroideryPoint(
+                        last.xUnits,
+                        last.yUnits,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+
+            var currentX:
+                Int? =
+                null
+
+            var currentY:
+                Int? =
+                null
+
+            var positiveWidth:
+                Double? =
+                null
+
+            var negativeWidth:
+                Double? =
+                null
+
+            samples.forEachIndexed {
+                    index,
+                    sample ->
+                val before =
+                    samples[
+                        (
+                            index -
+                                3
+                            ).coerceAtLeast(
+                            0
+                        )
+                    ]
+
+                val after =
+                    samples[
+                        (
+                            index +
+                                3
+                            ).coerceAtMost(
+                            samples.lastIndex
+                        )
+                    ]
+
+                val tangentX =
+                    (
+                        after.x -
+                            before.x
+                        ).toDouble()
+
+                val tangentY =
+                    (
+                        after.y -
+                            before.y
+                        ).toDouble()
+
+                val tangentLength =
+                    sqrt(
+                        tangentX *
+                            tangentX +
+                            tangentY *
+                                tangentY
+                    )
+
+                if (
+                    tangentLength <
+                        0.001
+                ) {
+                    return@forEachIndexed
+                }
+
+                val normalX =
+                    -tangentY /
+                        tangentLength
+
+                val normalY =
+                    tangentX /
+                        tangentLength
+
+                val rawPositive =
+                    boundaryDistance(
+                        mask =
+                            mask,
+                        width =
+                            width,
+                        height =
+                            height,
+                        centerX =
+                            sample.x
+                                .toDouble(),
+                        centerY =
+                            sample.y
+                                .toDouble(),
+                        normalX =
+                            normalX,
+                        normalY =
+                            normalY,
+                        direction =
+                            1.0
+                    )
+
+                val rawNegative =
+                    boundaryDistance(
+                        mask =
+                            mask,
+                        width =
+                            width,
+                        height =
+                            height,
+                        centerX =
+                            sample.x
+                                .toDouble(),
+                        centerY =
+                            sample.y
+                                .toDouble(),
+                        normalX =
+                            normalX,
+                        normalY =
+                            normalY,
+                        direction =
+                            -1.0
+                    )
+
+                val positive =
+                    positiveWidth
+                        ?.let {
+                            previous ->
+                            previous *
+                                0.58 +
+                                rawPositive *
+                                    0.42
+                        }
+                        ?: rawPositive
+
+                val negative =
+                    negativeWidth
+                        ?.let {
+                            previous ->
+                            previous *
+                                0.58 +
+                                rawNegative *
+                                    0.42
+                        }
+                        ?: rawNegative
+
+                positiveWidth =
+                    positive
+
+                negativeWidth =
+                    negative
+
+                if (
+                    positive <
+                        0.8 ||
+                    negative <
+                        0.8
+                ) {
+                    return@forEachIndexed
+                }
+
+                val side =
+                    if (
+                        index %
+                            2 ==
+                            0
+                    ) {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+
+                val boundary =
+                    if (
+                        side >
+                            0.0
+                    ) {
+                        positive +
+                            pullPixels
+                    } else {
+                        negative +
+                            pullPixels
+                    }
+
+                val edgeX =
+                    sample.x +
+                        normalX *
+                            boundary *
+                            side
+
+                val edgeY =
+                    sample.y +
+                        normalY *
+                            boundary *
+                            side
+
+                val targetX =
+                    skeletonXToUnits(
+                        edgeX
+                            .toFloat(),
+                        minX,
+                        padding,
+                        unitsPerPixel
+                    )
+
+                val targetY =
+                    skeletonYToUnits(
+                        edgeY
+                            .toFloat(),
+                        maxY,
+                        padding,
+                        unitsPerPixel
+                    )
+
+                val fromX =
+                    currentX
+
+                val fromY =
+                    currentY
+
+                if (
+                    fromX ==
+                        null ||
+                    fromY ==
+                        null
+                ) {
+                    output +=
+                        EmbroideryPoint(
+                            targetX,
+                            targetY,
+                            StitchCommand.JUMP,
+                            0
+                        )
+                } else if (
+                    fromX !=
+                        targetX ||
+                    fromY !=
+                        targetY
+                ) {
+                    appendSplitStitch(
+                        output =
+                            output,
+                        fromX =
+                            fromX,
+                        fromY =
+                            fromY,
+                        toX =
+                            targetX,
+                        toY =
+                            targetY,
+                        maxLengthUnits =
+                            82f
+                    )
+                }
+
+                currentX =
+                    targetX
+
+                currentY =
+                    targetY
+            }
         }
 
         val quality =
@@ -904,7 +1485,7 @@ object ImportedFontMatrixGenerator {
                     output =
                         output,
                     maxLengthUnits =
-                        80f
+                        82f
                 )
             }
 
@@ -1979,6 +2560,7 @@ object ImportedFontMatrixGenerator {
             val x =
                 index %
                     width
+
             val y =
                 index /
                     width
@@ -2006,6 +2588,7 @@ object ImportedFontMatrixGenerator {
                     val nx =
                         x +
                             dx
+
                     val ny =
                         y +
                             dy
@@ -2047,6 +2630,7 @@ object ImportedFontMatrixGenerator {
                     first,
                     second
                 )
+
             val high =
                 maxOf(
                     first,
@@ -2070,6 +2654,12 @@ object ImportedFontMatrixGenerator {
                     skeleton[it]
                 }
 
+        if (
+            active.isEmpty()
+        ) {
+            return emptyList()
+        }
+
         val degree =
             HashMap<
                 Int,
@@ -2077,10 +2667,50 @@ object ImportedFontMatrixGenerator {
             >()
 
         active.forEach {
-                degree[it] =
-                    neighbors(it)
-                        .size
+            degree[it] =
+                neighbors(it)
+                    .size
+        }
+
+        val starts =
+            buildList {
+                addAll(
+                    active
+                        .filter {
+                            degree[it] ==
+                                1
+                        }
+                        .sortedBy {
+                            it %
+                                width
+                        }
+                )
+
+                addAll(
+                    active
+                        .filter {
+                            (
+                                degree[it]
+                                    ?: 0
+                                ) !=
+                                2 &&
+                                (
+                                    degree[it]
+                                        ?: 0
+                                    ) >
+                                    1
+                        }
+                        .sortedBy {
+                            it %
+                                width
+                        }
+                )
+
+                addAll(
+                    active
+                )
             }
+                .distinct()
 
         val usedEdges =
             hashSetOf<Long>()
@@ -2090,214 +2720,207 @@ object ImportedFontMatrixGenerator {
                 List<SkeletonPoint>
             >()
 
-        fun trace(
-            start: Int,
-            firstNext: Int
-        ): List<SkeletonPoint> {
-            val line =
-                mutableListOf<Int>()
+        fun directionalScore(
+            previous: Int,
+            current: Int,
+            candidate: Int
+        ): Double {
+            val px =
+                previous %
+                    width
 
-            line +=
-                start
+            val py =
+                previous /
+                    width
 
-            var previous =
-                start
+            val cx =
+                current %
+                    width
 
-            var current =
-                firstNext
+            val cy =
+                current /
+                    width
 
-            usedEdges +=
-                edgeKey(
-                    previous,
-                    current
+            val nx =
+                candidate %
+                    width
+
+            val ny =
+                candidate /
+                    width
+
+            val inX =
+                (
+                    cx -
+                        px
+                    ).toDouble()
+
+            val inY =
+                (
+                    cy -
+                        py
+                    ).toDouble()
+
+            val outX =
+                (
+                    nx -
+                        cx
+                    ).toDouble()
+
+            val outY =
+                (
+                    ny -
+                        cy
+                    ).toDouble()
+
+            val inLength =
+                hypot(
+                    inX,
+                    inY
                 )
 
-            line +=
-                current
+            val outLength =
+                hypot(
+                    outX,
+                    outY
+                )
 
-            var guard =
-                0
-
-            while (
-                guard <
-                    active.size
+            if (
+                inLength <
+                    0.001 ||
+                outLength <
+                    0.001
             ) {
-                guard++
+                return -2.0
+            }
 
-                val nextCandidates =
-                    neighbors(
-                        current
+            return (
+                inX *
+                    outX +
+                    inY *
+                        outY
+                ) /
+                (
+                    inLength *
+                        outLength
                     )
-                        .filter {
-                            it !=
-                                previous &&
-                                edgeKey(
-                                    current,
-                                    it
-                                ) !in
+        }
+
+        starts.forEach {
+                start ->
+            while (
+                true
+            ) {
+                val firstNext =
+                    neighbors(
+                        start
+                    )
+                        .firstOrNull {
+                            edgeKey(
+                                start,
+                                it
+                            ) !in
                                 usedEdges
                         }
+                    ?: break
 
-                if (
-                    nextCandidates
-                        .isEmpty()
-                ) {
-                    break
-                }
+                val line =
+                    mutableListOf<Int>()
 
-                if (
-                    degree[current] !=
-                        2 &&
-                    current !=
-                        firstNext
-                ) {
-                    break
-                }
+                line +=
+                    start
 
-                val next =
-                    nextCandidates
-                        .minByOrNull {
-                            candidate ->
-                            val cx =
-                                current %
-                                    width
-                            val cy =
-                                current /
-                                    width
-                            val px =
-                                previous %
-                                    width
-                            val py =
-                                previous /
-                                    width
-                            val nx =
-                                candidate %
-                                    width
-                            val ny =
-                                candidate /
-                                    width
+                var previous =
+                    start
 
-                            val inX =
-                                cx -
-                                    px
-                            val inY =
-                                cy -
-                                    py
-                            val outX =
-                                nx -
-                                    cx
-                            val outY =
-                                ny -
-                                    cy
-
-                            -(
-                                inX *
-                                    outX +
-                                    inY *
-                                        outY
-                                )
-                        } ?: break
+                var current =
+                    firstNext
 
                 usedEdges +=
                     edgeKey(
-                        current,
-                        next
+                        previous,
+                        current
                     )
 
-                previous =
-                    current
-                current =
-                    next
                 line +=
                     current
-            }
 
-            return line.map {
-                    index ->
-                SkeletonPoint(
-                    x =
-                        index %
-                            width,
-                    y =
-                        index /
-                            width
-                )
-            }
-        }
+                var guard =
+                    0
 
-        active
-            .filter {
-                (
-                    degree[it]
-                        ?: 0
-                    ) !=
-                    2 &&
-                    (
-                        degree[it]
-                            ?: 0
-                        ) >
-                        0
-            }
-            .sortedBy {
-                it %
-                    width
-            }
-            .forEach {
-                    start ->
-                neighbors(start)
-                    .forEach {
-                            next ->
-                        if (
-                            edgeKey(
-                                start,
-                                next
-                            ) !in
-                            usedEdges
-                        ) {
-                            val line =
-                                trace(
-                                    start,
-                                    next
-                                )
+                while (
+                    guard <
+                        active.size *
+                            2
+                ) {
+                    guard++
 
-                            if (
-                                line.size >=
-                                    2
-                            ) {
-                                lines +=
-                                    line
+                    val candidates =
+                        neighbors(
+                            current
+                        )
+                            .filter {
+                                it !=
+                                    previous &&
+                                    edgeKey(
+                                        current,
+                                        it
+                                    ) !in
+                                        usedEdges
                             }
-                        }
-                    }
-            }
 
-        active.forEach {
-                start ->
-            neighbors(start)
-                .forEach {
-                        next ->
                     if (
-                        edgeKey(
-                            start,
-                            next
-                        ) !in
-                        usedEdges
+                        candidates
+                            .isEmpty()
                     ) {
-                        val line =
-                            trace(
-                                start,
-                                next
-                            )
-
-                        if (
-                            line.size >=
-                                2
-                        ) {
-                            lines +=
-                                line
-                        }
+                        break
                     }
+
+                    val next =
+                        candidates
+                            .maxByOrNull {
+                                directionalScore(
+                                    previous,
+                                    current,
+                                    it
+                                )
+                            }
+                            ?: break
+
+                    usedEdges +=
+                        edgeKey(
+                            current,
+                            next
+                        )
+
+                    previous =
+                        current
+
+                    current =
+                        next
+
+                    line +=
+                        current
                 }
+
+                if (
+                    line.size >=
+                        2
+                ) {
+                    lines +=
+                        line.map {
+                                index ->
+                            SkeletonPoint(
+                                x =
+                                    index %
+                                        width,
+                                y =
+                                    index /
+                                        width
+                            )
+                        }
+                }
+            }
         }
 
         return lines
