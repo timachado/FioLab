@@ -41,14 +41,19 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.4.0-debug.apk
+      - name: Prepare downloadable files
+        shell: bash
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.4.0-debug.apk
+          zip -9 FioLab-0.4.0-debug.zip FioLab-0.4.0-debug.apk
 
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.4.0-APK
-          path: FioLab-0.4.0-debug.apk
+          name: FioLab-0.4.0-downloads
+          path: |
+            FioLab-0.4.0-debug.apk
+            FioLab-0.4.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -56,7 +61,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view v0.4.0 >/dev/null 2>&1; then
-            gh release upload v0.4.0 FioLab-0.4.0-debug.apk --clobber
+            gh release upload v0.4.0               FioLab-0.4.0-debug.apk               FioLab-0.4.0-debug.zip               --clobber
           else
-            gh release create v0.4.0 FioLab-0.4.0-debug.apk               --target main               --title "FioLab 0.4.0"               --notes "FioLab 0.4.0: leitura e simulação de DST, JEF e PES; salvar cópia/OTG; compartilhamento Android. Testes incluem matrizes JEF/PES reais."
+            gh release create v0.4.0               FioLab-0.4.0-debug.apk               FioLab-0.4.0-debug.zip               --target main               --title "FioLab 0.4.0"               --notes "FioLab 0.4.0: leitura e simulação de DST, JEF e PES; salvar cópia/OTG; compartilhamento Android. Inclui APK direto e ZIP alternativo para navegadores Android."
           fi
