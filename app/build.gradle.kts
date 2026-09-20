@@ -63,10 +63,10 @@ dependencies {
 
     implementation("com.github.EmbroidePy.EmbroideryIO:embroideryio-android:0.0.7")
 
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.8.0"))
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.3"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    implementation("io.ktor:ktor-client-android:3.5.1")
+    implementation("io.ktor:ktor-client-android:3.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
