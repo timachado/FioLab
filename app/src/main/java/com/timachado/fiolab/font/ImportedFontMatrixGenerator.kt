@@ -757,28 +757,17 @@ object ImportedFontMatrixGenerator {
 
         if (
             width >
-                900 ||
+                1600 ||
             height >
-                900
+                1600
         ) {
-            return buildFilledText(
+            return buildRunningOutline(
                 contours =
                     contours,
-                rowStepUnits =
+                stitchLengthUnits =
                     options
-                        .satinDensityMm *
-                        10f,
-                pullCompensationUnits =
-                    options
-                        .satinPullCompensationMm *
-                        10f,
-                maxStitchUnits =
-                    max(
-                        45f,
-                        options
-                            .satinWidthMm *
-                            10f
-                    )
+                        .stitchLengthMm *
+                        10f
             )
         }
 
@@ -1008,33 +997,7 @@ object ImportedFontMatrixGenerator {
                     metrics
                 )
 
-        if (
-            technique ==
-                ImportedGlyphTechnique
-                    .AREA_FILL
-        ) {
-            return buildFilledText(
-                contours =
-                    contours,
-                rowStepUnits =
-                    options
-                        .satinDensityMm *
-                        10f,
-                pullCompensationUnits =
-                    options
-                        .satinPullCompensationMm *
-                        10f,
-                maxStitchUnits =
-                    max(
-                        45f,
-                        options
-                            .satinWidthMm *
-                            10f
-                    )
-            )
-        }
-
-        val lines =
+        val rawLines =
             traceSkeleton(
                 skeleton =
                     skeleton,
@@ -1049,43 +1012,32 @@ object ImportedFontMatrixGenerator {
                         skeletonLineLength(
                             it
                         ) >=
-                            8f
+                            if (
+                                technique ==
+                                    ImportedGlyphTechnique
+                                        .SATIN_COLUMNS_CONSERVATIVE
+                            ) {
+                                12f
+                            } else {
+                                8f
+                            }
                 }
-                .sortedWith(
-                    compareBy<
-                        List<SkeletonPoint>
-                    > {
-                        line ->
-                        line.minOf {
-                            it.x
-                        }
-                    }.thenByDescending {
-                        line ->
-                        line.size
-                    }
-                )
+
+        val lines =
+            orderSkeletonLinesByProximity(
+                rawLines
+            )
 
         if (
             lines.isEmpty()
         ) {
-            return buildFilledText(
+            return buildRunningOutline(
                 contours =
                     contours,
-                rowStepUnits =
+                stitchLengthUnits =
                     options
-                        .satinDensityMm *
-                        10f,
-                pullCompensationUnits =
-                    options
-                        .satinPullCompensationMm *
-                        10f,
-                maxStitchUnits =
-                    max(
-                        45f,
-                        options
-                            .satinWidthMm *
-                            10f
-                    )
+                        .stitchLengthMm *
+                        10f
             )
         }
 
@@ -1119,9 +1071,25 @@ object ImportedFontMatrixGenerator {
                         rawLine
                     ),
                     radius =
-                        4,
+                        if (
+                            technique ==
+                                ImportedGlyphTechnique
+                                    .SATIN_COLUMNS_CONSERVATIVE
+                        ) {
+                            5
+                        } else {
+                            3
+                        },
                     passes =
-                        2
+                        if (
+                            technique ==
+                                ImportedGlyphTechnique
+                                    .SATIN_COLUMNS_CONSERVATIVE
+                        ) {
+                            3
+                        } else {
+                            2
+                        }
                 )
 
             val samples =
@@ -1427,39 +1395,70 @@ object ImportedFontMatrixGenerator {
                             distance *
                             side
 
-                val point =
-                    EmbroideryPoint(
-                        xUnits =
-                            skeletonXToUnits(
-                                edgeX.toFloat(),
-                                minX,
-                                padding,
-                                unitsPerPixel
-                            ),
-                        yUnits =
-                            skeletonYToUnits(
-                                edgeY.toFloat(),
-                                maxY,
-                                padding,
-                                unitsPerPixel
-                            ),
-                        command =
-                            if (
-                                started
-                            ) {
-                                StitchCommand.STITCH
-                            } else {
-                                StitchCommand.JUMP
-                            },
-                        colorIndex =
-                            0
+                val targetX =
+                    skeletonXToUnits(
+                        edgeX.toFloat(),
+                        minX,
+                        padding,
+                        unitsPerPixel
                     )
 
-                output +=
-                    point
+                val targetY =
+                    skeletonYToUnits(
+                        edgeY.toFloat(),
+                        maxY,
+                        padding,
+                        unitsPerPixel
+                    )
 
-                started =
-                    true
+                if (
+                    !started
+                ) {
+                    output +=
+                        EmbroideryPoint(
+                            targetX,
+                            targetY,
+                            StitchCommand.JUMP,
+                            0
+                        )
+
+                    started =
+                        true
+                } else {
+                    val previousPoint =
+                        output.lastOrNull {
+                            it.command ==
+                                StitchCommand.STITCH ||
+                                it.command ==
+                                    StitchCommand.JUMP
+                        }
+
+                    if (
+                        previousPoint !=
+                            null &&
+                        (
+                            previousPoint.xUnits !=
+                                targetX ||
+                            previousPoint.yUnits !=
+                                targetY
+                            )
+                    ) {
+                        appendSplitStitch(
+                            output =
+                                output,
+                            fromX =
+                                previousPoint.xUnits,
+                            fromY =
+                                previousPoint.yUnits,
+                            toX =
+                                targetX,
+                            toY =
+                                targetY,
+                            maxLengthUnits =
+                                90f
+                        )
+                    }
+                }
             }
         }
 
@@ -1477,36 +1476,38 @@ object ImportedFontMatrixGenerator {
                     }
                 )
 
+        val repaired =
+            if (
+                AdaptiveFontPolicy
+                    .isAcceptable(
+                        quality
+                    )
+            ) {
+                output
+            } else {
+                repairSatinSequence(
+                    output =
+                        output,
+                    maxLengthUnits =
+                        90f
+                )
+            }
+
         return if (
-            output.any {
+            repaired.any {
                 it.command ==
                     StitchCommand.STITCH
-            } &&
-            AdaptiveFontPolicy
-                .isAcceptable(
-                    quality
-                )
+            }
         ) {
-            output
+            repaired
         } else {
-            buildFilledText(
+            buildRunningOutline(
                 contours =
                     contours,
-                rowStepUnits =
+                stitchLengthUnits =
                     options
-                        .satinDensityMm *
-                        10f,
-                pullCompensationUnits =
-                    options
-                        .satinPullCompensationMm *
-                        10f,
-                maxStitchUnits =
-                    max(
-                        45f,
-                        options
-                            .satinWidthMm *
-                            10f
-                    )
+                        .stitchLengthMm *
+                        10f
             )
         }
     }
@@ -2078,6 +2079,297 @@ object ImportedFontMatrixGenerator {
         } else {
             line
         }
+    }
+
+    private fun orderSkeletonLinesByProximity(
+        source:
+            List<List<SkeletonPoint>>
+    ): List<List<SkeletonPoint>> {
+        if (
+            source.size <=
+                1
+        ) {
+            return source
+        }
+
+        val remaining =
+            source
+                .map {
+                    orientSkeletonLine(
+                        it
+                    )
+                }
+                .toMutableList()
+
+        val ordered =
+            mutableListOf<
+                List<SkeletonPoint>
+            >()
+
+        var current =
+            remaining
+                .minByOrNull {
+                    line ->
+                    line.firstOrNull()
+                        ?.x
+                        ?: Int.MAX_VALUE
+                }
+                ?: return emptyList()
+
+        remaining.remove(
+            current
+        )
+
+        ordered +=
+            current
+
+        while (
+            remaining.isNotEmpty()
+        ) {
+            val end =
+                current.last()
+
+            val next =
+                remaining
+                    .minByOrNull {
+                        line ->
+                        minOf(
+                            pointDistance(
+                                end,
+                                line.first()
+                            ),
+                            pointDistance(
+                                end,
+                                line.last()
+                            )
+                        )
+                    }
+                    ?: break
+
+            remaining.remove(
+                next
+            )
+
+            current =
+                if (
+                    pointDistance(
+                        end,
+                        next.last()
+                    ) <
+                    pointDistance(
+                        end,
+                        next.first()
+                    )
+                ) {
+                    next.asReversed()
+                } else {
+                    next
+                }
+
+            ordered +=
+                current
+        }
+
+        return ordered
+    }
+
+    private fun pointDistance(
+        first: SkeletonPoint,
+        second: SkeletonPoint
+    ): Double =
+        hypot(
+            (
+                second.x -
+                    first.x
+                ).toDouble(),
+            (
+                second.y -
+                    first.y
+                ).toDouble()
+        )
+
+    private fun appendSplitStitch(
+        output:
+            MutableList<EmbroideryPoint>,
+        fromX: Int,
+        fromY: Int,
+        toX: Int,
+        toY: Int,
+        maxLengthUnits: Float
+    ) {
+        val dx =
+            toX -
+                fromX
+
+        val dy =
+            toY -
+                fromY
+
+        val distance =
+            hypot(
+                dx.toDouble(),
+                dy.toDouble()
+            )
+
+        val segments =
+            maxOf(
+                1,
+                ceil(
+                    distance /
+                        maxLengthUnits
+                ).toInt()
+            )
+
+        for (
+            part in
+                1..segments
+        ) {
+            val ratio =
+                part.toFloat() /
+                    segments
+
+            val x =
+                (
+                    fromX +
+                        dx *
+                            ratio
+                    ).roundToInt()
+
+            val y =
+                (
+                    fromY +
+                        dy *
+                            ratio
+                    ).roundToInt()
+
+            val last =
+                output.lastOrNull()
+
+            if (
+                last?.xUnits ==
+                    x &&
+                last.yUnits ==
+                    y
+            ) {
+                continue
+            }
+
+            output +=
+                EmbroideryPoint(
+                    xUnits =
+                        x,
+                    yUnits =
+                        y,
+                    command =
+                        StitchCommand.STITCH,
+                    colorIndex =
+                        0
+                )
+        }
+    }
+
+    private fun repairSatinSequence(
+        output:
+            List<EmbroideryPoint>,
+        maxLengthUnits:
+            Float
+    ): MutableList<EmbroideryPoint> {
+        val repaired =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        var previous:
+            EmbroideryPoint? =
+            null
+
+        output.forEach {
+                point ->
+            when (
+                point.command
+            ) {
+                StitchCommand.STITCH -> {
+                    val before =
+                        previous
+
+                    if (
+                        before ==
+                            null ||
+                        (
+                            before.xUnits ==
+                                point.xUnits &&
+                            before.yUnits ==
+                                point.yUnits
+                            )
+                    ) {
+                        previous =
+                            point
+
+                        return@forEach
+                    }
+
+                    appendSplitStitch(
+                        output =
+                            repaired,
+                        fromX =
+                            before.xUnits,
+                        fromY =
+                            before.yUnits,
+                        toX =
+                            point.xUnits,
+                        toY =
+                            point.yUnits,
+                        maxLengthUnits =
+                            maxLengthUnits
+                    )
+
+                    previous =
+                        repaired.lastOrNull()
+                            ?: point
+                }
+
+                StitchCommand.JUMP -> {
+                    val last =
+                        repaired.lastOrNull()
+
+                    if (
+                        last?.xUnits !=
+                            point.xUnits ||
+                        last.yUnits !=
+                            point.yUnits ||
+                        last.command !=
+                            StitchCommand.JUMP
+                    ) {
+                        repaired +=
+                            point
+                    }
+
+                    previous =
+                        point
+                }
+
+                StitchCommand.TRIM,
+                StitchCommand.STOP,
+                StitchCommand.COLOR_CHANGE,
+                StitchCommand.SEQUIN,
+                StitchCommand.END -> {
+                    if (
+                        repaired
+                            .lastOrNull()
+                            ?.command !=
+                            point.command
+                    ) {
+                        repaired +=
+                            point
+                    }
+
+                    previous =
+                        point
+                }
+            }
+        }
+
+        return repaired
     }
 
     private fun skeletonLineLength(
