@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/m3-expressive-0221"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
