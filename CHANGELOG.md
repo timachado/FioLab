@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.0
+
+### Adicionado
+- Gerador Satin real no Criar Nome.
+- Alternância de pontadas lado a lado formando coluna satin.
+- Largura Satin configurável de 1 a 6 mm.
+- Densidade configurável de 0,3 a 1,2 mm.
+- Underlay central opcional antes do preenchimento.
+- Modo Ponto Corrido preservado como alternativa.
+- Prévia com as pontadas Satin reais.
+- Simulação de Máquina reproduzindo o preenchimento progressivo.
+- Exportação Satin para DST, PES e JEF.
+- Testes de densidade, underlay e exportação.
+
+### Observação
+- Esta é a primeira geração Satin do FioLab, baseada nos caminhos próprios das letras.
+- Curvas e encontros complexos ainda serão refinados em versões seguintes para melhorar compensação, cantos e acabamento profissional.
+
+
 ## 0.8.0
 
 ### Adicionado
