@@ -3,8 +3,8 @@ package com.timachado.fiolab.font
 import kotlin.math.hypot
 
 enum class ImportedGlyphTechnique {
-    AXIS_SATIN,
-    AREA_FILL
+    SATIN_COLUMNS,
+    SATIN_COLUMNS_CONSERVATIVE
 }
 
 data class ImportedGlyphMetrics(
@@ -59,64 +59,43 @@ data class GeneratedStitchQuality(
 }
 
 /**
- * Política genérica para fontes importadas.
+ * Política genérica de digitalização para fontes importadas.
  *
- * Não usa nome/família de fonte. A decisão é baseada exclusivamente na
- * geometria rasterizada de cada glifo, permitindo que o mesmo motor trabalhe
- * com fontes cursivas, serifadas, sans, display e pesos variados.
+ * O modo Satin nunca troca silenciosamente para uma varredura horizontal.
+ * Glifos simples usam colunas Satin normais; geometrias largas ou muito
+ * ramificadas usam a mesma técnica com parâmetros conservadores.
  */
 object AdaptiveFontPolicy {
 
     fun chooseTechnique(
         metrics: ImportedGlyphMetrics
     ): ImportedGlyphTechnique {
-        if (
-            metrics.areaPixels <=
-                0 ||
-            metrics.skeletonPixels <=
-                0
-        ) {
-            return ImportedGlyphTechnique
-                .AREA_FILL
-        }
-
         val stroke =
             metrics
                 .estimatedStrokeWidthPixels
 
-        val branchRatio =
-            metrics
-                .branchRatio
-
-        val verySmall =
-            metrics.widthPixels <
-                5 ||
+        val complexGeometry =
+            metrics.areaPixels <=
+                0 ||
+                metrics.skeletonPixels <
+                    5 ||
+                metrics.widthPixels <
+                    5 ||
                 metrics.heightPixels <
-                    5
-
-        val veryWideStroke =
-            stroke >
-                24f
-
-        val excessiveBranching =
-            branchRatio >
-                0.18f
-
-        val skeletonTooShort =
-            metrics.skeletonPixels <
-                5
+                    5 ||
+                stroke >
+                    24f ||
+                metrics.branchRatio >
+                    0.18f
 
         return if (
-            verySmall ||
-            veryWideStroke ||
-            excessiveBranching ||
-            skeletonTooShort
+            complexGeometry
         ) {
             ImportedGlyphTechnique
-                .AREA_FILL
+                .SATIN_COLUMNS_CONSERVATIVE
         } else {
             ImportedGlyphTechnique
-                .AXIS_SATIN
+                .SATIN_COLUMNS
         }
     }
 
@@ -127,12 +106,12 @@ object AdaptiveFontPolicy {
         quality.stitchCount >
             0 &&
             quality.maxStitchLengthUnits <=
-                125.0 &&
+                95.0 &&
             quality.zeroLengthRatio <=
-                0.08f &&
+                0.04f &&
             quality.jumpCount <=
                 quality.stitchCount +
-                    32
+                    40
 
     fun qualityFromCoordinates(
         commands:
