@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.1
+
+### Identidade visual
+- A imagem FioLab Matrizes enviada pelo projeto passa a ser o ícone do launcher.
+- A mesma arte aparece no cabeçalho da Home.
+- O ícone antigo com a letra "F" deixa de ser usado como identidade principal.
+- A arte foi apenas dimensionada para uso no Android; não foi redesenhada.
+
+
 ## 0.21.0
 
 ### Minha Conta
@@ -29,9 +38,9 @@
 - Estrutura versionada em supabase/fiolab_account_schema.sql.
 
 ### Dependências
-- supabase-kt 3.8.0.
+- supabase-kt 3.2.3.
 - Auth e PostgREST.
-- Ktor Android 3.5.1.
+- Ktor Android 3.3.0.
 
 
 ## 0.20.0

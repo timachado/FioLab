@@ -1,5 +1,6 @@
 package com.timachado.fiolab
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
-import com.timachado.fiolab.ui.theme.FioGoldSoft
 import com.timachado.fiolab.ui.theme.FioSurface
 import com.timachado.fiolab.ui.theme.FioSurfaceAlt
 import com.timachado.fiolab.ui.theme.FioText
@@ -74,48 +76,45 @@ fun HomeScreen(
             )
     ) {
         item {
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
             ) {
-                Box(
-                    Modifier
-                        .size(46.dp)
-                        .background(
-                            FioGold,
-                            CircleShape
+                Image(
+                    painter =
+                        painterResource(
+                            R.drawable
+                                .fiolab_brand_logo
                         ),
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-                    Text(
-                        "F",
-                        color = FioBackground,
-                        fontWeight =
-                            FontWeight.Black,
-                        fontSize = 28.sp
-                    )
-                }
-
-                Spacer(
-                    Modifier.width(12.dp)
+                    contentDescription =
+                        "FioLab Matrizes",
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(
+                                154.dp
+                            ),
+                    contentScale =
+                        ContentScale.Fit
                 )
 
-                Column {
-                    Text(
-                        "FioLab",
-                        color = FioGoldSoft,
-                        fontSize = 28.sp,
-                        fontWeight =
-                            FontWeight.Bold
+                Spacer(
+                    Modifier.height(
+                        4.dp
                     )
+                )
 
-                    Text(
-                        "Do nome à máquina, direto pelo celular.",
-                        color = FioTextMuted,
-                        fontSize = 12.sp
-                    )
-                }
+                Text(
+                    "Do nome à máquina, direto pelo celular.",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        12.sp,
+                    textAlign =
+                        TextAlign.Center
+                )
             }
         }
 
@@ -149,7 +148,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.21 adiciona Minha Conta e prepara o acompanhamento seguro das assinaturas.",
+                        "FioLab 0.21.1 usa a nova identidade FioLab Matrizes no launcher e dentro do aplicativo.",
                         color = FioTextMuted
                     )
                 }
@@ -496,7 +495,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.21.0 • Android",
+                "FioLab 0.21.1 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,
