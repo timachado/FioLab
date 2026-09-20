@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/font-preview-zoom-0217"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
