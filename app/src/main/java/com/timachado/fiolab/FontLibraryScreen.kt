@@ -1,5 +1,8 @@
 package com.timachado.fiolab
 
+import android.widget.TextView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,31 +15,108 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixGenerator
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
+import com.timachado.fiolab.font.ImportedFont
+import com.timachado.fiolab.font.ImportedFontStore
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
+import com.timachado.fiolab.ui.theme.FioSurfaceAlt
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @Composable
 fun FontLibraryScreen(
     onBack: () -> Unit
 ) {
+    val context =
+        LocalContext.current
+
+    val scope =
+        rememberCoroutineScope()
+
+    var importedFonts by remember {
+        mutableStateOf(
+            ImportedFontStore
+                .list(context)
+        )
+    }
+
+    var statusMessage by remember {
+        mutableStateOf<String?>(
+            null
+        )
+    }
+
+    val fontPicker =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .OpenDocument()
+        ) { uri ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            scope.launch {
+                val result =
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        ImportedFontStore
+                            .importFont(
+                                context,
+                                uri
+                            )
+                    }
+
+                result.fold(
+                    onSuccess = {
+                            font ->
+                        importedFonts =
+                            ImportedFontStore
+                                .list(context)
+
+                        statusMessage =
+                            font.displayName +
+                                " adicionada à biblioteca."
+                    },
+                    onFailure = {
+                            error ->
+                        statusMessage =
+                            error.message
+                                ?: "Não foi possível importar esta fonte."
+                    }
+                )
+            }
+        }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -74,7 +154,7 @@ fun FontLibraryScreen(
                 )
 
                 Text(
-                    "Famílias desenhadas para gerar pontadas",
+                    "Fontes FioLab + TTF/OTF importadas",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -82,6 +162,70 @@ fun FontLibraryScreen(
                 )
             }
         }
+
+        Button(
+            onClick = {
+                statusMessage =
+                    null
+
+                fontPicker.launch(
+                    arrayOf(
+                        "font/ttf",
+                        "font/otf",
+                        "application/font-sfnt",
+                        "application/x-font-ttf",
+                        "application/x-font-opentype",
+                        "application/octet-stream"
+                    )
+                )
+            },
+            modifier =
+                Modifier.fillMaxWidth(),
+            colors =
+                ButtonDefaults
+                    .buttonColors(
+                        containerColor =
+                            FioGold,
+                        contentColor =
+                            Color(0xFF111111)
+                    )
+        ) {
+            Text(
+                "+ Adicionar fonte TTF/OTF",
+                fontWeight =
+                    FontWeight.Bold
+            )
+        }
+
+        Text(
+            "O arquivo é validado e copiado para o armazenamento privado do FioLab. Limite: 12 MB por fonte.",
+            modifier =
+                Modifier.padding(
+                    top = 6.dp,
+                    bottom = 8.dp
+                ),
+            color =
+                FioTextMuted,
+            fontSize =
+                10.sp
+        )
+
+        statusMessage
+            ?.let {
+                    message ->
+                Text(
+                    message,
+                    modifier =
+                        Modifier.padding(
+                            bottom =
+                                8.dp
+                        ),
+                    color =
+                        FioGold,
+                    fontSize =
+                        11.sp
+                )
+            }
 
         LazyColumn(
             modifier =
@@ -91,6 +235,80 @@ fun FontLibraryScreen(
                     12.dp
                 )
         ) {
+            if (
+                importedFonts
+                    .isNotEmpty()
+            ) {
+                item {
+                    Text(
+                        "Minhas fontes importadas",
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                items(
+                    items =
+                        importedFonts,
+                    key = {
+                        it.id
+                    }
+                ) {
+                        font ->
+                    ImportedFontCard(
+                        font = font,
+                        onDelete = {
+                            scope.launch {
+                                val result =
+                                    withContext(
+                                        Dispatchers.IO
+                                    ) {
+                                        ImportedFontStore
+                                            .delete(
+                                                context,
+                                                font
+                                            )
+                                    }
+
+                                result.fold(
+                                    onSuccess = {
+                                        importedFonts =
+                                            ImportedFontStore
+                                                .list(
+                                                    context
+                                                )
+
+                                        statusMessage =
+                                            font.displayName +
+                                                " removida."
+                                    },
+                                    onFailure = {
+                                            statusMessage =
+                                                "Não foi possível remover a fonte."
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    Spacer(
+                        Modifier.height(
+                            2.dp
+                        )
+                    )
+
+                    Text(
+                        "Fontes nativas do FioLab",
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+            }
+
             items(
                 EmbroideryFontPreset
                     .entries
@@ -207,7 +425,7 @@ fun FontLibraryScreen(
 
             item {
                 Text(
-                    "As famílias usam geometrias próprias do FioLab; não são TTFs convertidas automaticamente.",
+                    "As fontes nativas usam geometrias próprias do FioLab. As TTF/OTF importadas mantêm o desenho vetorial da fonte e são convertidas em trajetórias de bordado sem substituir as famílias nativas.",
                     modifier =
                         Modifier.padding(
                             bottom =
@@ -219,6 +437,140 @@ fun FontLibraryScreen(
                         10.sp
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ImportedFontCard(
+    font: ImportedFont,
+    onDelete: () -> Unit
+) {
+    val textColor =
+        FioText.toArgb()
+
+    val typeface =
+        remember(
+            font.id
+        ) {
+            ImportedFontStore
+                .loadTypeface(font)
+                .getOrNull()
+        }
+
+    Card(
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurfaceAlt
+                ),
+        shape =
+            RoundedCornerShape(
+                20.dp
+            )
+    ) {
+        Column(
+            Modifier.padding(
+                14.dp
+            )
+        ) {
+            Row(
+                Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    Modifier.weight(1f)
+                ) {
+                    Text(
+                        font.displayName,
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+
+                    Text(
+                        font.extension
+                            .uppercase(
+                                Locale.ROOT
+                            ) +
+                            " • importada pelo usuário",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                }
+
+                TextButton(
+                    onClick =
+                        onDelete
+                ) {
+                    Text(
+                        "Excluir",
+                        color =
+                            FioGold
+                    )
+                }
+            }
+
+            Spacer(
+                Modifier.height(
+                    8.dp
+                )
+            )
+
+            AndroidView(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(
+                            64.dp
+                        ),
+                factory = {
+                        viewContext ->
+                    TextView(
+                        viewContext
+                    ).apply {
+                        text =
+                            "FioLab Matrizes"
+                        textSize =
+                            28f
+                        setTextColor(
+                            textColor
+                        )
+                        setPadding(
+                            8,
+                            0,
+                            8,
+                            0
+                        )
+                        typeface
+                            ?.let {
+                                this.typeface =
+                                    it
+                            }
+                    }
+                },
+                update = {
+                        view ->
+                    view.text =
+                        "FioLab Matrizes"
+
+                    typeface
+                        ?.let {
+                            view.typeface =
+                                it
+                        }
+                }
+            )
+
+            Text(
+                "Disponível em Criar Nome.",
+                color =
+                    FioTextMuted,
+                fontSize =
+                    10.sp
+            )
         }
     }
 }
