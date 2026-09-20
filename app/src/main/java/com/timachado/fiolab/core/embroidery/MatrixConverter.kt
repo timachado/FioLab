@@ -31,7 +31,8 @@ object MatrixConverter {
 
     fun convert(
         design: EmbroideryDesign,
-        targetFormat: String
+        targetFormat: String,
+        outputSuffix: String = "convertido"
     ): Result<ConvertedMatrix> =
         runCatching {
             val format =
@@ -60,9 +61,21 @@ object MatrixConverter {
                     .substringBeforeLast('.')
                     .ifBlank { "matriz" }
 
+            val suffix =
+                outputSuffix
+                    .replace(
+                        Regex("[^A-Za-z0-9_-]"),
+                        "_"
+                    )
+                    .ifBlank {
+                        "convertido"
+                    }
+
             val outputName =
                 baseName +
-                    "-convertido." +
+                    "-" +
+                    suffix +
+                    "." +
                     extension
 
             val writer =

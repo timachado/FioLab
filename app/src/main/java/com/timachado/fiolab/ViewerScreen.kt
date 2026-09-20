@@ -39,6 +39,7 @@ fun ViewerScreen(
     onBack: () -> Unit,
     onOpen: () -> Unit,
     onSimulate: () -> Unit,
+    onEdit: () -> Unit,
     onConvert: () -> Unit,
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
@@ -50,8 +51,10 @@ fun ViewerScreen(
             Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = 12.dp,
-                    vertical = 6.dp
+                    horizontal =
+                        12.dp,
+                    vertical =
+                        6.dp
                 ),
             verticalAlignment =
                 Alignment.CenterVertically
@@ -74,14 +77,23 @@ fun ViewerScreen(
                     design.fileName,
                     color = FioText,
                     fontWeight =
-                        FontWeight.SemiBold,
+                        FontWeight
+                            .SemiBold,
                     maxLines = 1
                 )
 
                 Text(
                     design.format +
-                        " • original protegido",
-                    color = FioTextMuted,
+                        if (
+                            design
+                                .isModified
+                        ) {
+                            " • edição aplicada"
+                        } else {
+                            " • original protegido"
+                        },
+                    color =
+                        FioTextMuted,
                     fontSize = 11.sp
                 )
             }
@@ -99,30 +111,44 @@ fun ViewerScreen(
         EmbroideryCanvas(
             design = design,
             interactive = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp)
-                .background(
-                    Color(0xFF071017),
-                    RoundedCornerShape(24.dp)
-                )
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(
+                        horizontal =
+                            16.dp
+                    )
+                    .background(
+                        Color(
+                            0xFF071017
+                        ),
+                        RoundedCornerShape(
+                            24.dp
+                        )
+                    )
         )
 
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        FioSurface
-                ),
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
             shape =
-                RoundedCornerShape(24.dp)
+                RoundedCornerShape(
+                    24.dp
+                )
         ) {
             Column(
-                Modifier.padding(18.dp)
+                Modifier.padding(
+                    18.dp
+                )
             ) {
                 Text(
                     "Informações da matriz",
@@ -134,57 +160,79 @@ fun ViewerScreen(
 
                 design.label?.let {
                     Text(
-                        "Identificação: " + it,
-                        color = FioTextMuted,
-                        fontSize = 11.sp
+                        "Identificação: " +
+                            it,
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
                     )
                 }
 
                 Spacer(
-                    Modifier.height(12.dp)
+                    Modifier.height(
+                        12.dp
+                    )
                 )
 
                 Row(
                     horizontalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                        Arrangement
+                            .spacedBy(
+                                8.dp
+                            )
                 ) {
                     InfoChip(
-                        design.stitchCount
+                        design
+                            .stitchCount
                             .toString(),
                         "pontos",
-                        Modifier.weight(1f)
+                        Modifier.weight(
+                            1f
+                        )
                     )
 
                     InfoChip(
                         mm(
-                            design.bounds
+                            design
+                                .bounds
                                 .widthMm
                         ) +
                             " × " +
                             mm(
-                                design.bounds
+                                design
+                                    .bounds
                                     .heightMm
                             ),
                         "mm",
-                        Modifier.weight(1f)
+                        Modifier.weight(
+                            1f
+                        )
                     )
 
                     InfoChip(
-                        design.colorCount
+                        design
+                            .colorCount
                             .toString(),
                         "blocos",
-                        Modifier.weight(1f)
+                        Modifier.weight(
+                            1f
+                        )
                     )
                 }
 
                 Spacer(
-                    Modifier.height(12.dp)
+                    Modifier.height(
+                        12.dp
+                    )
                 )
 
                 Button(
-                    onClick = onSimulate,
+                    onClick =
+                        onSimulate,
                     modifier =
-                        Modifier.fillMaxWidth(),
+                        Modifier
+                            .fillMaxWidth(),
                     colors =
                         ButtonDefaults
                             .buttonColors(
@@ -202,51 +250,106 @@ fun ViewerScreen(
                 }
 
                 Spacer(
-                    Modifier.height(8.dp)
-                )
-
-                OutlinedButton(
-                    onClick = onConvert,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "⇄ Converter formato"
+                    Modifier.height(
+                        8.dp
                     )
-                }
-
-                Spacer(
-                    Modifier.height(8.dp)
                 )
 
                 Row(
                     horizontalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                        Arrangement
+                            .spacedBy(
+                                8.dp
+                            )
                 ) {
                     OutlinedButton(
-                        onClick = onSaveCopy,
+                        onClick =
+                            onEdit,
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier
+                                .weight(
+                                    1f
+                                )
                     ) {
-                        Text("Salvar cópia")
+                        Text(
+                            "✎ Editar"
+                        )
                     }
 
                     OutlinedButton(
-                        onClick = onShare,
+                        onClick =
+                            onConvert,
                         modifier =
-                            Modifier.weight(1f)
+                            Modifier
+                                .weight(
+                                    1f
+                                )
                     ) {
-                        Text("Compartilhar")
+                        Text(
+                            "⇄ Converter"
+                        )
                     }
                 }
 
                 Spacer(
-                    Modifier.height(8.dp)
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                Row(
+                    horizontalArrangement =
+                        Arrangement
+                            .spacedBy(
+                                8.dp
+                            )
+                ) {
+                    OutlinedButton(
+                        onClick =
+                            onSaveCopy,
+                        modifier =
+                            Modifier
+                                .weight(
+                                    1f
+                                )
+                    ) {
+                        Text(
+                            if (
+                                design
+                                    .isModified
+                            ) {
+                                "Salvar edição"
+                            } else {
+                                "Salvar cópia"
+                            }
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick =
+                            onShare,
+                        modifier =
+                            Modifier
+                                .weight(
+                                    1f
+                                )
+                    ) {
+                        Text(
+                            "Compartilhar"
+                        )
+                    }
+                }
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
                 )
 
                 Text(
-                    "Salvar e converter usam o seletor do Android, compatível com memória interna, cartão SD e pendrive OTG disponível.",
-                    color = FioTextMuted,
+                    "O original nunca é sobrescrito. Edições e conversões geram um novo arquivo.",
+                    color =
+                        FioTextMuted,
                     fontSize = 10.sp
                 )
             }
@@ -258,27 +361,34 @@ fun ViewerScreen(
 fun InfoChip(
     value: String,
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier =
+        Modifier
 ) {
     Card(
         modifier = modifier,
         colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    FioSurfaceAlt
-            ),
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurfaceAlt
+                ),
         shape =
-            RoundedCornerShape(16.dp)
+            RoundedCornerShape(
+                16.dp
+            )
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .padding(
-                    vertical = 10.dp,
-                    horizontal = 6.dp
+                    vertical =
+                        10.dp,
+                    horizontal =
+                        6.dp
                 ),
             horizontalAlignment =
-                Alignment.CenterHorizontally
+                Alignment
+                    .CenterHorizontally
         ) {
             Text(
                 value,
@@ -290,7 +400,8 @@ fun InfoChip(
 
             Text(
                 label,
-                color = FioTextMuted,
+                color =
+                    FioTextMuted,
                 fontSize = 10.sp
             )
         }
@@ -301,7 +412,9 @@ private fun mm(
     value: Float
 ): String =
     String.format(
-        Locale("pt", "BR"),
+        Locale.forLanguageTag(
+            "pt-BR"
+        ),
         "%.1f",
         value
     )

@@ -24,7 +24,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.ui.theme.FioGold
 
-private val palette = listOf(
+private val fallbackPalette = listOf(
     Color(0xFFE6BE70),
     Color(0xFFFF9F9A),
     Color(0xFF7ED6DF),
@@ -42,18 +42,38 @@ fun EmbroideryCanvas(
     pointLimit: Int = design.points.size,
     interactive: Boolean = false
 ) {
-    var zoom by remember(design.fileName) {
+    var zoom by remember(
+        design.fileName,
+        design.isModified
+    ) {
         mutableFloatStateOf(1f)
     }
 
-    var offset by remember(design.fileName) {
+    var offset by remember(
+        design.fileName,
+        design.isModified
+    ) {
         mutableStateOf(Offset.Zero)
     }
 
     val gestures = if (interactive) {
-        Modifier.pointerInput(design.fileName) {
-            detectTransformGestures { _, pan, change, _ ->
-                zoom = (zoom * change).coerceIn(0.5f, 8f)
+        Modifier.pointerInput(
+            design.fileName,
+            design.isModified
+        ) {
+            detectTransformGestures {
+                    _,
+                    pan,
+                    change,
+                    _ ->
+                zoom =
+                    (
+                        zoom *
+                            change
+                        ).coerceIn(
+                            0.5f,
+                            8f
+                        )
                 offset += pan
             }
         }
@@ -70,20 +90,24 @@ fun EmbroideryCanvas(
             )
             .then(gestures)
     ) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(
+            Modifier.fillMaxSize()
+        ) {
             drawGrid()
+
             drawDesign(
-                design,
-                pointLimit,
-                zoom,
-                offset
+                design = design,
+                pointLimit = pointLimit,
+                userScale = zoom,
+                userOffset = offset
             )
         }
     }
 }
 
 private fun DrawScope.drawGrid() {
-    val step = 32.dp.toPx()
+    val step =
+        32.dp.toPx()
 
     var x = 0f
     while (x < size.width) {
@@ -93,6 +117,7 @@ private fun DrawScope.drawGrid() {
             Offset(x, size.height),
             1f
         )
+
         x += step
     }
 
@@ -104,6 +129,7 @@ private fun DrawScope.drawGrid() {
             Offset(size.width, y),
             1f
         )
+
         y += step
     }
 }
@@ -114,38 +140,71 @@ private fun DrawScope.drawDesign(
     userScale: Float,
     userOffset: Offset
 ) {
-    val bounds = design.bounds
+    val bounds =
+        design.bounds
 
     val widthUnits =
-        (bounds.maxXUnits - bounds.minXUnits)
-            .coerceAtLeast(1)
+        (
+            bounds.maxXUnits -
+                bounds.minXUnits
+            ).coerceAtLeast(1)
 
     val heightUnits =
-        (bounds.maxYUnits - bounds.minYUnits)
-            .coerceAtLeast(1)
+        (
+            bounds.maxYUnits -
+                bounds.minYUnits
+            ).coerceAtLeast(1)
 
-    val padding = 36.dp.toPx()
+    val padding =
+        36.dp.toPx()
 
-    val baseScale = minOf(
-        (size.width - padding * 2) / widthUnits,
-        (size.height - padding * 2) / heightUnits
-    ).coerceAtLeast(0.01f)
+    val baseScale =
+        minOf(
+            (
+                size.width -
+                    padding * 2
+                ) / widthUnits,
+            (
+                size.height -
+                    padding * 2
+                ) / heightUnits
+        ).coerceAtLeast(
+            0.01f
+        )
 
-    val scale = baseScale * userScale
-    val contentWidth = widthUnits * scale
-    val contentHeight = heightUnits * scale
+    val scale =
+        baseScale *
+            userScale
+
+    val contentWidth =
+        widthUnits *
+            scale
+
+    val contentHeight =
+        heightUnits *
+            scale
 
     val originX =
-        (size.width - contentWidth) / 2f -
-            bounds.minXUnits * scale +
+        (
+            size.width -
+                contentWidth
+            ) / 2f -
+            bounds.minXUnits *
+                scale +
             userOffset.x
 
     val originY =
-        (size.height - contentHeight) / 2f +
-            bounds.maxYUnits * scale +
+        (
+            size.height -
+                contentHeight
+            ) / 2f +
+            bounds.maxYUnits *
+                scale +
             userOffset.y
 
-    var previous: Offset? = null
+    var previous: Offset? =
+        null
+
     var colorIndex = 0
 
     design.points
@@ -156,14 +215,20 @@ private fun DrawScope.drawDesign(
             )
         )
         .forEach { point ->
-            val current = Offset(
-                originX + point.xUnits * scale,
-                originY - point.yUnits * scale
-            )
+            val current =
+                Offset(
+                    originX +
+                        point.xUnits *
+                            scale,
+                    originY -
+                        point.yUnits *
+                            scale
+                )
 
             when (point.command) {
                 StitchCommand.COLOR_CHANGE -> {
-                    colorIndex = point.colorIndex
+                    colorIndex =
+                        point.colorIndex
                     previous = current
                 }
 
@@ -177,42 +242,74 @@ private fun DrawScope.drawDesign(
                     previous?.let {
                         drawLine(
                             color =
-                                palette[
-                                    colorIndex %
-                                        palette.size
-                                ],
+                                threadColor(
+                                    design,
+                                    colorIndex
+                                ),
                             start = it,
                             end = current,
-                            strokeWidth = 1.8.dp.toPx(),
-                            cap = StrokeCap.Round
+                            strokeWidth =
+                                1.8.dp.toPx(),
+                            cap =
+                                StrokeCap.Round
                         )
                     }
+
                     previous = current
                 }
 
                 StitchCommand.JUMP -> {
                     previous?.let {
                         drawLine(
-                            color = Color(0x556D7C87),
+                            color =
+                                Color(
+                                    0x556D7C87
+                                ),
                             start = it,
                             end = current,
-                            strokeWidth = 1.dp.toPx()
+                            strokeWidth =
+                                1.dp.toPx()
                         )
                     }
+
                     previous = current
                 }
 
                 StitchCommand.SEQUIN -> {
                     drawCircle(
                         color = FioGold,
-                        radius = 2.2.dp.toPx(),
+                        radius =
+                            2.2.dp.toPx(),
                         center = current,
-                        style = Stroke(
-                            1.dp.toPx()
-                        )
+                        style =
+                            Stroke(
+                                1.dp.toPx()
+                            )
                     )
+
                     previous = current
                 }
             }
         }
+}
+
+private fun threadColor(
+    design: EmbroideryDesign,
+    index: Int
+): Color {
+    val raw =
+        design.threadColors
+            .getOrNull(index)
+
+    return if (raw != null) {
+        Color(
+            0xFF000000 or
+                raw.toLong()
+        )
+    } else {
+        fallbackPalette[
+            index %
+                fallbackPalette.size
+        ]
+    }
 }

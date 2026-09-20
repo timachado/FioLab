@@ -1,6 +1,6 @@
-# FioLab 0.5.0
+# FioLab 0.6.0
 
-Aplicativo Android nativo para matrizes de bordado diretamente pelo celular.
+Aplicativo Android nativo para trabalhar com matrizes de bordado diretamente pelo celular.
 
 ## Formatos liberados
 
@@ -8,35 +8,51 @@ Aplicativo Android nativo para matrizes de bordado diretamente pelo celular.
 - PES — Brother/Baby Lock.
 - JEF — Janome/Elna.
 
+## Editor
+
+A v0.6.0 adiciona edição não destrutiva:
+
+- mover em X/Y;
+- redimensionar;
+- girar;
+- espelhar horizontalmente;
+- espelhar verticalmente;
+- centralizar a matriz;
+- trocar cores por bloco;
+- visualizar dimensões atualizadas em tempo real.
+
+O editor trabalha sobre o modelo normalizado do FioLab. O arquivo original nunca é sobrescrito.
+
+Ao aplicar uma edição, o FioLab mantém a matriz editada em memória e regenera um novo arquivo quando o usuário salva ou compartilha.
+
 ## Conversor
 
-A v0.5.0 permite converter:
+Conversão disponível:
 
 **DST ⇄ PES ⇄ JEF**
 
-Fluxo:
+A edição pode ser aplicada antes da conversão.
 
-1. Abra uma matriz.
-2. Toque em **Converter**.
-3. Escolha o formato de destino.
-4. Use **Converter e salvar** ou **Converter e compartilhar**.
-5. Ao salvar, escolha memória interna, cartão SD ou pendrive OTG disponível no seletor do Android.
+## Fluxo mobile
 
-O arquivo original nunca é sobrescrito.
-
-## Cores
-
-PES/JEF podem trazer informações de cores de linha e o FioLab preserva essa paleta quando disponível.
-
-DST normalmente não carrega uma paleta de linha confiável. Ao converter DST para PES/JEF, o FioLab mantém os blocos/trocas e aplica uma paleta padrão para que a estrutura de cores não seja perdida.
+1. Abra a matriz.
+2. Visualize e confira dimensões.
+3. Edite se necessário.
+4. Simule a sequência.
+5. Salve no celular, SD ou pendrive OTG.
+6. Compartilhe ou converta para outro formato.
 
 ## Validação
 
 O CI executa:
-- teste do parser DST;
+- testes do parser DST;
 - leitura de amostras reais PES/JEF;
-- conversão para DST, PES e JEF;
-- reabertura dos arquivos convertidos;
+- geração e reabertura DST/PES/JEF;
+- testes de escala;
+- testes de rotação;
+- testes de espelhamento;
+- testes de centralização;
+- testes de troca de cores;
 - compilação Android.
 
 ## Compatibilidade
@@ -48,16 +64,16 @@ O CI executa:
 - Gradle 9.6.0.
 - Jetpack Compose.
 
-## Download
+## Downloads
 
 Cada Release publica:
 - APK direto;
-- ZIP contendo o APK, como alternativa para navegadores Android.
+- ZIP contendo o APK para navegadores Android que travam na finalização de downloads APK.
 
 ## Próximos passos
 
-- 0.6: editor básico.
-- 0.7: Criar Nome e biblioteca de fontes de bordado.
-- expansão gradual para VP3, EXP, XXX, U01 e TBF.
+- 0.7: Criar Nome e biblioteca inicial de fontes de bordado.
+- depois: expansão para VP3, EXP, XXX, U01 e TBF.
+- depois: recursos avançados de edição e otimização.
 
 Desenvolvido por **T.I. Machado — Soluções em Tecnologia**.

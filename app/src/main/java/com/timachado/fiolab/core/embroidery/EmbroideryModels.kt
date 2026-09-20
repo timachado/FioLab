@@ -38,7 +38,8 @@ data class EmbroideryDesign(
     val colorChanges: Int,
     val endFound: Boolean,
     val sourceBytes: ByteArray,
-    val threadColors: List<Int> = emptyList()
+    val threadColors: List<Int> = emptyList(),
+    val isModified: Boolean = false
 ) {
     val colorCount: Int
         get() = maxOf(
@@ -51,6 +52,17 @@ data class ConvertedMatrix(
     val fileName: String,
     val format: String,
     val bytes: ByteArray
+)
+
+data class EditTransform(
+    val scale: Float = 1f,
+    val rotationDegrees: Float = 0f,
+    val offsetXUnits: Int = 0,
+    val offsetYUnits: Int = 0,
+    val mirrorHorizontal: Boolean = false,
+    val mirrorVertical: Boolean = false,
+    val centerAtOrigin: Boolean = false,
+    val threadColors: List<Int>? = null
 )
 
 sealed interface EmbroideryLoadResult {
