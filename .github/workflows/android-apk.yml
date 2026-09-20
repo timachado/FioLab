@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.5-debug.apk
-          zip -9 FioLab-0.21.5-debug.zip FioLab-0.21.5-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.6-debug.apk
+          zip -9 FioLab-0.21.6-debug.zip FioLab-0.21.6-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.21.5-downloads
+          name: FioLab-0.21.6-downloads
           path: |
-            FioLab-0.21.5-debug.apk
-            FioLab-0.21.5-debug.zip
+            FioLab-0.21.6-debug.apk
+            FioLab-0.21.6-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.21.5 >/dev/null 2>&1; then
-            gh release upload v0.21.5               FioLab-0.21.5-debug.apk               FioLab-0.21.5-debug.zip               --clobber
+          if gh release view v0.21.6 >/dev/null 2>&1; then
+            gh release upload v0.21.6               FioLab-0.21.6-debug.apk               FioLab-0.21.6-debug.zip               --clobber
           else
-            gh release create v0.21.5               FioLab-0.21.5-debug.apk               FioLab-0.21.5-debug.zip               --target main               --title "FioLab 0.21.5"               --notes "FioLab 0.21.5: adiciona importação e gerenciamento de fontes TTF/OTF, seleção em Criar Nome e conversão dos contornos vetoriais em trajetórias de bordado; preserva as fontes nativas e os recursos existentes."
+            gh release create v0.21.6               FioLab-0.21.6-debug.apk               FioLab-0.21.6-debug.zip               --target main               --title "FioLab 0.21.6"               --notes "FioLab 0.21.6: reorganiza a Home em grade, adiciona barra inferior com acessos principais e corrige o botão Voltar do Android para retornar à tela anterior sem fechar o app fora da Home."
           fi
