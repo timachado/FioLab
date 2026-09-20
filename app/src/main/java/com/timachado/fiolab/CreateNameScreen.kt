@@ -45,7 +45,10 @@ import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
-import com.timachado.fiolab.core.embroidery.TextMatrixGenerator
+import com.timachado.fiolab.core.embroidery.LetterAdjustment
+import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
+import com.timachado.fiolab.core.embroidery.TextLayoutMode
+import com.timachado.fiolab.core.embroidery.TextLayoutOptions
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
@@ -149,9 +152,57 @@ fun CreateNameScreen(
         )
     }
 
+    var layoutMode by remember {
+        mutableStateOf(
+            TextLayoutMode.STRAIGHT
+        )
+    }
+
+    var arcHeightMm by remember {
+        mutableFloatStateOf(8f)
+    }
+
+    var selectedLetterOrdinal by remember {
+        mutableIntStateOf(0)
+    }
+
+    var letterAdjustments by remember {
+        mutableStateOf<
+            Map<Int, LetterAdjustment>
+        >(emptyMap())
+    }
+
+    val letterSourceIndices =
+        text.indices
+            .filter {
+                text[it].isLetter()
+            }
+
+    val selectedSourceIndex =
+        letterSourceIndices
+            .getOrNull(
+                selectedLetterOrdinal
+            )
+            ?: letterSourceIndices
+                .firstOrNull()
+
+    val selectedAdjustment =
+        selectedSourceIndex
+            ?.let {
+                sourceIndex ->
+                letterAdjustments[
+                    sourceIndex
+                ] ?: LetterAdjustment(
+                    sourceIndex =
+                        sourceIndex
+                )
+            }
+
     val result =
-        TextMatrixGenerator.generate(
-            TextMatrixOptions(
+        TextLayoutGenerator.generate(
+            TextLayoutOptions(
+                textOptions =
+                    TextMatrixOptions(
                 text = text,
                 heightMm = heightMm,
                 spacingMm = spacingMm,
@@ -177,6 +228,15 @@ fun CreateNameScreen(
                     hoopProfile,
                 fabricProfile =
                     fabricProfile
+                    ),
+                layoutMode =
+                    layoutMode,
+                arcHeightMm =
+                    arcHeightMm,
+                letterAdjustments =
+                    letterAdjustments
+                        .values
+                        .toList()
             )
         )
 
@@ -300,6 +360,12 @@ fun CreateNameScreen(
                     value = text,
                     onValueChange = {
                         text = it.take(24)
+
+                        selectedLetterOrdinal =
+                            0
+
+                        letterAdjustments =
+                            emptyMap()
                     },
                     modifier =
                         Modifier.fillMaxWidth(),
@@ -318,6 +384,332 @@ fun CreateNameScreen(
 
                 Spacer(
                     Modifier.height(14.dp)
+                )
+
+                Text(
+                    "Composição do texto",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            vertical = 8.dp
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    TextLayoutMode
+                        .entries
+                        .forEach {
+                                option ->
+                            val selected =
+                                layoutMode ==
+                                    option
+
+                            OutlinedButton(
+                                onClick = {
+                                    layoutMode =
+                                        option
+                                },
+                                colors =
+                                    ButtonDefaults
+                                        .outlinedButtonColors(
+                                            contentColor =
+                                                if (
+                                                    selected
+                                                ) {
+                                                    FioGold
+                                                } else {
+                                                    FioText
+                                                }
+                                        )
+                            ) {
+                                Text(
+                                    if (
+                                        selected
+                                    ) {
+                                        "● " +
+                                            option.displayName
+                                    } else {
+                                        option.displayName
+                                    }
+                                )
+                            }
+                        }
+                }
+
+                if (
+                    layoutMode !=
+                        TextLayoutMode.STRAIGHT
+                ) {
+                    Text(
+                        "Altura do arco " +
+                            mm(
+                                arcHeightMm
+                            ) +
+                            " mm",
+                        color = FioText,
+                        fontSize = 12.sp
+                    )
+
+                    Slider(
+                        value =
+                            arcHeightMm,
+                        onValueChange = {
+                            arcHeightMm = it
+                        },
+                        valueRange =
+                            0f..30f
+                    )
+                }
+
+                Text(
+                    "Ajuste por letra",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                if (
+                    letterSourceIndices
+                        .isEmpty()
+                ) {
+                    Text(
+                        "Digite pelo menos uma letra para ajustar.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                } else {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                vertical = 8.dp
+                            ),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+                        letterSourceIndices
+                            .forEachIndexed {
+                                    ordinal,
+                                    sourceIndex ->
+                                val selected =
+                                    sourceIndex ==
+                                        selectedSourceIndex
+
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedLetterOrdinal =
+                                            ordinal
+                                    },
+                                    colors =
+                                        ButtonDefaults
+                                            .outlinedButtonColors(
+                                                contentColor =
+                                                    if (
+                                                        selected
+                                                    ) {
+                                                        FioGold
+                                                    } else {
+                                                        FioText
+                                                    }
+                                            )
+                                ) {
+                                    Text(
+                                        (
+                                            ordinal +
+                                                1
+                                            ).toString() +
+                                            " • " +
+                                            text[
+                                                sourceIndex
+                                            ]
+                                                .uppercaseChar()
+                                    )
+                                }
+                            }
+                    }
+
+                    if (
+                        selectedAdjustment !=
+                            null
+                    ) {
+                        Text(
+                            "Mover X " +
+                                mm(
+                                    selectedAdjustment
+                                        .offsetXmm
+                                ) +
+                                " mm",
+                            color = FioText,
+                            fontSize = 12.sp
+                        )
+
+                        Slider(
+                            value =
+                                selectedAdjustment
+                                    .offsetXmm,
+                            onValueChange = {
+                                    value ->
+                                letterAdjustments =
+                                    letterAdjustments +
+                                        (
+                                            selectedAdjustment
+                                                .sourceIndex to
+                                                selectedAdjustment
+                                                    .copy(
+                                                        offsetXmm =
+                                                            value
+                                                    )
+                                            )
+                            },
+                            valueRange =
+                                -10f..10f
+                        )
+
+                        Text(
+                            "Mover Y " +
+                                mm(
+                                    selectedAdjustment
+                                        .offsetYmm
+                                ) +
+                                " mm",
+                            color = FioText,
+                            fontSize = 12.sp
+                        )
+
+                        Slider(
+                            value =
+                                selectedAdjustment
+                                    .offsetYmm,
+                            onValueChange = {
+                                    value ->
+                                letterAdjustments =
+                                    letterAdjustments +
+                                        (
+                                            selectedAdjustment
+                                                .sourceIndex to
+                                                selectedAdjustment
+                                                    .copy(
+                                                        offsetYmm =
+                                                            value
+                                                    )
+                                            )
+                            },
+                            valueRange =
+                                -10f..10f
+                        )
+
+                        Text(
+                            "Girar " +
+                                selectedAdjustment
+                                    .rotationDegrees
+                                    .toInt() +
+                                "°",
+                            color = FioText,
+                            fontSize = 12.sp
+                        )
+
+                        Slider(
+                            value =
+                                selectedAdjustment
+                                    .rotationDegrees,
+                            onValueChange = {
+                                    value ->
+                                letterAdjustments =
+                                    letterAdjustments +
+                                        (
+                                            selectedAdjustment
+                                                .sourceIndex to
+                                                selectedAdjustment
+                                                    .copy(
+                                                        rotationDegrees =
+                                                            value
+                                                    )
+                                            )
+                            },
+                            valueRange =
+                                -45f..45f
+                        )
+
+                        Text(
+                            "Espaço após letra " +
+                                mm(
+                                    selectedAdjustment
+                                        .spacingAfterMm
+                                ) +
+                                " mm",
+                            color = FioText,
+                            fontSize = 12.sp
+                        )
+
+                        Slider(
+                            value =
+                                selectedAdjustment
+                                    .spacingAfterMm,
+                            onValueChange = {
+                                    value ->
+                                letterAdjustments =
+                                    letterAdjustments +
+                                        (
+                                            selectedAdjustment
+                                                .sourceIndex to
+                                                selectedAdjustment
+                                                    .copy(
+                                                        spacingAfterMm =
+                                                            value
+                                                    )
+                                            )
+                            },
+                            valueRange =
+                                -3f..8f
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                letterAdjustments =
+                                    letterAdjustments -
+                                        selectedAdjustment
+                                            .sourceIndex
+                            },
+                            modifier =
+                                Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "Redefinir esta letra"
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    "A matriz final é recentralizada automaticamente no bastidor antes da exportação.",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        14.dp
+                    )
                 )
 
                 Text(

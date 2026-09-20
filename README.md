@@ -1,4 +1,4 @@
-# FioLab 0.13.0
+# FioLab 0.14.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,23 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Texto Curvo e Ajuste por Letra
+
+A v0.14 adiciona um motor de composição por letra.
+
+Modos:
+- Reto;
+- Arco para cima;
+- Arco para baixo.
+
+Cada letra pode receber:
+- deslocamento horizontal;
+- deslocamento vertical;
+- rotação independente;
+- espaçamento próprio após a letra.
+
+No modo curvo, a letra também acompanha a tangente do arco. Depois das transformações, a matriz inteira é recentralizada automaticamente antes da validação de bastidor e exportação.
 
 ## Biblioteca de Fontes
 

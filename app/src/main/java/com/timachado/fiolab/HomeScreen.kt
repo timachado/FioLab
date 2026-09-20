@@ -145,7 +145,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.13 cria nomes e monogramas com biblioteca de fontes em pontadas reais.",
+                        "FioLab 0.14 adiciona texto curvo e ajuste individual por letra, mantendo pontadas reais.",
                         color = FioTextMuted
                     )
                 }
@@ -423,7 +423,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.13.0 • Android",
+                "FioLab 0.14.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

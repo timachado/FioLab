@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.14.0
+
+### Texto Curvo
+- Composição Reta.
+- Arco para cima.
+- Arco para baixo.
+- Altura do arco configurável.
+- Cada letra acompanha a tangente do arco.
+
+### Ajuste por Letra
+- Seleção individual de cada letra.
+- Movimento horizontal independente.
+- Movimento vertical independente.
+- Rotação de -45° a 45°.
+- Espaçamento adicional ou negativo após cada letra.
+- Redefinição individual.
+- Saltos e TRIM continuam pertencendo à sequência real de costura.
+
+### Centralização
+- Após todas as transformações, a matriz é recentralizada automaticamente no 0,0.
+- Validação de bastidor acontece sobre a geometria final.
+- Prévia, simulador e arquivos DST/PES/JEF usam a mesma composição.
+
+### Testes
+- Arco para cima versus texto reto.
+- Arco para cima versus arco para baixo.
+- Rotação individual.
+- Espaçamento individual.
+- Centralização final.
+- Exportação de texto curvo para DST/PES/JEF.
+
+
 ## 0.13.0
 
 ### Biblioteca de Fontes
