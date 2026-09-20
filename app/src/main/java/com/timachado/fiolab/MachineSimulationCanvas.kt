@@ -154,35 +154,68 @@ private data class SimulationTransform(
                     .minYUnits
             ).coerceAtLeast(1)
 
-    private val frameWidthUnits =
-        design.hoopProfile
-            ?.let {
-                it.widthMm *
-                    10f
-            }
-            ?: widthUnits.toFloat()
+    private val availableWidth =
+        (
+            canvasWidth -
+                padding *
+                    2f
+            ).coerceAtLeast(
+                1f
+            )
 
-    private val frameHeightUnits =
+    private val availableHeight =
+        (
+            canvasHeight -
+                padding *
+                    2f
+            ).coerceAtLeast(
+                1f
+            )
+
+    private val designScale =
+        minOf(
+            availableWidth /
+                (
+                    widthUnits *
+                        1.18f
+                    ),
+            availableHeight /
+                (
+                    heightUnits *
+                        1.18f
+                    )
+        )
+
+    private val hoopScale =
         design.hoopProfile
             ?.let {
-                it.heightMm *
-                    10f
+                hoop ->
+                minOf(
+                    availableWidth /
+                        (
+                            hoop.widthMm *
+                                10f
+                            ),
+                    availableHeight /
+                        (
+                            hoop.heightMm *
+                                10f
+                            )
+                )
             }
-            ?: heightUnits.toFloat()
 
     val scale: Float =
-        minOf(
-            (
-                canvasWidth -
-                    padding * 2f
-                ) /
-                frameWidthUnits,
-            (
-                canvasHeight -
-                    padding * 2f
-                ) /
-                frameHeightUnits
-        ).coerceAtLeast(
+        (
+            hoopScale
+                ?.let {
+                    minOf(
+                        designScale,
+                        it *
+                            8f
+                    )
+                }
+                ?: designScale
+            ).coerceAtLeast(
             0.01f
         )
 
