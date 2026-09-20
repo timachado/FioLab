@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.8
+
+### Correção TTF/OTF
+- Corrigida a causa do texto importado aparecer como bolhas/traços no Criar Nome.
+- O modo Satin de fontes TTF/OTF deixa de tratar o contorno externo como se fosse uma linha central.
+- O gerador passa a preencher a área interna real dos glifos por varredura, preservando furos e formas internas pelo preenchimento par/ímpar.
+- A escala da fonte passa a usar a altura visual real do contorno, em vez da altura tipográfica total do arquivo, evitando nomes muito pequenos.
+- Ponto corrido continua seguindo o contorno vetorial.
+- Fontes manuscritas e ligadas continuam sendo processadas como palavra inteira quando não há ajustes individuais por letra.
+- Caracteres ausentes continuam sendo detectados explicitamente, sem substituição silenciosa por ponto de interrogação.
+
 ## 0.21.7
 
 ### Fontes importadas
