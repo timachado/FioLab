@@ -774,7 +774,7 @@ object ImportedFontMatrixGenerator {
                                     24f,
                                     step *
                                         4f
-                                )
+                                ).toDouble()
 
                     if (canConnect) {
                         val connector =
