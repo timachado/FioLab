@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -39,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.SimulationTiming
 import com.timachado.fiolab.core.embroidery.StitchCommand
-import com.timachado.fiolab.core.embroidery.estimateThreadMeters
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -71,23 +71,23 @@ fun SimulatorScreen(
             ).also {
                     prefix ->
                 points.forEachIndexed {
-                        index,
+                        pointIndex,
                         point ->
                     prefix[
-                        index +
+                        pointIndex +
                             1
                     ] =
                         prefix[
-                            index
+                            pointIndex
                         ] +
-                        if (
-                            point.command ==
-                                StitchCommand.STITCH
-                        ) {
-                            1
-                        } else {
-                            0
-                        }
+                            if (
+                                point.command ==
+                                    StitchCommand.STITCH
+                            ) {
+                                1
+                            } else {
+                                0
+                            }
                 }
             }
         }
@@ -127,9 +127,8 @@ fun SimulatorScreen(
                 points.size
         ) {
             val command =
-                points[
-                    index
-                ].command
+                points[index]
+                    .command
 
             delay(
                 SimulationTiming
@@ -153,10 +152,8 @@ fun SimulatorScreen(
             ) {
                 stoppedForColorChange =
                     true
-
                 playing =
                     false
-
                 break
             }
         }
@@ -165,7 +162,8 @@ fun SimulatorScreen(
             index >=
                 points.size
         ) {
-            playing = false
+            playing =
+                false
         }
     }
 
@@ -222,22 +220,6 @@ fun SimulatorScreen(
                     speed
             )
 
-    val totalSeconds =
-        SimulationTiming
-            .estimatedSeconds(
-                stitches =
-                    design.stitchCount,
-                speedMultiplier =
-                    speed
-            )
-
-    val thread =
-        remember(design) {
-            estimateThreadMeters(
-                design
-            )
-        }
-
     val currentThreadColor =
         remember(
             design.threadColors,
@@ -265,14 +247,15 @@ fun SimulatorScreen(
         Modifier.fillMaxSize()
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal =
-                        10.dp,
-                    vertical =
-                        6.dp
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal =
+                            8.dp,
+                        vertical =
+                            5.dp
+                    ),
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
@@ -281,9 +264,11 @@ fun SimulatorScreen(
                     onBack
             ) {
                 Text(
-                    "‹ Voltar",
+                    "‹",
                     color =
-                        FioGold
+                        FioText,
+                    fontSize =
+                        24.sp
                 )
             }
 
@@ -298,7 +283,7 @@ fun SimulatorScreen(
                 fontWeight =
                     FontWeight.Bold,
                 fontSize =
-                    18.sp
+                    17.sp
             )
 
             Row(
@@ -313,60 +298,17 @@ fun SimulatorScreen(
                     4f
                 ).forEach {
                         option ->
-                    val selected =
-                        speed ==
-                            option
-
-                    Card(
-                        modifier =
-                            Modifier
-                                .clickable {
-                                    speed =
-                                        option
-                                },
-                        colors =
-                            CardDefaults
-                                .cardColors(
-                                    containerColor =
-                                        if (
-                                            selected
-                                        ) {
-                                            FioGold
-                                        } else {
-                                            FioSurfaceAlt
-                                        }
-                                ),
-                        shape =
-                            RoundedCornerShape(
-                                10.dp
-                            )
-                    ) {
-                        Text(
-                            option
-                                .toInt()
-                                .toString() +
-                                "×",
-                            modifier =
-                                Modifier.padding(
-                                    horizontal =
-                                        10.dp,
-                                    vertical =
-                                        7.dp
-                                ),
-                            color =
-                                if (
-                                    selected
-                                ) {
-                                    FioBackground
-                                } else {
-                                    FioTextMuted
-                                },
-                            fontWeight =
-                                FontWeight.Bold,
-                            fontSize =
-                                11.sp
-                        )
-                    }
+                    SpeedChip(
+                        speed =
+                            option,
+                        selected =
+                            speed ==
+                                option,
+                        onClick = {
+                            speed =
+                                option
+                        }
+                    )
                 }
             }
         }
@@ -378,86 +320,38 @@ fun SimulatorScreen(
                     .weight(1f)
                     .padding(
                         horizontal =
-                            14.dp
+                            6.dp
                     )
         ) {
             MachineSimulationCanvas(
-                design = design,
+                design =
+                    design,
                 pointLimit =
                     index,
                 modifier =
-                    Modifier
-                        .fillMaxSize()
+                    Modifier.fillMaxSize()
             )
 
-            Card(
-                modifier =
-                    Modifier
-                        .align(
-                            Alignment.TopStart
-                        )
-                        .padding(
-                            10.dp
-                        ),
-                colors =
-                    CardDefaults
-                        .cardColors(
-                            containerColor =
-                                Color(
-                                    0xCC25272A
-                                )
-                        ),
-                shape =
-                    RoundedCornerShape(
-                        14.dp
-                    )
-            ) {
-                Text(
+            OverlayChip(
+                text =
                     (
                         progress *
                             100f
                         ).toInt()
                         .toString() +
                         "%",
-                    modifier =
-                        Modifier.padding(
-                            horizontal =
-                                10.dp,
-                            vertical =
-                                6.dp
-                        ),
-                    color =
-                        Color.White,
-                    fontSize =
-                        11.sp,
-                    fontWeight =
-                        FontWeight.Bold
-                )
-            }
-
-            Card(
                 modifier =
                     Modifier
                         .align(
-                            Alignment.TopEnd
+                            Alignment.TopStart
                         )
                         .padding(
-                            10.dp
-                        ),
-                colors =
-                    CardDefaults
-                        .cardColors(
-                            containerColor =
-                                Color(
-                                    0xCC25272A
-                                )
-                        ),
-                shape =
-                    RoundedCornerShape(
-                        14.dp
-                    )
-            ) {
-                Text(
+                            8.dp
+                        )
+            )
+
+            OverlayChip(
+                text =
                     mm(
                         design.bounds
                             .widthMm
@@ -468,21 +362,15 @@ fun SimulatorScreen(
                                 .heightMm
                         ) +
                         " mm",
-                    modifier =
-                        Modifier.padding(
-                            horizontal =
-                                10.dp,
-                            vertical =
-                                6.dp
-                        ),
-                    color =
-                        Color.White,
-                    fontSize =
-                        11.sp,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-            }
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.TopEnd
+                        )
+                        .padding(
+                            8.dp
+                        )
+            )
         }
 
         Card(
@@ -490,22 +378,27 @@ fun SimulatorScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        14.dp
+                        horizontal =
+                            8.dp,
+                        vertical =
+                            7.dp
                     ),
             colors =
-                CardDefaults
-                    .cardColors(
-                        containerColor =
-                            FioSurface
-                    ),
+                CardDefaults.cardColors(
+                    containerColor =
+                        FioSurface
+                ),
             shape =
                 RoundedCornerShape(
-                    24.dp
+                    18.dp
                 )
         ) {
             Column(
                 Modifier.padding(
-                    16.dp
+                    horizontal =
+                        12.dp,
+                    vertical =
+                        10.dp
                 )
             ) {
                 Row(
@@ -515,7 +408,7 @@ fun SimulatorScreen(
                     Box(
                         Modifier
                             .size(
-                                34.dp
+                                22.dp
                             )
                             .background(
                                 currentThreadColor,
@@ -531,7 +424,7 @@ fun SimulatorScreen(
                                 )
                                 .padding(
                                     start =
-                                        10.dp
+                                        8.dp
                                 )
                     ) {
                         Text(
@@ -540,26 +433,29 @@ fun SimulatorScreen(
                             color =
                                 FioText,
                             fontWeight =
-                                FontWeight.SemiBold
+                                FontWeight.SemiBold,
+                            fontSize =
+                                12.sp
                         )
 
                         Text(
-                            "Bloco " +
+                            "Fio " +
                                 block +
-                                " de " +
+                                "/" +
                                 design.colorCount,
                             color =
                                 FioTextMuted,
                             fontSize =
-                                10.sp
+                                9.sp
                         )
                     }
 
                     Text(
-                        "Fio " +
-                            block +
+                        completedStitches
+                            .toString() +
                             "/" +
-                            design.colorCount,
+                            design.stitchCount +
+                            " pts",
                         color =
                             FioTextMuted,
                         fontSize =
@@ -569,7 +465,7 @@ fun SimulatorScreen(
 
                 Spacer(
                     Modifier.height(
-                        10.dp
+                        4.dp
                     )
                 )
 
@@ -580,15 +476,17 @@ fun SimulatorScreen(
                         Arrangement.SpaceBetween
                 ) {
                     Text(
-                        completedStitches
+                        (
+                            SimulationTiming
+                                .BASE_STITCHES_PER_MINUTE *
+                                speed
+                            ).toInt()
                             .toString() +
-                            "/" +
-                            design.stitchCount +
-                            " pts",
+                            " pts/min",
                         color =
                             FioTextMuted,
                         fontSize =
-                            11.sp
+                            9.sp
                     )
 
                     Text(
@@ -604,31 +502,16 @@ fun SimulatorScreen(
                             "Concluído"
                         },
                         color =
-                            FioTextMuted,
+                            if (
+                                remainingStitches >
+                                    0
+                            ) {
+                                FioTextMuted
+                            } else {
+                                FioGold
+                            },
                         fontSize =
-                            11.sp
-                    )
-                }
-
-                if (
-                    stoppedForColorChange
-                ) {
-                    Text(
-                        "Troca de linha • coloque a cor do bloco " +
-                            block +
-                            " e toque em Continuar.",
-                        color =
-                            FioGold,
-                        fontWeight =
-                            FontWeight.SemiBold,
-                        fontSize =
-                            11.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            6.dp
-                        )
+                            9.sp
                     )
                 }
 
@@ -638,10 +521,8 @@ fun SimulatorScreen(
                     onValueChange = {
                         playing =
                             false
-
                         stoppedForColorChange =
                             false
-
                         index =
                             (
                                 it *
@@ -653,26 +534,43 @@ fun SimulatorScreen(
                                 )
                     },
                     colors =
-                        SliderDefaults
-                            .colors(
-                                thumbColor =
-                                    FioGold,
-                                activeTrackColor =
-                                    FioGold,
-                                inactiveTrackColor =
-                                    FioSurfaceAlt
-                            )
+                        SliderDefaults.colors(
+                            thumbColor =
+                                FioGold,
+                            activeTrackColor =
+                                FioGold,
+                            inactiveTrackColor =
+                                FioSurfaceAlt
+                        )
                 )
+
+                if (
+                    stoppedForColorChange
+                ) {
+                    Text(
+                        "Troca de linha: coloque a próxima cor e toque em Continuar.",
+                        color =
+                            FioGold,
+                        fontSize =
+                            10.sp,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            5.dp
+                        )
+                    )
+                }
 
                 Row(
                     modifier =
-                        Modifier
-                            .fillMaxWidth(),
+                        Modifier.fillMaxWidth(),
                     horizontalArrangement =
-                        Arrangement
-                            .spacedBy(
-                                8.dp
-                            ),
+                        Arrangement.spacedBy(
+                            7.dp
+                        ),
                     verticalAlignment =
                         Alignment.CenterVertically
                 ) {
@@ -680,7 +578,8 @@ fun SimulatorScreen(
                         onClick = {
                             playing =
                                 false
-
+                            stoppedForColorChange =
+                                false
                             index =
                                 (
                                     index -
@@ -694,15 +593,17 @@ fun SimulatorScreen(
                         },
                         modifier =
                             Modifier.weight(
-                                .8f
+                                .65f
                             )
                     ) {
                         Text(
-                            "⏮ −10%",
+                            "↶ 10%",
                             color =
-                                FioGold,
+                                FioTextMuted,
                             fontWeight =
-                                FontWeight.Bold
+                                FontWeight.Bold,
+                            fontSize =
+                                10.sp
                         )
                     }
 
@@ -712,7 +613,8 @@ fun SimulatorScreen(
                                 index >=
                                     points.size
                             ) {
-                                index = 0
+                                index =
+                                    0
                             }
 
                             if (
@@ -720,7 +622,6 @@ fun SimulatorScreen(
                             ) {
                                 stoppedForColorChange =
                                     false
-
                                 playing =
                                     true
                             } else {
@@ -729,17 +630,20 @@ fun SimulatorScreen(
                             }
                         },
                         modifier =
-                            Modifier.weight(
-                                1.7f
-                            ),
-                        colors =
-                            ButtonDefaults
-                                .buttonColors(
-                                    containerColor =
-                                        FioGold,
-                                    contentColor =
-                                        FioBackground
+                            Modifier
+                                .weight(
+                                    1.8f
                                 )
+                                .height(
+                                    44.dp
+                                ),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    FioGold,
+                                contentColor =
+                                    FioBackground
+                            )
                     ) {
                         Text(
                             when {
@@ -750,10 +654,12 @@ fun SimulatorScreen(
                                     "Ⅱ Pausar"
 
                                 else ->
-                                    "▶ Reproduzir"
+                                    "▶ Iniciar simulação"
                             },
                             fontWeight =
-                                FontWeight.Bold
+                                FontWeight.Bold,
+                            fontSize =
+                                11.sp
                         )
                     }
 
@@ -761,99 +667,127 @@ fun SimulatorScreen(
                         onClick = {
                             playing =
                                 false
-
                             stoppedForColorChange =
                                 false
-
-                            index = 0
+                            index =
+                                0
                         },
                         modifier =
                             Modifier.weight(
-                                .8f
+                                .65f
                             )
                     ) {
                         Text(
                             "■ Parar",
                             color =
                                 Color(
-                                    0xFFFF9F9A
+                                    0xFFFF8E8A
                                 ),
                             fontWeight =
-                                FontWeight.Bold
+                                FontWeight.Bold,
+                            fontSize =
+                                10.sp
                         )
                     }
                 }
-
-                Spacer(
-                    Modifier.height(
-                        8.dp
-                    )
-                )
-
-                Row(
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-                    InfoChip(
-                        value =
-                            (
-                                SimulationTiming
-                                    .BASE_STITCHES_PER_MINUTE *
-                                    speed
-                                ).toInt()
-                                .toString(),
-                        label = "pts/min",
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
-                    )
-
-                    InfoChip(
-                        value =
-                            formatTime(
-                                totalSeconds
-                            ),
-                        label =
-                            "tempo estimado",
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
-                    )
-
-                    InfoChip(
-                        value =
-                            twoDecimals(
-                                thread
-                            ) +
-                            " m",
-                        label =
-                            "linha est.",
-                        modifier =
-                            Modifier.weight(
-                                1f
-                            )
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(
-                        6.dp
-                    )
-                )
-
-                Text(
-                    "A prévia clara mostra o caminho completo. As pontadas fortes representam o que a máquina já teria costurado; o marcador indica a posição atual da agulha.",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
             }
         }
+    }
+}
+
+@Composable
+private fun SpeedChip(
+    speed: Float,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier.clickable(
+                onClick =
+                    onClick
+            ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (
+                        selected
+                    ) {
+                        FioGold
+                    } else {
+                        FioSurfaceAlt
+                    }
+            ),
+        shape =
+            RoundedCornerShape(
+                9.dp
+            )
+    ) {
+        Text(
+            speed
+                .toInt()
+                .toString() +
+                "×",
+            modifier =
+                Modifier.padding(
+                    horizontal =
+                        10.dp,
+                    vertical =
+                        7.dp
+                ),
+            color =
+                if (
+                    selected
+                ) {
+                    FioBackground
+                } else {
+                    FioTextMuted
+                },
+            fontWeight =
+                FontWeight.Bold,
+            fontSize =
+                10.sp
+        )
+    }
+}
+
+@Composable
+private fun OverlayChip(
+    text: String,
+    modifier: Modifier =
+        Modifier
+) {
+    Card(
+        modifier =
+            modifier,
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    Color(
+                        0xD9313336
+                    )
+            ),
+        shape =
+            RoundedCornerShape(
+                12.dp
+            )
+    ) {
+        Text(
+            text,
+            modifier =
+                Modifier.padding(
+                    horizontal =
+                        9.dp,
+                    vertical =
+                        5.dp
+                ),
+            color =
+                Color.White,
+            fontWeight =
+                FontWeight.SemiBold,
+            fontSize =
+                9.sp
+        )
     }
 }
 
@@ -865,17 +799,6 @@ private fun mm(
             "pt-BR"
         ),
         "%.0f",
-        value
-    )
-
-private fun twoDecimals(
-    value: Double
-): String =
-    String.format(
-        Locale.forLanguageTag(
-            "pt-BR"
-        ),
-        "%.2f",
         value
     )
 
@@ -896,7 +819,8 @@ private fun formatTime(
             60
 
     return if (
-        minutes > 0
+        minutes >
+            0
     ) {
         minutes
             .toString() +
