@@ -1047,8 +1047,7 @@ private fun FioLabApp() {
                         projects =
                             savedProjects,
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         },
                         onOpen = {
                                 project ->
@@ -1099,8 +1098,7 @@ private fun FioLabApp() {
                 Screen.CreateName -> {
                     CreateNameScreen(
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         },
                         onCreate = {
                                 created ->
@@ -1128,8 +1126,7 @@ private fun FioLabApp() {
                 Screen.CreateDrawing -> {
                     CreateDrawingScreen(
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         },
                         onCreate = {
                                 created ->
@@ -1157,8 +1154,7 @@ private fun FioLabApp() {
                 Screen.CreateMonogram -> {
                     MonogramScreen(
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         },
                         onCreate = {
                                 created ->
@@ -1188,10 +1184,7 @@ private fun FioLabApp() {
                         design =
                             current.design,
                         onBack = {
-                            screen =
-                                Screen.Viewer(
-                                    current.design
-                                )
+                            goBack()
                         },
                         onUsbOtg = {
                                 format ->
@@ -1225,8 +1218,7 @@ private fun FioLabApp() {
                         design =
                             current.design,
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         },
                         onOpen = {
                             picker.launch(
@@ -1299,12 +1291,7 @@ private fun FioLabApp() {
                         design =
                             current.design,
                         onBack = {
-                            screen =
-                                Screen
-                                    .Viewer(
-                                        current
-                                            .design
-                                    )
+                            goBack()
                         },
                         onSave = {
                                 format ->
@@ -1334,12 +1321,7 @@ private fun FioLabApp() {
                         design =
                             current.design,
                         onBack = {
-                            screen =
-                                Screen
-                                    .Viewer(
-                                        current
-                                            .design
-                                    )
+                            goBack()
                         },
                         onApply = {
                                 edited ->
