@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +50,7 @@ import com.timachado.fiolab.core.embroidery.LetterAdjustment
 import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
 import com.timachado.fiolab.core.embroidery.TextLayoutMode
 import com.timachado.fiolab.core.embroidery.TextLayoutOptions
+import com.timachado.fiolab.core.embroidery.TextGlyphProvider
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
@@ -58,6 +60,8 @@ import com.timachado.fiolab.ui.theme.FioSurface
 import com.timachado.fiolab.ui.theme.FioSurfaceAlt
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
+import com.timachado.fiolab.font.ImportedFontMatrixGenerator
+import com.timachado.fiolab.font.ImportedFontStore
 import java.util.Locale
 
 private val namePalette =
@@ -80,6 +84,21 @@ fun CreateNameScreen(
     onCreate: (EmbroideryDesign) -> Unit,
     onSimulate: (EmbroideryDesign) -> Unit
 ) {
+    val context =
+        LocalContext.current
+
+    val importedFonts =
+        remember {
+            ImportedFontStore
+                .list(context)
+        }
+
+    var importedFontId by remember {
+        mutableStateOf<String?>(
+            null
+        )
+    }
+
     var text by remember {
         mutableStateOf("Maria")
     }
@@ -198,6 +217,38 @@ fun CreateNameScreen(
                 )
             }
 
+    val importedFont =
+        importedFonts
+            .firstOrNull {
+                it.id ==
+                    importedFontId
+            }
+
+    val glyphProvider =
+        importedFont
+            ?.let {
+                    selected ->
+                TextGlyphProvider(
+                    preserveCase =
+                        true,
+                    spacingScale =
+                        1f,
+                    generate = {
+                            char,
+                            glyphOptions ->
+                        ImportedFontMatrixGenerator
+                            .generateGlyph(
+                                font =
+                                    selected,
+                                char =
+                                    char,
+                                options =
+                                    glyphOptions
+                            )
+                    }
+                )
+            }
+
     val result =
         TextLayoutGenerator.generate(
             TextLayoutOptions(
@@ -237,6 +288,8 @@ fun CreateNameScreen(
                     letterAdjustments
                         .values
                         .toList(),
+                glyphProvider =
+                    glyphProvider,
             )
         )
 
@@ -1032,6 +1085,8 @@ fun CreateNameScreen(
                             Card(
                                 onClick = {
                                     font = option
+                                    importedFontId =
+                                        null
                                 },
                                 colors =
                                     CardDefaults
@@ -1080,6 +1135,110 @@ fun CreateNameScreen(
                                 )
                             }
                         }
+                }
+
+                if (
+                    importedFonts
+                        .isNotEmpty()
+                ) {
+                    Text(
+                        "Fontes importadas TTF/OTF",
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                vertical = 8.dp
+                            ),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+                        importedFonts
+                            .forEach {
+                                    option ->
+                                val selected =
+                                    importedFontId ==
+                                        option.id
+
+                                Card(
+                                    onClick = {
+                                        importedFontId =
+                                            option.id
+                                    },
+                                    colors =
+                                        CardDefaults
+                                            .cardColors(
+                                                containerColor =
+                                                    if (
+                                                        selected
+                                                    ) {
+                                                        FioSurfaceAlt
+                                                    } else {
+                                                        FioSurface
+                                                    }
+                                            ),
+                                    shape =
+                                        RoundedCornerShape(
+                                            14.dp
+                                        )
+                                ) {
+                                    Text(
+                                        option.displayName +
+                                            " • " +
+                                            option.extension
+                                                .uppercase(
+                                                    Locale.ROOT
+                                                ),
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal =
+                                                    14.dp,
+                                                vertical =
+                                                    10.dp
+                                            ),
+                                        color =
+                                            if (
+                                                selected
+                                            ) {
+                                                FioGold
+                                            } else {
+                                                FioText
+                                            },
+                                        fontWeight =
+                                            if (
+                                                selected
+                                            ) {
+                                                FontWeight.Bold
+                                            } else {
+                                                FontWeight.Normal
+                                            }
+                                    )
+                                }
+                            }
+                    }
+
+                    Text(
+                        "A TTF/OTF é convertida pelo contorno vetorial da própria fonte e passa pelo motor de pontadas do FioLab.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            10.dp
+                        )
+                    )
                 }
 
                 Text(
