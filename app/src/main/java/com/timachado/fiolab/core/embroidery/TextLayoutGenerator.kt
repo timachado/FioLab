@@ -29,7 +29,14 @@ data class TextGlyphProvider(
     val spacingScale: Float = 1f,
     val generate:
         (Char, TextMatrixOptions) ->
-            Result<EmbroideryDesign>
+            Result<EmbroideryDesign>,
+    val generateText:
+        ((
+            String,
+            TextMatrixOptions
+        ) ->
+            Result<EmbroideryDesign>)? =
+        null
 )
 
 data class TextLayoutOptions(
@@ -102,6 +109,86 @@ object TextLayoutGenerator {
                     .associateBy {
                         it.sourceIndex
                     }
+
+            val wholeTextGenerator =
+                options
+                    .glyphProvider
+                    ?.generateText
+
+            val hasPerLetterChanges =
+                options
+                    .letterAdjustments
+                    .any {
+                        it.offsetXmm != 0f ||
+                            it.offsetYmm != 0f ||
+                            it.rotationDegrees != 0f ||
+                            it.spacingAfterMm != 0f ||
+                            it.color != null
+                    }
+
+            if (
+                wholeTextGenerator != null &&
+                options.layoutMode ==
+                    TextLayoutMode.STRAIGHT &&
+                !hasPerLetterChanges
+            ) {
+                val direct =
+                    wholeTextGenerator(
+                        normalized,
+                        options
+                            .textOptions
+                            .copy(
+                                text =
+                                    normalized,
+                                enforceHoop =
+                                    false
+                            )
+                    )
+                    .getOrThrow()
+                    .copy(
+                        label =
+                            sourceText
+                    )
+
+                val finished =
+                    MachineFinishing
+                        .apply(
+                            direct,
+                            options
+                                .machineFinishingSettings
+                        )
+                        .design
+
+                if (
+                    options.textOptions
+                        .enforceHoop &&
+                    options.textOptions
+                        .hoopProfile !=
+                        null
+                ) {
+                    val fit =
+                        HoopValidator
+                            .validate(
+                                finished,
+                                options
+                                    .textOptions
+                                    .hoopProfile
+                            )
+
+                    require(
+                        fit.fits
+                    ) {
+                        "O texto ultrapassa a área segura do bastidor " +
+                            options
+                                .textOptions
+                                .hoopProfile
+                                .displayName +
+                            "."
+                    }
+                }
+
+                return@runCatching finished
+            }
 
             val spacingScale =
                 options
