@@ -18,6 +18,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +50,72 @@ fun ViewerScreen(
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
+    var displayMode by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            EmbroideryDisplayMode
+                .REALISTIC
+        )
+    }
+
+    var referenceHoop by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            design.hoopProfile
+                ?: com.timachado
+                    .fiolab
+                    .core
+                    .embroidery
+                    .HoopProfile
+                    .H100X100
+        )
+    }
+
+    var showConnections by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var showDisplaySettings by remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    if (
+        showDisplaySettings
+    ) {
+        DisplaySettingsSheet(
+            displayMode =
+                displayMode,
+            onDisplayModeChange = {
+                displayMode =
+                    it
+            },
+            hoop =
+                referenceHoop,
+            onHoopChange = {
+                referenceHoop =
+                    it
+            },
+            showConnections =
+                showConnections,
+            onShowConnectionsChange = {
+                showConnections =
+                    it
+            },
+            onDismiss = {
+                showDisplaySettings =
+                    false
+            }
+        )
+    }
+
     Column(
         Modifier.fillMaxSize()
     ) {
@@ -104,6 +174,18 @@ fun ViewerScreen(
             }
 
             TextButton(
+                onClick = {
+                    showDisplaySettings =
+                        true
+                }
+            ) {
+                Text(
+                    "Exibição",
+                    color = FioGold
+                )
+            }
+
+            TextButton(
                 onClick = onOpen
             ) {
                 Text(
@@ -117,7 +199,11 @@ fun ViewerScreen(
             design = design,
             interactive = true,
             hoop =
-                design.hoopProfile,
+                referenceHoop,
+            displayMode =
+                displayMode,
+            showConnections =
+                showConnections,
             modifier =
                 Modifier
                     .fillMaxWidth()
