@@ -13,6 +13,11 @@
 - Se o Satin por eixo falhar no preflight, o gerador refaz o glifo automaticamente com a técnica segura.
 - A decisão não usa nome, fabricante ou família da fonte; depende apenas da geometria real do glifo.
 - Adicionados testes de regressão para perfis fino/cursivo, grosso/display, decorativo, degenerado e trajetórias inválidas.
+- Adicionado painel de Configurações de Exibição inspirado no fluxo de referência.
+- Modos disponíveis: Sólida, Pontos e Realista.
+- Bastidor de referência pode ser trocado sem alterar a matriz.
+- Traços de conexão podem ser exibidos/ocultados separadamente.
+- Os mesmos modos de exibição ficam disponíveis no Visualizador e no Editor.
 
 ## 0.22.4
 
