@@ -72,5 +72,5 @@ jobs:
           if gh release view v0.23.0 >/dev/null 2>&1; then
             gh release upload v0.23.0               FioLab-0.23.0-debug.apk               FioLab-0.23.0-debug.zip               --clobber
           else
-            gh release create v0.23.0               FioLab-0.23.0-debug.apk               FioLab-0.23.0-debug.zip               --target main               --title "FioLab 0.23.0"               --notes "FioLab 0.23.0: substitui correções por fonte por um motor adaptativo genérico TTF/OTF, escolhendo a técnica por geometria do glifo e aplicando preflight/fallback automático antes de gerar a matriz."
+            gh release create v0.23.0               FioLab-0.23.0-debug.apk               FioLab-0.23.0-debug.zip               --target main               --title "FioLab 0.23.0"               --notes "FioLab 0.23.0: motor adaptativo genérico TTF/OTF com preflight e fallback automático, mais Configurações de Exibição com modos Sólida, Pontos e Realista, bastidor de referência e traços de conexão."
           fi
