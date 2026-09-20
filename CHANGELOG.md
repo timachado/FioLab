@@ -17,6 +17,7 @@
 - Geração, simulação, edição, exportação e transferência já existentes.
 - Minha Conta/Supabase continua isolada da inicialização.
 - Identidade visual e recursos de logo/launcher da 0.21.4.
+- Pipeline Android validado com testes unitários e build debug antes da publicação.
 
 
 ## 0.21.3
