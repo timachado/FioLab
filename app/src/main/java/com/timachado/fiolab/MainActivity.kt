@@ -967,13 +967,9 @@ private fun FioLabApp() {
                             screen =
                                 Screen.CreateName
                         },
-                        onCreateMonogram = {
+                        onFonts = {
                             screen =
-                                Screen.CreateMonogram
-                        },
-                        onCreateDrawing = {
-                            screen =
-                                Screen.CreateDrawing
+                                Screen.FontLibrary
                         },
                         onTransfer = {
                             recent?.let {
