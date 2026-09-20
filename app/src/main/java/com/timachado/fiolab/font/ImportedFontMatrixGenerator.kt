@@ -720,7 +720,7 @@ object ImportedFontMatrixGenerator {
             }
 
         val unitsPerPixel =
-            1.5f
+            1.0f
 
         val padding =
             4
@@ -988,7 +988,7 @@ object ImportedFontMatrixGenerator {
                         rawLine
                     ),
                     radius =
-                        3,
+                        4,
                     passes =
                         2
                 )
