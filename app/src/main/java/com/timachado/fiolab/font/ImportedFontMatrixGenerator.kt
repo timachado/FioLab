@@ -553,7 +553,7 @@ object ImportedFontMatrixGenerator {
                     Normalizer.Form.NFD
                 )
                 .replace(
-                    Regex("\p{M}+"),
+                    Regex("\\p{M}+"),
                     ""
                 )
 
@@ -753,7 +753,7 @@ object ImportedFontMatrixGenerator {
                 Normalizer.Form.NFD
             )
             .replace(
-                Regex("\p{M}+"),
+                Regex("\\p{M}+"),
                 ""
             )
             .replace(
