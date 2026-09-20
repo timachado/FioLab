@@ -3,12 +3,12 @@ package com.timachado.fiolab.font
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
+import android.graphics.RectF
 import com.timachado.fiolab.core.embroidery.EmbroideryBounds
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
-import com.timachado.fiolab.core.embroidery.SatinGenerator
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
@@ -16,6 +16,7 @@ import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 object ImportedFontMatrixGenerator {
@@ -146,19 +147,30 @@ object ImportedFontMatrixGenerator {
                 "A fonte não gerou um contorno utilizável para este texto."
             }
 
-            val metrics =
-                paint.fontMetrics
+            val pathBounds =
+                RectF().also {
+                    path.computeBounds(
+                        it,
+                        true
+                    )
+                }
 
-            val emHeightPx =
-                (
-                    metrics.descent -
-                        metrics.ascent
-                    ).coerceAtLeast(1f)
+            require(
+                pathBounds.width() >
+                    0.5f &&
+                    pathBounds.height() >
+                    0.5f
+            ) {
+                "A fonte não gerou uma área utilizável para este texto."
+            }
+
+            val targetHeightUnits =
+                options.heightMm *
+                    10f
 
             val scale =
-                options.heightMm *
-                    10f /
-                    emHeightPx
+                targetHeightUnits /
+                    pathBounds.height()
 
             val sampled =
                 samplePath(path)
@@ -169,175 +181,100 @@ object ImportedFontMatrixGenerator {
                 "Não foi possível interpretar o contorno da fonte."
             }
 
-            val points =
-                mutableListOf<
-                    EmbroideryPoint
-                >()
+            val transformed =
+                sampled.map {
+                        contour ->
+                    SampledContour(
+                        points =
+                            contour.points
+                                .map {
+                                    point ->
+                                    Pair(
+                                        (
+                                            (
+                                                point.first -
+                                                    pathBounds
+                                                        .centerX()
+                                                ) *
+                                                scale
+                                            ).roundToInt(),
+                                        (
+                                            (
+                                                pathBounds
+                                                    .centerY() -
+                                                    point.second
+                                                ) *
+                                                scale
+                                            ).roundToInt()
+                                    )
+                                }
+                                .fold(
+                                    mutableListOf<
+                                        Pair<Int, Int>
+                                    >()
+                                ) {
+                                    acc,
+                                    point ->
+                                    if (
+                                        acc.lastOrNull() !=
+                                            point
+                                    ) {
+                                        acc +=
+                                            point
+                                    }
 
-            var currentX = 0
-            var currentY = 0
-
-            sampled.forEachIndexed {
-                    index,
-                    contour ->
-                val units =
-                    contour.points
-                        .map {
-                            point ->
-                            Pair(
-                                (
-                                    point.first *
-                                        scale
-                                    ).roundToInt(),
-                                (
-                                    (
-                                        point.second -
-                                            metrics.ascent
-                                        ) *
-                                        scale
-                                    ).roundToInt()
-                            )
-                        }
-                        .fold(
-                            mutableListOf<
-                                Pair<Int, Int>
-                            >()
-                        ) {
-                            acc,
-                            point ->
-                            if (
-                                acc.lastOrNull() !=
-                                    point
-                            ) {
-                                acc += point
-                            }
-
-                            acc
-                        }
-
-                if (
-                    units.size <
-                        2
-                ) {
-                    return@forEachIndexed
-                }
-
-                val stroke =
-                    units.toMutableList()
-
-                if (
-                    contour.closed &&
-                    stroke.first() !=
-                        stroke.last()
-                ) {
-                    stroke +=
-                        stroke.first()
-                }
-
-                if (
-                    index > 0 &&
-                    points.isNotEmpty()
-                ) {
-                    points +=
-                        EmbroideryPoint(
-                            currentX,
-                            currentY,
-                            StitchCommand.TRIM,
-                            0
-                        )
-                }
-
-                val first =
-                    stroke.first()
-
-                points +=
-                    EmbroideryPoint(
-                        first.first,
-                        first.second,
-                        StitchCommand.JUMP,
-                        0
+                                    acc
+                                },
+                        closed =
+                            contour.closed
                     )
+                }
+                .filter {
+                    it.points.size >=
+                        2
+                }
 
-                currentX =
-                    first.first
+            require(
+                transformed.isNotEmpty()
+            ) {
+                "A fonte não gerou contornos válidos."
+            }
 
-                currentY =
-                    first.second
-
+            val points =
                 when (
                     options.style
                 ) {
-                    TextStitchStyle.RUNNING -> {
-                        stroke
-                            .drop(1)
-                            .forEach {
-                                    target ->
-                                val result =
-                                    appendRunning(
-                                        output =
-                                            points,
-                                        fromX =
-                                            currentX,
-                                        fromY =
-                                            currentY,
-                                        toX =
-                                            target.first,
-                                        toY =
-                                            target.second,
-                                        maxLengthUnits =
-                                            options
-                                                .stitchLengthMm *
-                                                10f
-                                    )
+                    TextStitchStyle.RUNNING ->
+                        buildRunningOutline(
+                            contours =
+                                transformed,
+                            stitchLengthUnits =
+                                options
+                                    .stitchLengthMm *
+                                    10f
+                        )
 
-                                currentX =
-                                    result.first
-
-                                currentY =
-                                    result.second
-                            }
-                    }
-
-                    TextStitchStyle.SATIN -> {
-                        val built =
-                            SatinGenerator
-                                .append(
-                                    points =
-                                        points,
-                                    stroke =
-                                        stroke,
-                                    currentX =
-                                        currentX,
-                                    currentY =
-                                        currentY,
-                                    widthUnits =
-                                        options
-                                            .satinWidthMm *
-                                            10f,
-                                    stepUnits =
-                                        options
-                                            .satinDensityMm *
-                                            10f,
-                                    pullCompensationUnits =
-                                        options
-                                            .satinPullCompensationMm *
-                                            10f,
-                                    shortStitches =
-                                        options
-                                            .satinShortStitches,
-                                    underlayMode =
-                                        options
-                                            .satinUnderlayMode
+                    TextStitchStyle.SATIN ->
+                        buildFilledText(
+                            contours =
+                                transformed,
+                            rowStepUnits =
+                                options
+                                    .satinDensityMm *
+                                    10f,
+                            pullCompensationUnits =
+                                options
+                                    .satinPullCompensationMm *
+                                    10f,
+                            maxStitchUnits =
+                                max(
+                                    45f,
+                                    options
+                                        .satinWidthMm *
+                                        10f
                                 )
-
-                        currentX =
-                            built.currentX
-
-                        currentY =
-                            built.currentY
-                    }
+                        )
                 }
-            }
 
             require(
                 points.any {
@@ -524,6 +461,431 @@ object ImportedFontMatrixGenerator {
             design
         }
 
+    private fun buildRunningOutline(
+        contours: List<SampledContour>,
+        stitchLengthUnits: Float
+    ): MutableList<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        var currentX = 0
+        var currentY = 0
+
+        contours.forEachIndexed {
+                index,
+                contour ->
+            val stroke =
+                contour.points
+                    .toMutableList()
+
+            if (
+                contour.closed &&
+                stroke.first() !=
+                    stroke.last()
+            ) {
+                stroke +=
+                    stroke.first()
+            }
+
+            if (
+                index > 0 &&
+                output.isNotEmpty()
+            ) {
+                output +=
+                    EmbroideryPoint(
+                        currentX,
+                        currentY,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+
+            val first =
+                stroke.first()
+
+            output +=
+                EmbroideryPoint(
+                    first.first,
+                    first.second,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            currentX =
+                first.first
+
+            currentY =
+                first.second
+
+            stroke
+                .drop(1)
+                .forEach {
+                        target ->
+                    val result =
+                        appendRunning(
+                            output =
+                                output,
+                            fromX =
+                                currentX,
+                            fromY =
+                                currentY,
+                            toX =
+                                target.first,
+                            toY =
+                                target.second,
+                            maxLengthUnits =
+                                stitchLengthUnits
+                        )
+
+                    currentX =
+                        result.first
+
+                    currentY =
+                        result.second
+                }
+        }
+
+        return output
+    }
+
+    private fun buildFilledText(
+        contours: List<SampledContour>,
+        rowStepUnits: Float,
+        pullCompensationUnits: Float,
+        maxStitchUnits: Float
+    ): MutableList<EmbroideryPoint> {
+        val allPoints =
+            contours.flatMap {
+                it.points
+            }
+
+        val minY =
+            allPoints.minOf {
+                it.second
+            }
+
+        val maxY =
+            allPoints.maxOf {
+                it.second
+            }
+
+        val step =
+            rowStepUnits
+                .coerceIn(
+                    3f,
+                    12f
+                )
+
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        var currentX = 0
+        var currentY = 0
+        var hasCurrent = false
+        var rowIndex = 0
+        var previousSingleSegment =
+            false
+
+        var scanY =
+            minY.toFloat() +
+                step /
+                    2f
+
+        while (
+            scanY <=
+                maxY.toFloat() +
+                    0.01f
+        ) {
+            val intersections =
+                mutableListOf<Float>()
+
+            contours.forEach {
+                    contour ->
+                val polygon =
+                    if (
+                        contour.closed &&
+                        contour.points.first() !=
+                            contour.points.last()
+                    ) {
+                        contour.points +
+                            contour.points.first()
+                    } else {
+                        contour.points
+                    }
+
+                for (
+                    index in
+                        1 until polygon.size
+                ) {
+                    val first =
+                        polygon[
+                            index -
+                                1
+                        ]
+
+                    val second =
+                        polygon[index]
+
+                    val y1 =
+                        first.second
+                            .toFloat()
+
+                    val y2 =
+                        second.second
+                            .toFloat()
+
+                    val crosses =
+                        (
+                            y1 <= scanY &&
+                                y2 > scanY
+                            ) ||
+                            (
+                                y2 <= scanY &&
+                                    y1 > scanY
+                                )
+
+                    if (!crosses) {
+                        continue
+                    }
+
+                    val ratio =
+                        (
+                            scanY -
+                                y1
+                            ) /
+                            (
+                                y2 -
+                                    y1
+                                )
+
+                    intersections +=
+                        first.first +
+                            (
+                                second.first -
+                                    first.first
+                                ) *
+                                ratio
+                }
+            }
+
+            intersections.sort()
+
+            val segments =
+                mutableListOf<
+                    Pair<Int, Int>
+                >()
+
+            var index = 0
+
+            while (
+                index +
+                    1 <
+                    intersections.size
+            ) {
+                val left =
+                    (
+                        intersections[index] -
+                            pullCompensationUnits
+                        ).roundToInt()
+
+                val right =
+                    (
+                        intersections[
+                            index +
+                                1
+                        ] +
+                            pullCompensationUnits
+                        ).roundToInt()
+
+                if (
+                    right -
+                        left >=
+                        2
+                ) {
+                    segments +=
+                        Pair(
+                            left,
+                            right
+                        )
+                }
+
+                index +=
+                    2
+            }
+
+            if (
+                segments.isNotEmpty()
+            ) {
+                val reversed =
+                    rowIndex %
+                        2 ==
+                        1
+
+                val ordered =
+                    if (reversed) {
+                        segments.asReversed()
+                    } else {
+                        segments
+                    }
+
+                ordered.forEachIndexed {
+                        segmentIndex,
+                        segment ->
+                    val startX =
+                        if (reversed) {
+                            segment.second
+                        } else {
+                            segment.first
+                        }
+
+                    val endX =
+                        if (reversed) {
+                            segment.first
+                        } else {
+                            segment.second
+                        }
+
+                    val y =
+                        scanY
+                            .roundToInt()
+
+                    val canConnect =
+                        hasCurrent &&
+                            previousSingleSegment &&
+                            segments.size ==
+                                1 &&
+                            segmentIndex ==
+                                0 &&
+                            hypot(
+                                (
+                                    startX -
+                                        currentX
+                                    ).toDouble(),
+                                (
+                                    y -
+                                        currentY
+                                    ).toDouble()
+                            ) <=
+                                max(
+                                    24f,
+                                    step *
+                                        4f
+                                )
+
+                    if (canConnect) {
+                        val connector =
+                            appendRunning(
+                                output =
+                                    output,
+                                fromX =
+                                    currentX,
+                                fromY =
+                                    currentY,
+                                toX =
+                                    startX,
+                                toY =
+                                    y,
+                                maxLengthUnits =
+                                    24f
+                            )
+
+                        currentX =
+                            connector.first
+
+                        currentY =
+                            connector.second
+                    } else {
+                        if (hasCurrent) {
+                            val distance =
+                                hypot(
+                                    (
+                                        startX -
+                                            currentX
+                                        ).toDouble(),
+                                    (
+                                        y -
+                                            currentY
+                                        ).toDouble()
+                                )
+
+                            if (
+                                distance >
+                                    40.0
+                            ) {
+                                output +=
+                                    EmbroideryPoint(
+                                        currentX,
+                                        currentY,
+                                        StitchCommand.TRIM,
+                                        0
+                                    )
+                            }
+                        }
+
+                        output +=
+                            EmbroideryPoint(
+                                startX,
+                                y,
+                                StitchCommand.JUMP,
+                                0
+                            )
+
+                        currentX =
+                            startX
+
+                        currentY =
+                            y
+
+                        hasCurrent =
+                            true
+                    }
+
+                    val filled =
+                        appendRunning(
+                            output =
+                                output,
+                            fromX =
+                                currentX,
+                            fromY =
+                                currentY,
+                            toX =
+                                endX,
+                            toY =
+                                y,
+                            maxLengthUnits =
+                                maxStitchUnits
+                        )
+
+                    currentX =
+                        filled.first
+
+                    currentY =
+                        filled.second
+
+                    hasCurrent =
+                        true
+                }
+
+                previousSingleSegment =
+                    segments.size ==
+                        1
+            } else {
+                previousSingleSegment =
+                    false
+            }
+
+            rowIndex++
+            scanY +=
+                step
+        }
+
+        return output
+    }
+
     private fun resolveCharacter(
         paint: Paint,
         font: ImportedFont,
@@ -577,13 +939,19 @@ object ImportedFontMatrixGenerator {
 
     private data class SampledContour(
         val points:
+            List<Pair<Int, Int>>,
+        val closed: Boolean
+    )
+
+    private data class RawSampledContour(
+        val points:
             List<Pair<Float, Float>>,
         val closed: Boolean
     )
 
     private fun samplePath(
         path: Path
-    ): List<SampledContour> {
+    ): List<RawSampledContour> {
         val measure =
             PathMeasure(
                 path,
@@ -592,7 +960,7 @@ object ImportedFontMatrixGenerator {
 
         val result =
             mutableListOf<
-                SampledContour
+                RawSampledContour
             >()
 
         val position =
@@ -609,10 +977,10 @@ object ImportedFontMatrixGenerator {
             val step =
                 (
                     length /
-                        128f
+                        180f
                     ).coerceIn(
-                    1.5f,
-                    14f
+                    1.2f,
+                    10f
                 )
 
             val contour =
@@ -663,7 +1031,7 @@ object ImportedFontMatrixGenerator {
                     2
             ) {
                 result +=
-                    SampledContour(
+                    RawSampledContour(
                         points =
                             contour,
                         closed =
@@ -700,12 +1068,18 @@ object ImportedFontMatrixGenerator {
                 dy.toDouble()
             )
 
+        val safeMaxLength =
+            maxLengthUnits
+                .coerceAtLeast(
+                    1f
+                )
+
         val segments =
-            maxOf(
+            max(
                 1,
                 ceil(
                     distance /
-                        maxLengthUnits
+                        safeMaxLength
                 ).toInt()
             )
 
