@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,7 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -35,6 +40,8 @@ import com.timachado.fiolab.core.project.SavedProjectSummary
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioLabTheme
+import com.timachado.fiolab.ui.theme.FioSurface
+import com.timachado.fiolab.ui.theme.FioTextMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -126,6 +133,56 @@ private fun FioLabApp() {
 
     var loading by remember {
         mutableStateOf(false)
+    }
+
+    fun goBack() {
+        screen =
+            when (
+                val current =
+                    screen
+            ) {
+                Screen.Home ->
+                    Screen.Home
+
+                Screen.Account,
+                Screen.ProjectLibrary,
+                Screen.FontLibrary,
+                Screen.CreateName,
+                Screen.CreateMonogram,
+                Screen.CreateDrawing ->
+                    Screen.Home
+
+                is Screen.Transfer ->
+                    Screen.Viewer(
+                        current.design
+                    )
+
+                is Screen.Viewer ->
+                    Screen.Home
+
+                is Screen.Simulator ->
+                    Screen.Viewer(
+                        current.design
+                    )
+
+                is Screen.Converter ->
+                    Screen.Viewer(
+                        current.design
+                    )
+
+                is Screen.Editor ->
+                    Screen.Viewer(
+                        current.design
+                    )
+            }
+    }
+
+    BackHandler(
+        enabled =
+            screen !=
+                Screen.Home
+    ) {
+        goBack()
     }
 
     val picker =
@@ -768,6 +825,130 @@ private fun FioLabApp() {
             SnackbarHost(
                 snackbar
             )
+        },
+        bottomBar = {
+            val topLevelScreen =
+                screen == Screen.Home ||
+                    screen == Screen.CreateName ||
+                    screen == Screen.ProjectLibrary ||
+                    screen == Screen.FontLibrary ||
+                    screen == Screen.Account
+
+            if (topLevelScreen) {
+                NavigationBar(
+                    containerColor =
+                        FioSurface
+                ) {
+                    val navigationColors =
+                        NavigationBarItemDefaults
+                            .colors(
+                                selectedIconColor =
+                                    FioBackground,
+                                selectedTextColor =
+                                    FioGold,
+                                indicatorColor =
+                                    FioGold,
+                                unselectedIconColor =
+                                    FioTextMuted,
+                                unselectedTextColor =
+                                    FioTextMuted
+                            )
+
+                    NavigationBarItem(
+                        selected =
+                            screen ==
+                                Screen.Home,
+                        onClick = {
+                            screen =
+                                Screen.Home
+                        },
+                        icon = {
+                            Text("⌂")
+                        },
+                        label = {
+                            Text("Início")
+                        },
+                        colors =
+                            navigationColors
+                    )
+
+                    NavigationBarItem(
+                        selected =
+                            screen ==
+                                Screen.CreateName,
+                        onClick = {
+                            screen =
+                                Screen.CreateName
+                        },
+                        icon = {
+                            Text("Aa")
+                        },
+                        label = {
+                            Text("Criar")
+                        },
+                        colors =
+                            navigationColors
+                    )
+
+                    NavigationBarItem(
+                        selected =
+                            screen ==
+                                Screen.ProjectLibrary,
+                        onClick = {
+                            if (
+                                screen !=
+                                    Screen.ProjectLibrary
+                            ) {
+                                openProjectLibrary()
+                            }
+                        },
+                        icon = {
+                            Text("▣")
+                        },
+                        label = {
+                            Text("Matrizes")
+                        },
+                        colors =
+                            navigationColors
+                    )
+
+                    NavigationBarItem(
+                        selected =
+                            screen ==
+                                Screen.FontLibrary,
+                        onClick = {
+                            screen =
+                                Screen.FontLibrary
+                        },
+                        icon = {
+                            Text("Ff")
+                        },
+                        label = {
+                            Text("Fontes")
+                        },
+                        colors =
+                            navigationColors
+                    )
+
+                    NavigationBarItem(
+                        selected =
+                            screen ==
+                                Screen.Account,
+                        onClick = {
+                            screen =
+                                Screen.Account
+                        },
+                        icon = {
+                            Text("☺")
+                        },
+                        label = {
+                            Text("Conta")
+                        },
+                        colors =
+                            navigationColors
+                    )
+                }
+            }
         }
     ) { padding ->
         Box(
@@ -793,17 +974,6 @@ private fun FioLabApp() {
                         onCreateDrawing = {
                             screen =
                                 Screen.CreateDrawing
-                        },
-                        onFonts = {
-                            screen =
-                                Screen.FontLibrary
-                        },
-                        onProjects = {
-                            openProjectLibrary()
-                        },
-                        onAccount = {
-                            screen =
-                                Screen.Account
                         },
                         onTransfer = {
                             recent?.let {
@@ -867,8 +1037,7 @@ private fun FioLabApp() {
                 Screen.Account -> {
                     AccountHostScreen(
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         }
                     )
                 }
@@ -922,8 +1091,7 @@ private fun FioLabApp() {
                 Screen.FontLibrary -> {
                     FontLibraryScreen(
                         onBack = {
-                            screen =
-                                Screen.Home
+                            goBack()
                         }
                     )
                 }
@@ -1121,12 +1289,7 @@ private fun FioLabApp() {
                         design =
                             current.design,
                         onBack = {
-                            screen =
-                                Screen
-                                    .Viewer(
-                                        current
-                                            .design
-                                    )
+                            goBack()
                         }
                     )
                 }
