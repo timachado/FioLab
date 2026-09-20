@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "fix/ttf-fill-0218"]
   workflow_dispatch:
 
 permissions:
@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.7-debug.apk
-          zip -9 FioLab-0.21.7-debug.zip FioLab-0.21.7-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.8-debug.apk
+          zip -9 FioLab-0.21.8-debug.zip FioLab-0.21.8-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.21.7-downloads
+          name: FioLab-0.21.8-downloads
           path: |
-            FioLab-0.21.7-debug.apk
-            FioLab-0.21.7-debug.zip
+            FioLab-0.21.8-debug.apk
+            FioLab-0.21.8-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.21.7 >/dev/null 2>&1; then
-            gh release upload v0.21.7               FioLab-0.21.7-debug.apk               FioLab-0.21.7-debug.zip               --clobber
+          if gh release view v0.21.8 >/dev/null 2>&1; then
+            gh release upload v0.21.8               FioLab-0.21.8-debug.apk               FioLab-0.21.8-debug.zip               --clobber
           else
-            gh release create v0.21.7               FioLab-0.21.7-debug.apk               FioLab-0.21.7-debug.zip               --target main               --title "FioLab 0.21.7"               --notes "FioLab 0.21.7: corrige fontes TTF/OTF com renderização da palavra inteira, aceita fontes válidas sem extensão no nome, simplifica a Home e amplia automaticamente matrizes pequenas no Simulador."
+            gh release create v0.21.8               FioLab-0.21.8-debug.apk               FioLab-0.21.8-debug.zip               --target main               --title "FioLab 0.21.8"               --notes "FioLab 0.21.8: corrige a conversão TTF/OTF para bordado preenchendo a área real dos glifos, ajusta a escala pela altura visual da fonte e mantém o zoom automático do Simulador."
           fi
