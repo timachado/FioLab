@@ -175,29 +175,111 @@ object ImportedFontMatrixGenerator {
                 targetHeightUnits /
                     pathBounds.height()
 
-            val glyphGroups =
-                sampleGlyphGroups(
-                    paint = paint,
-                    text = renderableText,
-                    pathBounds = pathBounds,
-                    scale = scale,
-                    spacingMm =
-                        options.spacingMm
-                )
-
-            require(
-                glyphGroups.isNotEmpty()
-            ) {
-                "A fonte não gerou contornos válidos."
-            }
-
             val points =
-                buildTextInReadingOrder(
-                    glyphGroups =
-                        glyphGroups,
-                    options =
-                        options
-                )
+                if (
+                    options.style ==
+                        TextStitchStyle.SATIN &&
+                    renderableText.length >
+                        1
+                ) {
+                    val wholeTextContours =
+                        samplePath(
+                            path
+                        )
+                            .map {
+                                    contour ->
+                                SampledContour(
+                                    points =
+                                        contour.points
+                                            .map {
+                                                point ->
+                                                Pair(
+                                                    (
+                                                        (
+                                                            point.first -
+                                                                pathBounds
+                                                                    .centerX()
+                                                            ) *
+                                                            scale
+                                                        ).roundToInt(),
+                                                    (
+                                                        (
+                                                            pathBounds
+                                                                .centerY() -
+                                                                point.second
+                                                            ) *
+                                                            scale
+                                                        ).roundToInt()
+                                                )
+                                            }
+                                            .fold(
+                                                mutableListOf<
+                                                    Pair<Int, Int>
+                                                >()
+                                            ) {
+                                                acc,
+                                                point ->
+                                                if (
+                                                    acc.lastOrNull() !=
+                                                        point
+                                                ) {
+                                                    acc +=
+                                                        point
+                                                }
+
+                                                acc
+                                            },
+                                    closed =
+                                        contour.closed
+                                )
+                            }
+                            .filter {
+                                it.points.size >=
+                                    2
+                            }
+
+                    require(
+                        wholeTextContours
+                            .isNotEmpty()
+                    ) {
+                        "A fonte não gerou contornos válidos."
+                    }
+
+                    buildSatinByAxis(
+                        contours =
+                            wholeTextContours,
+                        options =
+                            options
+                    )
+                } else {
+                    val glyphGroups =
+                        sampleGlyphGroups(
+                            paint =
+                                paint,
+                            text =
+                                renderableText,
+                            pathBounds =
+                                pathBounds,
+                            scale =
+                                scale,
+                            spacingMm =
+                                options.spacingMm
+                        )
+
+                    require(
+                        glyphGroups
+                            .isNotEmpty()
+                    ) {
+                        "A fonte não gerou contornos válidos."
+                    }
+
+                    buildTextInReadingOrder(
+                        glyphGroups =
+                            glyphGroups,
+                        options =
+                            options
+                    )
+                }
 
             require(
                 points.any {
