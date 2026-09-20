@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.11.0
+
+### Bastidores
+- Perfis genéricos 100×100, 130×180, 140×200, 160×260 e 200×300 mm.
+- Margem de segurança padrão de 5 mm por lado.
+- Área útil exibida antes de gerar a matriz.
+- Prévia em proporção física do bastidor.
+- Aviso de excesso em largura e altura.
+- Criar e Simular ficam bloqueados quando a matriz ultrapassa a área segura.
+- Bastidor selecionado acompanha a matriz criada e a Simulação de Máquina.
+
+### Perfis iniciais de tecido
+- Algodão.
+- Malha / camiseta.
+- Toalha / felpudo.
+- Jeans / sarja.
+- Boné estruturado.
+- Cada perfil sugere densidade Satin, pull compensation, underlay e short stitches.
+- Valores continuam editáveis pelo usuário depois da seleção.
+
+### Qualidade
+- Testes de encaixe e rejeição por bastidor.
+- Testes dos valores iniciais dos perfis.
+- Metadados de bastidor e tecido preservados na matriz criada.
+
+### Importante
+- Os perfis são pontos de partida; estabilizador, tensão, fio, agulha, máquina e tecido real continuam exigindo teste de costura.
+
+
 ## 0.10.0
 
 ### Satin Refinado

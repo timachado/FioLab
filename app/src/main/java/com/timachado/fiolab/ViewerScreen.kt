@@ -114,6 +114,8 @@ fun ViewerScreen(
         EmbroideryCanvas(
             design = design,
             interactive = true,
+            hoop =
+                design.hoopProfile,
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -165,6 +167,39 @@ fun ViewerScreen(
                     Text(
                         "Identificação: " +
                             it,
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
+                    )
+                }
+
+                design.hoopProfile?.let {
+                    hoop ->
+                    Text(
+                        "Bastidor: " +
+                            hoop.displayName +
+                            " • área segura " +
+                            mm(
+                                hoop.usableWidthMm
+                            ) +
+                            " × " +
+                            mm(
+                                hoop.usableHeightMm
+                            ) +
+                            " mm",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
+                    )
+                }
+
+                design.fabricProfile?.let {
+                    fabric ->
+                    Text(
+                        "Tecido: " +
+                            fabric.displayName,
                         color =
                             FioTextMuted,
                         fontSize =

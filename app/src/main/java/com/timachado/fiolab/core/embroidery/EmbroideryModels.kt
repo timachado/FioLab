@@ -39,7 +39,9 @@ data class EmbroideryDesign(
     val endFound: Boolean,
     val sourceBytes: ByteArray,
     val threadColors: List<Int> = emptyList(),
-    val isModified: Boolean = false
+    val isModified: Boolean = false,
+    val hoopProfile: HoopProfile? = null,
+    val fabricProfile: FabricProfile? = null
 ) {
     val colorCount: Int
         get() = maxOf(

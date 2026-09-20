@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
+import com.timachado.fiolab.core.embroidery.FabricProfile
+import com.timachado.fiolab.core.embroidery.HoopProfile
+import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.TextMatrixGenerator
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
@@ -114,7 +117,7 @@ fun CreateNameScreen(
 
     var satinUnderlayMode by remember {
         mutableStateOf(
-            SatinUnderlayMode.BOTH
+            SatinUnderlayMode.CENTER
         )
     }
 
@@ -131,6 +134,18 @@ fun CreateNameScreen(
     var color by remember {
         mutableIntStateOf(
             0xE6BE70
+        )
+    }
+
+    var hoopProfile by remember {
+        mutableStateOf(
+            HoopProfile.H100X100
+        )
+    }
+
+    var fabricProfile by remember {
+        mutableStateOf(
+            FabricProfile.COTTON
         )
     }
 
@@ -157,12 +172,28 @@ fun CreateNameScreen(
                 color = color,
                 font = font,
                 outputFormat =
-                    outputFormat
+                    outputFormat,
+                hoopProfile =
+                    hoopProfile,
+                fabricProfile =
+                    fabricProfile
             )
         )
 
     val preview =
         result.getOrNull()
+
+    val hoopFit =
+        preview?.let {
+            HoopValidator.validate(
+                it,
+                hoopProfile
+            )
+        }
+
+    val fitsHoop =
+        hoopFit?.fits ==
+            true
 
     Column(
         Modifier
@@ -223,6 +254,8 @@ fun CreateNameScreen(
             if (preview != null) {
                 EmbroideryCanvas(
                     design = preview,
+                    hoop =
+                        hoopProfile,
                     modifier =
                         Modifier.fillMaxSize()
                 )
@@ -285,6 +318,188 @@ fun CreateNameScreen(
 
                 Spacer(
                     Modifier.height(14.dp)
+                )
+
+                Text(
+                    "Bastidor",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            vertical = 8.dp
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    HoopProfile
+                        .entries
+                        .forEach {
+                                option ->
+                            val selected =
+                                hoopProfile ==
+                                    option
+
+                            OutlinedButton(
+                                onClick = {
+                                    hoopProfile =
+                                        option
+                                },
+                                colors =
+                                    ButtonDefaults
+                                        .outlinedButtonColors(
+                                            contentColor =
+                                                if (
+                                                    selected
+                                                ) {
+                                                    FioGold
+                                                } else {
+                                                    FioText
+                                                }
+                                        )
+                            ) {
+                                Text(
+                                    if (
+                                        selected
+                                    ) {
+                                        "● " +
+                                            option
+                                                .displayName
+                                    } else {
+                                        option
+                                            .displayName
+                                    }
+                                )
+                            }
+                        }
+                }
+
+                Text(
+                    "Área segura: " +
+                        mm(
+                            hoopProfile
+                                .usableWidthMm
+                        ) +
+                        " × " +
+                        mm(
+                            hoopProfile
+                                .usableHeightMm
+                        ) +
+                        " mm",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        10.dp
+                    )
+                )
+
+                Text(
+                    "Tecido",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            vertical = 8.dp
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    FabricProfile
+                        .entries
+                        .forEach {
+                                option ->
+                            val selected =
+                                fabricProfile ==
+                                    option
+
+                            OutlinedButton(
+                                onClick = {
+                                    fabricProfile =
+                                        option
+
+                                    satinDensityMm =
+                                        option
+                                            .satinDensityMm
+
+                                    satinPullCompensationMm =
+                                        option
+                                            .pullCompensationMm
+
+                                    satinUnderlayMode =
+                                        option
+                                            .underlayMode
+
+                                    satinShortStitches =
+                                        option
+                                            .shortStitches
+                                },
+                                colors =
+                                    ButtonDefaults
+                                        .outlinedButtonColors(
+                                            contentColor =
+                                                if (
+                                                    selected
+                                                ) {
+                                                    FioGold
+                                                } else {
+                                                    FioText
+                                                }
+                                        )
+                            ) {
+                                Text(
+                                    if (
+                                        selected
+                                    ) {
+                                        "● " +
+                                            option
+                                                .displayName
+                                    } else {
+                                        option
+                                            .displayName
+                                    }
+                                )
+                            }
+                        }
+                }
+
+                Text(
+                    fabricProfile
+                        .helperText +
+                        " • valores iniciais editáveis",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        12.dp
+                    )
                 )
 
                 Text(
@@ -792,6 +1007,50 @@ fun CreateNameScreen(
                         color = FioTextMuted,
                         fontSize = 11.sp
                     )
+
+                    Spacer(
+                        Modifier.height(
+                            4.dp
+                        )
+                    )
+
+                    if (fitsHoop) {
+                        Text(
+                            "✓ Cabe na área segura do bastidor " +
+                                hoopProfile
+                                    .displayName,
+                            color =
+                                Color(
+                                    0xFF7ED6A5
+                                ),
+                            fontSize =
+                                11.sp
+                        )
+                    } else {
+                        Text(
+                            "⚠ Ultrapassa a área segura" +
+                                (
+                                    hoopFit?.let {
+                                        fit ->
+                                        " • excesso: " +
+                                            mm(
+                                                fit.widthOverflowMm
+                                            ) +
+                                            " mm largura / " +
+                                            mm(
+                                                fit.heightOverflowMm
+                                            ) +
+                                            " mm altura"
+                                    } ?: ""
+                                ),
+                            color =
+                                Color(
+                                    0xFFFF9F9A
+                                ),
+                            fontSize =
+                                11.sp
+                        )
+                    }
                 } else {
                     Text(
                         result.exceptionOrNull()
@@ -815,7 +1074,8 @@ fun CreateNameScreen(
                         )
                     },
                     enabled =
-                        preview != null,
+                        preview != null &&
+                            fitsHoop,
                     modifier =
                         Modifier.fillMaxWidth(),
                     colors =
@@ -845,7 +1105,8 @@ fun CreateNameScreen(
                         )
                     },
                     enabled =
-                        preview != null,
+                        preview != null &&
+                            fitsHoop,
                     modifier =
                         Modifier.fillMaxWidth()
                 ) {

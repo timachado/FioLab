@@ -1,4 +1,4 @@
-# FioLab 0.10.0
+# FioLab 0.11.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,26 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Bastidores e Perfis de Tecido
+
+A v0.11 adiciona bastidores genéricos:
+- 100×100 mm;
+- 130×180 mm;
+- 140×200 mm;
+- 160×260 mm;
+- 200×300 mm.
+
+O FioLab reserva uma margem de segurança padrão de 5 mm por lado. A prévia é desenhada na proporção física do bastidor e informa se a matriz ultrapassa a área segura. Quando ultrapassa, **Criar matriz** e **Simular agora** ficam bloqueados.
+
+Perfis iniciais de tecido:
+- Algodão;
+- Malha / camiseta;
+- Toalha / felpudo;
+- Jeans / sarja;
+- Boné estruturado.
+
+Selecionar um tecido aplica uma sugestão inicial de densidade Satin, compensação de repuxo, underlay e short stitches. Esses valores continuam editáveis e devem ser confirmados com teste de costura.
 
 ## Satin Refinado
 
@@ -127,9 +147,10 @@ Cada Release publica:
 
 ## Próximos passos
 
-- geração satin para nomes;
 - monogramas;
-- bastidores e validação de área;
-- expansão para VP3, EXP, XXX, U01 e TBF.
+- perfis personalizados de máquina/bastidor;
+- biblioteca maior de fontes de bordado;
+- expansão para VP3, EXP, XXX, U01 e TBF;
+- validação de qualidade com amostras reais de costura.
 
 Desenvolvido por **T.I. Machado — Soluções em Tecnologia**.

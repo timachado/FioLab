@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.StitchCommand
 
 private val simulationPalette =
@@ -68,7 +69,10 @@ fun MachineSimulationCanvas(
                 transform
             )
 
-            drawHoop()
+            drawHoop(
+                hoop =
+                    design.hoopProfile
+            )
 
             drawStitches(
                 design =
@@ -150,48 +154,66 @@ private data class SimulationTransform(
                     .minYUnits
             ).coerceAtLeast(1)
 
+    private val frameWidthUnits =
+        design.hoopProfile
+            ?.let {
+                it.widthMm *
+                    10f
+            }
+            ?: widthUnits.toFloat()
+
+    private val frameHeightUnits =
+        design.hoopProfile
+            ?.let {
+                it.heightMm *
+                    10f
+            }
+            ?: heightUnits.toFloat()
+
     val scale: Float =
         minOf(
             (
                 canvasWidth -
                     padding * 2f
                 ) /
-                widthUnits,
+                frameWidthUnits,
             (
                 canvasHeight -
                     padding * 2f
                 ) /
-                heightUnits
+                frameHeightUnits
         ).coerceAtLeast(
             0.01f
         )
 
-    private val contentWidth =
-        widthUnits *
-            scale
+    private val centerXUnits =
+        (
+            design.bounds
+                .minXUnits +
+                design.bounds
+                    .maxXUnits
+            ) /
+            2f
 
-    private val contentHeight =
-        heightUnits *
-            scale
+    private val centerYUnits =
+        (
+            design.bounds
+                .minYUnits +
+                design.bounds
+                    .maxYUnits
+            ) /
+            2f
 
     private val originX =
-        (
-            canvasWidth -
-                contentWidth
-            ) /
+        canvasWidth /
             2f -
-            design.bounds
-                .minXUnits *
+            centerXUnits *
                 scale
 
     private val originY =
-        (
-            canvasHeight -
-                contentHeight
-            ) /
+        canvasHeight /
             2f +
-            design.bounds
-                .maxYUnits *
+            centerYUnits *
                 scale
 
     fun point(
@@ -373,9 +395,75 @@ private fun DrawScope.drawFabricGrid(
     )
 }
 
-private fun DrawScope.drawHoop() {
-    val inset =
+private fun DrawScope.drawHoop(
+    hoop: HoopProfile?
+) {
+    val fallbackInset =
         13.dp.toPx()
+
+    val frameWidth =
+        if (
+            hoop == null
+        ) {
+            size.width -
+                fallbackInset *
+                    2f
+        } else {
+            val ratio =
+                hoop.widthMm /
+                    hoop.heightMm
+
+            minOf(
+                size.width -
+                    fallbackInset *
+                        2f,
+                (
+                    size.height -
+                        fallbackInset *
+                            2f
+                    ) *
+                    ratio
+            )
+        }
+
+    val frameHeight =
+        if (
+            hoop == null
+        ) {
+            size.height -
+                fallbackInset *
+                    2f
+        } else {
+            val ratio =
+                hoop.widthMm /
+                    hoop.heightMm
+
+            minOf(
+                size.height -
+                    fallbackInset *
+                        2f,
+                (
+                    size.width -
+                        fallbackInset *
+                            2f
+                    ) /
+                    ratio
+            )
+        }
+
+    val left =
+        (
+            size.width -
+                frameWidth
+            ) /
+            2f
+
+    val top =
+        (
+            size.height -
+                frameHeight
+            ) /
+            2f
 
     drawRoundRect(
         color =
@@ -384,17 +472,15 @@ private fun DrawScope.drawHoop() {
             ),
         topLeft =
             Offset(
-                inset,
-                inset
+                left,
+                top
             ),
         size =
             androidx.compose.ui.geometry.Size(
                 width =
-                    size.width -
-                        inset * 2f,
+                    frameWidth,
                 height =
-                    size.height -
-                        inset * 2f
+                    frameHeight
             ),
         cornerRadius =
             CornerRadius(

@@ -36,7 +36,10 @@ data class TextMatrixOptions(
     val satinUnderlayMode: SatinUnderlayMode = SatinUnderlayMode.BOTH,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
-    val outputFormat: String = "DST"
+    val outputFormat: String = "DST",
+    val hoopProfile: HoopProfile? = null,
+    val fabricProfile: FabricProfile? = null,
+    val enforceHoop: Boolean = false
 )
 
 object TextMatrixGenerator {
@@ -464,45 +467,69 @@ object TextMatrixGenerator {
                         "nome"
                     }
 
-            EmbroideryDesign(
-                fileName =
-                    "nome-" +
-                        safeName +
-                        "." +
-                        outputFormat.lowercase(
-                            Locale.ROOT
+            val design =
+                EmbroideryDesign(
+                    fileName =
+                        "nome-" +
+                            safeName +
+                            "." +
+                            outputFormat.lowercase(
+                                Locale.ROOT
+                            ),
+                    format =
+                        outputFormat,
+                    label =
+                        cleanText,
+                    points =
+                        points,
+                    bounds =
+                        EmbroideryBounds(
+                            minXUnits =
+                                minX,
+                            maxXUnits =
+                                maxX,
+                            minYUnits =
+                                minY,
+                            maxYUnits =
+                                maxY
                         ),
-                format =
-                    outputFormat,
-                label =
-                    cleanText,
-                points =
-                    points,
-                bounds =
-                    EmbroideryBounds(
-                        minXUnits =
-                            minX,
-                        maxXUnits =
-                            maxX,
-                        minYUnits =
-                            minY,
-                        maxYUnits =
-                            maxY
-                    ),
-                stitchCount =
-                    stitchCount,
-                jumpCount =
-                    jumpCount,
-                colorChanges = 0,
-                endFound = true,
-                sourceBytes =
-                    ByteArray(0),
-                threadColors =
-                    listOf(
-                        options.color
-                    ),
-                isModified = true
-            )
+                    stitchCount =
+                        stitchCount,
+                    jumpCount =
+                        jumpCount,
+                    colorChanges = 0,
+                    endFound = true,
+                    sourceBytes =
+                        ByteArray(0),
+                    threadColors =
+                        listOf(
+                            options.color
+                        ),
+                    isModified = true,
+                    hoopProfile =
+                        options.hoopProfile,
+                    fabricProfile =
+                        options.fabricProfile
+                )
+
+            if (
+                options.enforceHoop &&
+                options.hoopProfile != null
+            ) {
+                val fit =
+                    HoopValidator.validate(
+                        design,
+                        options.hoopProfile
+                    )
+
+                require(fit.fits) {
+                    "A matriz ultrapassa a área segura do bastidor " +
+                        options.hoopProfile.displayName +
+                        "."
+                }
+            }
+
+            design
         }
 
     private fun appendRunningStroke(

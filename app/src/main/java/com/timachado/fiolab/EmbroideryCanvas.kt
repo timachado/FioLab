@@ -15,12 +15,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.ui.theme.FioGold
 
@@ -40,7 +42,8 @@ fun EmbroideryCanvas(
     design: EmbroideryDesign,
     modifier: Modifier = Modifier,
     pointLimit: Int = design.points.size,
-    interactive: Boolean = false
+    interactive: Boolean = false,
+    hoop: HoopProfile? = null
 ) {
     var zoom by remember(
         design.fileName,
@@ -95,14 +98,156 @@ fun EmbroideryCanvas(
         ) {
             drawGrid()
 
+            if (hoop != null) {
+                drawHoopPreview(
+                    hoop = hoop
+                )
+            }
+
             drawDesign(
                 design = design,
                 pointLimit = pointLimit,
                 userScale = zoom,
-                userOffset = offset
+                userOffset = offset,
+                hoop = hoop
             )
         }
     }
+}
+
+
+private fun DrawScope.drawHoopPreview(
+    hoop: HoopProfile
+) {
+    val padding =
+        36.dp.toPx()
+
+    val hoopWidthUnits =
+        hoop.widthMm *
+            10f
+
+    val hoopHeightUnits =
+        hoop.heightMm *
+            10f
+
+    val scale =
+        minOf(
+            (
+                size.width -
+                    padding *
+                        2f
+                ) /
+                hoopWidthUnits,
+            (
+                size.height -
+                    padding *
+                        2f
+                ) /
+                hoopHeightUnits
+        )
+
+    val width =
+        hoopWidthUnits *
+            scale
+
+    val height =
+        hoopHeightUnits *
+            scale
+
+    val left =
+        (
+            size.width -
+                width
+            ) /
+            2f
+
+    val top =
+        (
+            size.height -
+                height
+            ) /
+            2f
+
+    drawRoundRect(
+        color =
+            Color(
+                0xFF6B7780
+            ),
+        topLeft =
+            Offset(
+                left,
+                top
+            ),
+        size =
+            androidx.compose.ui.geometry.Size(
+                width,
+                height
+            ),
+        cornerRadius =
+            androidx.compose.ui.geometry.CornerRadius(
+                20.dp.toPx(),
+                20.dp.toPx()
+            ),
+        style =
+            Stroke(
+                width =
+                    2.dp.toPx()
+            )
+    )
+
+    val safeInset =
+        hoop.safeMarginMm *
+            10f *
+            scale
+
+    drawRoundRect(
+        color =
+            Color(
+                0x886D7C87
+            ),
+        topLeft =
+            Offset(
+                left +
+                    safeInset,
+                top +
+                    safeInset
+            ),
+        size =
+            androidx.compose.ui.geometry.Size(
+                (
+                    width -
+                        safeInset *
+                            2f
+                    ).coerceAtLeast(
+                        1f
+                    ),
+                (
+                    height -
+                        safeInset *
+                            2f
+                    ).coerceAtLeast(
+                        1f
+                    )
+            ),
+        cornerRadius =
+            androidx.compose.ui.geometry.CornerRadius(
+                14.dp.toPx(),
+                14.dp.toPx()
+            ),
+        style =
+            Stroke(
+                width =
+                    1.dp.toPx(),
+                pathEffect =
+                    PathEffect
+                        .dashPathEffect(
+                            floatArrayOf(
+                                8.dp.toPx(),
+                                6.dp.toPx()
+                            )
+                        )
+            )
+    )
 }
 
 private fun DrawScope.drawGrid() {
@@ -138,7 +283,8 @@ private fun DrawScope.drawDesign(
     design: EmbroideryDesign,
     pointLimit: Int,
     userScale: Float,
-    userOffset: Offset
+    userOffset: Offset,
+    hoop: HoopProfile?
 ) {
     val bounds =
         design.bounds
@@ -158,16 +304,34 @@ private fun DrawScope.drawDesign(
     val padding =
         36.dp.toPx()
 
+    val frameWidthUnits =
+        hoop
+            ?.let {
+                it.widthMm *
+                    10f
+            }
+            ?: widthUnits.toFloat()
+
+    val frameHeightUnits =
+        hoop
+            ?.let {
+                it.heightMm *
+                    10f
+            }
+            ?: heightUnits.toFloat()
+
     val baseScale =
         minOf(
             (
                 size.width -
                     padding * 2
-                ) / widthUnits,
+                ) /
+                frameWidthUnits,
             (
                 size.height -
                     padding * 2
-                ) / heightUnits
+                ) /
+                frameHeightUnits
         ).coerceAtLeast(
             0.01f
         )
@@ -176,29 +340,31 @@ private fun DrawScope.drawDesign(
         baseScale *
             userScale
 
-    val contentWidth =
-        widthUnits *
-            scale
+    val centerXUnits =
+        (
+            bounds.minXUnits +
+                bounds.maxXUnits
+            ) /
+            2f
 
-    val contentHeight =
-        heightUnits *
-            scale
+    val centerYUnits =
+        (
+            bounds.minYUnits +
+                bounds.maxYUnits
+            ) /
+            2f
 
     val originX =
-        (
-            size.width -
-                contentWidth
-            ) / 2f -
-            bounds.minXUnits *
+        size.width /
+            2f -
+            centerXUnits *
                 scale +
             userOffset.x
 
     val originY =
-        (
-            size.height -
-                contentHeight
-            ) / 2f +
-            bounds.maxYUnits *
+        size.height /
+            2f +
+            centerYUnits *
                 scale +
             userOffset.y
 
