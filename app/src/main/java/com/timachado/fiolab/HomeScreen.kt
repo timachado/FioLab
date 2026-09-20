@@ -143,7 +143,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.7 cria nomes, abre, edita, simula e converte DST, PES e JEF.",
+                        "FioLab 0.10 cria nomes em Satin refinado, edita, simula e converte DST, PES e JEF.",
                         color = FioTextMuted
                     )
                 }
@@ -386,7 +386,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.7.0 • Android",
+                "FioLab 0.10.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

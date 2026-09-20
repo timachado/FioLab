@@ -164,7 +164,7 @@ class TextMatrixGeneratorTest {
                             TextStitchStyle.SATIN,
                         satinWidthMm = 2.4f,
                         satinDensityMm = 0.45f,
-                        satinUnderlay = true
+                        satinUnderlayMode = SatinUnderlayMode.CENTER
                     )
                 )
                 .getOrThrow()
@@ -226,7 +226,7 @@ class TextMatrixGeneratorTest {
                         text = "FIO",
                         style =
                             TextStitchStyle.SATIN,
-                        satinUnderlay = true
+                        satinUnderlayMode = SatinUnderlayMode.CENTER
                     )
                 )
                 .getOrThrow()
@@ -238,7 +238,7 @@ class TextMatrixGeneratorTest {
                         text = "FIO",
                         style =
                             TextStitchStyle.SATIN,
-                        satinUnderlay = false
+                        satinUnderlayMode = SatinUnderlayMode.NONE
                     )
                 )
                 .getOrThrow()
@@ -282,6 +282,120 @@ class TextMatrixGeneratorTest {
                         .isNotEmpty()
                 )
             }
+    }
+
+    @Test
+    fun pullCompensationExpandsSatinEnvelope() {
+        val base =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "I",
+                        heightMm = 14f,
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinWidthMm = 2.4f,
+                        satinPullCompensationMm = 0f,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.NONE
+                    )
+                )
+                .getOrThrow()
+
+        val compensated =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "I",
+                        heightMm = 14f,
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinWidthMm = 2.4f,
+                        satinPullCompensationMm = 0.4f,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.NONE
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            compensated.bounds.widthMm >
+                base.bounds.widthMm ||
+                compensated.bounds.heightMm >
+                    base.bounds.heightMm
+        )
+    }
+
+    @Test
+    fun bothUnderlaysAddMoreStructure() {
+        val none =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "M",
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.NONE
+                    )
+                )
+                .getOrThrow()
+
+        val both =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "M",
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.BOTH
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            both.stitchCount >
+                none.stitchCount
+        )
+    }
+
+    @Test
+    fun shortStitchesChangeSharpCornerGeometry() {
+        val enabled =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "M",
+                        heightMm = 16f,
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinShortStitches = true,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.NONE
+                    )
+                )
+                .getOrThrow()
+
+        val disabled =
+            TextMatrixGenerator
+                .generate(
+                    TextMatrixOptions(
+                        text = "M",
+                        heightMm = 16f,
+                        style =
+                            TextStitchStyle.SATIN,
+                        satinShortStitches = false,
+                        satinUnderlayMode =
+                            SatinUnderlayMode.NONE
+                    )
+                )
+                .getOrThrow()
+
+        assertTrue(
+            enabled.points !=
+                disabled.points
+        )
     }
 
 }

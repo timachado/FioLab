@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0
+
+### Satin Refinado
+- Suavização da direção das colunas em cantos e mudanças de segmento.
+- Compensação de repuxo configurável de 0 a 1 mm.
+- Short stitches no lado interno de cantos fechados.
+- Underlay configurável: nenhum, central, zigue-zague ou ambos.
+- Underlay zigue-zague mais aberto antes da cobertura principal.
+- Mesmas pontadas usadas na prévia, simulação e exportação.
+- Testes específicos para compensação, short stitches e underlay.
+
+### Limite atual
+- O algoritmo foi refinado, mas ainda não substitui validação em tecido/máquina.
+- Perfis automáticos por tecido e compensação dinâmica ficam para uma etapa posterior.
+
+
 ## 0.9.0
 
 ### Adicionado

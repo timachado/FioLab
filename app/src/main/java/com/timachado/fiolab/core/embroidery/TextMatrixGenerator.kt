@@ -31,7 +31,9 @@ data class TextMatrixOptions(
     val style: TextStitchStyle = TextStitchStyle.RUNNING,
     val satinWidthMm: Float = 2.4f,
     val satinDensityMm: Float = 0.45f,
-    val satinUnderlay: Boolean = true,
+    val satinPullCompensationMm: Float = 0.2f,
+    val satinShortStitches: Boolean = true,
+    val satinUnderlayMode: SatinUnderlayMode = SatinUnderlayMode.BOTH,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
     val outputFormat: String = "DST"
@@ -234,6 +236,10 @@ object TextMatrixGenerator {
                 "A densidade Satin deve ficar entre 0,3 e 1,2 mm."
             }
 
+            require(options.satinPullCompensationMm in 0f..1f) {
+                "A compensação de repuxo deve ficar entre 0 e 1 mm."
+            }
+
             val outputFormat =
                 options.outputFormat
                     .uppercase(Locale.ROOT)
@@ -369,9 +375,16 @@ object TextMatrixGenerator {
                                         satinWidthUnits,
                                     satinStepUnits =
                                         satinStepUnits,
-                                    underlay =
+                                    pullCompensationUnits =
                                         options
-                                            .satinUnderlay
+                                            .satinPullCompensationMm *
+                                            10f,
+                                    shortStitches =
+                                        options
+                                            .satinShortStitches,
+                                    underlayMode =
+                                        options
+                                            .satinUnderlayMode
                                 )
                         }
 
@@ -612,255 +625,35 @@ object TextMatrixGenerator {
         currentY: Int,
         satinWidthUnits: Float,
         satinStepUnits: Float,
-        underlay: Boolean
+        pullCompensationUnits: Float,
+        shortStitches: Boolean,
+        underlayMode: SatinUnderlayMode
     ): StrokeBuildResult {
-        var x =
-            currentX
-
-        var y =
-            currentY
-
-        var stitches = 0
-        var jumps = 0
-
-        val first =
-            stroke.first()
-
-        if (
-            x != first.first ||
-            y != first.second ||
-            points.isEmpty()
-        ) {
-            points +=
-                EmbroideryPoint(
-                    first.first,
-                    first.second,
-                    StitchCommand.JUMP,
-                    0
-                )
-
-            x = first.first
-            y = first.second
-            jumps++
-        }
-
-        if (underlay) {
-            val underlayStep =
-                maxOf(
-                    20f,
-                    satinStepUnits *
-                        4f
-                )
-
-            for (
-                index in
-                    1 until stroke.size
-            ) {
-                val target =
-                    stroke[index]
-
-                val dx =
-                    target.first -
-                        x
-
-                val dy =
-                    target.second -
-                        y
-
-                val distance =
-                    hypot(
-                        dx.toDouble(),
-                        dy.toDouble()
-                    )
-
-                val segments =
-                    maxOf(
-                        1,
-                        ceil(
-                            distance /
-                                underlayStep
-                        ).toInt()
-                    )
-
-                val startX = x
-                val startY = y
-
-                for (
-                    part in
-                        1..segments
-                ) {
-                    val ratio =
-                        part.toDouble() /
-                            segments
-
-                    points +=
-                        EmbroideryPoint(
-                            (
-                                startX +
-                                    dx * ratio
-                                ).roundToInt(),
-                            (
-                                startY +
-                                    dy * ratio
-                                ).roundToInt(),
-                            StitchCommand.STITCH,
-                            0
-                        )
-
-                    stitches++
-                }
-
-                x = target.first
-                y = target.second
-            }
-
-            points +=
-                EmbroideryPoint(
-                    first.first,
-                    first.second,
-                    StitchCommand.JUMP,
-                    0
-                )
-
-            jumps++
-            x = first.first
-            y = first.second
-        }
-
-        val halfWidth =
-            satinWidthUnits /
-                2f
-
-        var parity = 0
-
-        for (
-            index in
-                1 until stroke.size
-        ) {
-            val start =
-                stroke[
-                    index -
-                        1
-                ]
-
-            val target =
-                stroke[index]
-
-            val dx =
-                target.first -
-                    start.first
-
-            val dy =
-                target.second -
-                    start.second
-
-            val distance =
-                hypot(
-                    dx.toDouble(),
-                    dy.toDouble()
-                )
-
-            if (
-                distance <
-                    0.001
-            ) {
-                continue
-            }
-
-            val normalX =
-                (
-                    -dy /
-                        distance
-                    ).toFloat()
-
-            val normalY =
-                (
-                    dx /
-                        distance
-                    ).toFloat()
-
-            val samples =
-                maxOf(
-                    1,
-                    ceil(
-                        distance /
-                            satinStepUnits
-                    ).toInt()
-                )
-
-            val firstPart =
-                if (
-                    index ==
-                        1
-                ) {
-                    0
-                } else {
-                    1
-                }
-
-            for (
-                part in
-                    firstPart..samples
-            ) {
-                val ratio =
-                    part.toDouble() /
-                        samples
-
-                val centerX =
-                    start.first +
-                        dx * ratio
-
-                val centerY =
-                    start.second +
-                        dy * ratio
-
-                val side =
-                    if (
-                        parity %
-                            2 ==
-                            0
-                    ) {
-                        1f
-                    } else {
-                        -1f
-                    }
-
-                val px =
-                    (
-                        centerX +
-                            normalX *
-                                halfWidth *
-                                side
-                        ).roundToInt()
-
-                val py =
-                    (
-                        centerY +
-                            normalY *
-                                halfWidth *
-                                side
-                        ).roundToInt()
-
-                points +=
-                    EmbroideryPoint(
-                        px,
-                        py,
-                        StitchCommand.STITCH,
-                        0
-                    )
-
-                x = px
-                y = py
-                stitches++
-                parity++
-            }
-        }
+        val result =
+            SatinGenerator.append(
+                points = points,
+                stroke = stroke,
+                currentX = currentX,
+                currentY = currentY,
+                widthUnits = satinWidthUnits,
+                stepUnits = satinStepUnits,
+                pullCompensationUnits =
+                    pullCompensationUnits,
+                shortStitches =
+                    shortStitches,
+                underlayMode =
+                    underlayMode
+            )
 
         return StrokeBuildResult(
-            currentX = x,
-            currentY = y,
-            stitchCount = stitches,
-            jumpCount = jumps
+            currentX =
+                result.currentX,
+            currentY =
+                result.currentY,
+            stitchCount =
+                result.stitchCount,
+            jumpCount =
+                result.jumpCount
         )
     }
 

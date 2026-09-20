@@ -1,4 +1,4 @@
-# FioLab 0.9.0
+# FioLab 0.10.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,18 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Satin Refinado
+
+A v0.10 melhora a geração Satin com:
+- suavização de normal/tangente em cantos;
+- compensação manual de repuxo;
+- short stitches no lado interno da curva;
+- underlay central;
+- underlay zigue-zague;
+- opção de combinar os dois underlays.
+
+A prévia, o simulador e os arquivos DST/PES/JEF usam a mesma sequência de pontadas.
 
 ## Criar Nome com Satin
 

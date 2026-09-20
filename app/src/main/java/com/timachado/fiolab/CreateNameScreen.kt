@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.TextMatrixGenerator
+import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import com.timachado.fiolab.ui.theme.FioBackground
@@ -103,8 +104,18 @@ fun CreateNameScreen(
         mutableFloatStateOf(0.45f)
     }
 
-    var satinUnderlay by remember {
+    var satinPullCompensationMm by remember {
+        mutableFloatStateOf(0.2f)
+    }
+
+    var satinShortStitches by remember {
         mutableStateOf(true)
+    }
+
+    var satinUnderlayMode by remember {
+        mutableStateOf(
+            SatinUnderlayMode.BOTH
+        )
     }
 
     var font by remember {
@@ -137,8 +148,12 @@ fun CreateNameScreen(
                     satinWidthMm,
                 satinDensityMm =
                     satinDensityMm,
-                satinUnderlay =
-                    satinUnderlay,
+                satinPullCompensationMm =
+                    satinPullCompensationMm,
+                satinShortStitches =
+                    satinShortStitches,
+                satinUnderlayMode =
+                    satinUnderlayMode,
                 color = color,
                 font = font,
                 outputFormat =
@@ -515,10 +530,94 @@ fun CreateNameScreen(
                             0.35f..0.9f
                     )
 
+                    Text(
+                        "Compensação de repuxo " +
+                            mm(
+                                satinPullCompensationMm
+                            ) +
+                            " mm",
+                        color = FioText,
+                        fontSize = 12.sp
+                    )
+
+                    Slider(
+                        value =
+                            satinPullCompensationMm,
+                        onValueChange = {
+                            satinPullCompensationMm =
+                                it
+                        },
+                        valueRange =
+                            0f..0.8f
+                    )
+
+                    Text(
+                        "Underlay",
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(
+                                rememberScrollState()
+                            )
+                            .padding(
+                                vertical = 6.dp
+                            ),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+                        SatinUnderlayMode
+                            .entries
+                            .forEach {
+                                    option ->
+                                val selected =
+                                    satinUnderlayMode ==
+                                        option
+
+                                OutlinedButton(
+                                    onClick = {
+                                        satinUnderlayMode =
+                                            option
+                                    },
+                                    colors =
+                                        ButtonDefaults
+                                            .outlinedButtonColors(
+                                                contentColor =
+                                                    if (
+                                                        selected
+                                                    ) {
+                                                        FioGold
+                                                    } else {
+                                                        FioText
+                                                    }
+                                            )
+                                ) {
+                                    Text(
+                                        if (
+                                            selected
+                                        ) {
+                                            "● " +
+                                                option
+                                                    .displayName
+                                        } else {
+                                            option
+                                                .displayName
+                                        }
+                                    )
+                                }
+                            }
+                    }
+
                     OutlinedButton(
                         onClick = {
-                            satinUnderlay =
-                                !satinUnderlay
+                            satinShortStitches =
+                                !satinShortStitches
                         },
                         modifier =
                             Modifier
@@ -526,17 +625,17 @@ fun CreateNameScreen(
                     ) {
                         Text(
                             if (
-                                satinUnderlay
+                                satinShortStitches
                             ) {
-                                "✓ Underlay central ativado"
+                                "✓ Short stitches nos cantos"
                             } else {
-                                "Underlay central desativado"
+                                "Short stitches desativados"
                             }
                         )
                     }
 
                     Text(
-                        "Menor densidade = mais pontadas e cobertura mais fechada.",
+                        "A compensação abre levemente a coluna para reduzir o efeito de repuxo. Short stitches encurtam o lado interno de cantos fechados.",
                         color =
                             FioTextMuted,
                         fontSize =
@@ -764,7 +863,7 @@ fun CreateNameScreen(
                         stitchStyle ==
                             TextStitchStyle.SATIN
                     ) {
-                        "Satin gera underlay e zigue-zague real de pontadas. A simulação mostra o preenchimento exatamente na ordem criada."
+                        "Satin refinado usa direção suavizada nos cantos, compensação de repuxo, short stitches e underlay configurável. A simulação mostra a mesma sequência exportada."
                     } else {
                         "Ponto corrido segue o centro do traço da letra. Não é uma fonte TTF comum convertida automaticamente."
                     },
