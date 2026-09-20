@@ -914,7 +914,11 @@ object ImportedFontMatrixGenerator {
             )
                 .filter {
                     it.size >=
-                        3
+                        5 &&
+                        skeletonLineLength(
+                            it
+                        ) >=
+                            8f
                 }
                 .sortedWith(
                     compareBy<
@@ -966,7 +970,7 @@ object ImportedFontMatrixGenerator {
                     10f /
                     unitsPerPixel
                 ).coerceIn(
-                1.8f,
+                3.0f,
                 7f
             )
 
@@ -979,8 +983,14 @@ object ImportedFontMatrixGenerator {
         lines.forEach {
                 rawLine ->
             val line =
-                orientSkeletonLine(
-                    rawLine
+                smoothSkeletonLine(
+                    orientSkeletonLine(
+                        rawLine
+                    ),
+                    radius =
+                        3,
+                    passes =
+                        2
                 )
 
             val samples =
@@ -1108,6 +1118,14 @@ object ImportedFontMatrixGenerator {
             var started =
                 false
 
+            var smoothedPositive:
+                Double? =
+                null
+
+            var smoothedNegative:
+                Double? =
+                null
+
             samples.forEachIndexed {
                     index,
                     sample ->
@@ -1115,7 +1133,7 @@ object ImportedFontMatrixGenerator {
                     samples[
                         (
                             index -
-                                1
+                                2
                             ).coerceAtLeast(
                             0
                         )
@@ -1125,7 +1143,7 @@ object ImportedFontMatrixGenerator {
                     samples[
                         (
                             index +
-                                1
+                                2
                             ).coerceAtMost(
                             samples.lastIndex
                         )
@@ -1166,7 +1184,7 @@ object ImportedFontMatrixGenerator {
                     tangentX /
                         tangentLength
 
-                val positive =
+                val rawPositive =
                     boundaryDistance(
                         mask =
                             mask,
@@ -1186,7 +1204,7 @@ object ImportedFontMatrixGenerator {
                             1.0
                     )
 
-                val negative =
+                val rawNegative =
                     boundaryDistance(
                         mask =
                             mask,
@@ -1205,6 +1223,34 @@ object ImportedFontMatrixGenerator {
                         direction =
                             -1.0
                     )
+
+                val positive =
+                    smoothedPositive
+                        ?.let {
+                            previous ->
+                            previous *
+                                0.68 +
+                                rawPositive *
+                                    0.32
+                        }
+                        ?: rawPositive
+
+                val negative =
+                    smoothedNegative
+                        ?.let {
+                            previous ->
+                            previous *
+                                0.68 +
+                                rawNegative *
+                                    0.32
+                        }
+                        ?: rawNegative
+
+                smoothedPositive =
+                    positive
+
+                smoothedNegative =
+                    negative
 
                 if (
                     positive <
@@ -1883,6 +1929,154 @@ object ImportedFontMatrixGenerator {
         } else {
             line
         }
+    }
+
+    private fun skeletonLineLength(
+        line: List<SkeletonPoint>
+    ): Float {
+        var length =
+            0.0
+
+        for (
+            index in
+                1 until
+                    line.size
+        ) {
+            val first =
+                line[
+                    index -
+                        1
+                ]
+
+            val second =
+                line[index]
+
+            length +=
+                hypot(
+                    (
+                        second.x -
+                            first.x
+                        ).toDouble(),
+                    (
+                        second.y -
+                            first.y
+                        ).toDouble()
+                )
+        }
+
+        return length.toFloat()
+    }
+
+    private fun smoothSkeletonLine(
+        source: List<SkeletonPoint>,
+        radius: Int,
+        passes: Int
+    ): List<SkeletonPoint> {
+        if (
+            source.size <
+                5 ||
+            radius <=
+                0 ||
+            passes <=
+                0
+        ) {
+            return source
+        }
+
+        var current =
+            source
+
+        repeat(
+            passes
+        ) {
+            current =
+                current.mapIndexed {
+                        index,
+                        point ->
+                    if (
+                        index ==
+                            0 ||
+                        index ==
+                            current.lastIndex
+                    ) {
+                        point
+                    } else {
+                        val start =
+                            (
+                                index -
+                                    radius
+                                ).coerceAtLeast(
+                                0
+                            )
+
+                        val end =
+                            (
+                                index +
+                                    radius
+                                ).coerceAtMost(
+                                current.lastIndex
+                            )
+
+                        var sumX =
+                            0
+
+                        var sumY =
+                            0
+
+                        var count =
+                            0
+
+                        for (
+                            neighborIndex in
+                                start..end
+                        ) {
+                            sumX +=
+                                current[
+                                    neighborIndex
+                                ].x
+
+                            sumY +=
+                                current[
+                                    neighborIndex
+                                ].y
+
+                            count++
+                        }
+
+                        SkeletonPoint(
+                            x =
+                                (
+                                    sumX.toFloat() /
+                                        count
+                                    ).roundToInt(),
+                            y =
+                                (
+                                    sumY.toFloat() /
+                                        count
+                                    ).roundToInt()
+                        )
+                    }
+                }
+        }
+
+        return current
+            .fold(
+                mutableListOf<
+                    SkeletonPoint
+                >()
+            ) {
+                acc,
+                point ->
+                if (
+                    acc.lastOrNull() !=
+                        point
+                ) {
+                    acc +=
+                        point
+                }
+
+                acc
+            }
     }
 
     private fun sampleSkeletonLine(
