@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/matrix-detect-satin-axis-0223"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
