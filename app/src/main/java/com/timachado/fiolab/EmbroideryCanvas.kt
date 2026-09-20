@@ -43,7 +43,10 @@ fun EmbroideryCanvas(
     modifier: Modifier = Modifier,
     pointLimit: Int = design.points.size,
     interactive: Boolean = false,
-    hoop: HoopProfile? = null
+    hoop: HoopProfile? = null,
+    displayMode: EmbroideryDisplayMode =
+        EmbroideryDisplayMode.REALISTIC,
+    showConnections: Boolean = false
 ) {
     var zoom by remember(
         design.fileName,
@@ -109,7 +112,11 @@ fun EmbroideryCanvas(
                 pointLimit = pointLimit,
                 userScale = zoom,
                 userOffset = offset,
-                hoop = hoop
+                hoop = hoop,
+                displayMode =
+                    displayMode,
+                showConnections =
+                    showConnections
             )
         }
     }
@@ -284,7 +291,11 @@ private fun DrawScope.drawDesign(
     pointLimit: Int,
     userScale: Float,
     userOffset: Offset,
-    hoop: HoopProfile?
+    hoop: HoopProfile?,
+    displayMode:
+        EmbroideryDisplayMode,
+    showConnections:
+        Boolean
 ) {
     val bounds =
         design.bounds
@@ -406,39 +417,76 @@ private fun DrawScope.drawDesign(
 
                 StitchCommand.STITCH -> {
                     previous?.let {
-                        drawLine(
+                            before ->
+                        drawStitchByDisplay(
+                            start =
+                                before,
+                            end =
+                                current,
                             color =
                                 threadColor(
                                     design,
                                     colorIndex
                                 ),
-                            start = it,
-                            end = current,
-                            strokeWidth =
-                                1.8.dp.toPx(),
-                            cap =
-                                StrokeCap.Round
+                            mode =
+                                displayMode
                         )
                     }
 
-                    previous = current
+                    if (
+                        displayMode ==
+                            EmbroideryDisplayMode
+                                .POINTS
+                    ) {
+                        drawCircle(
+                            color =
+                                threadColor(
+                                    design,
+                                    colorIndex
+                                ),
+                            radius =
+                                1.8.dp
+                                    .toPx(),
+                            center =
+                                current
+                        )
+                    }
+
+                    previous =
+                        current
                 }
 
                 StitchCommand.JUMP -> {
-                    previous?.let {
-                        drawLine(
-                            color =
-                                Color(
-                                    0x556D7C87
-                                ),
-                            start = it,
-                            end = current,
-                            strokeWidth =
-                                1.dp.toPx()
-                        )
+                    if (
+                        showConnections
+                    ) {
+                        previous?.let {
+                            drawLine(
+                                color =
+                                    Color(
+                                        0x668C8F94
+                                    ),
+                                start =
+                                    it,
+                                end =
+                                    current,
+                                strokeWidth =
+                                    0.9.dp
+                                        .toPx(),
+                                pathEffect =
+                                    PathEffect
+                                        .dashPathEffect(
+                                            floatArrayOf(
+                                                5.dp.toPx(),
+                                                4.dp.toPx()
+                                            )
+                                        )
+                            )
+                        }
                     }
 
-                    previous = current
+                    previous =
+                        current
                 }
 
                 StitchCommand.SEQUIN -> {
@@ -457,6 +505,122 @@ private fun DrawScope.drawDesign(
                 }
             }
         }
+}
+
+private fun DrawScope.drawStitchByDisplay(
+    start: Offset,
+    end: Offset,
+    color: Color,
+    mode: EmbroideryDisplayMode
+) {
+    when (
+        mode
+    ) {
+        EmbroideryDisplayMode.SOLID -> {
+            drawLine(
+                color =
+                    color,
+                start =
+                    start,
+                end =
+                    end,
+                strokeWidth =
+                    2.25.dp
+                        .toPx(),
+                cap =
+                    StrokeCap.Round
+            )
+        }
+
+        EmbroideryDisplayMode.POINTS -> {
+            drawLine(
+                color =
+                    color.copy(
+                        alpha =
+                            .28f
+                    ),
+                start =
+                    start,
+                end =
+                    end,
+                strokeWidth =
+                    .75.dp
+                        .toPx(),
+                cap =
+                    StrokeCap.Round
+            )
+
+            drawCircle(
+                color =
+                    color,
+                radius =
+                    1.8.dp
+                        .toPx(),
+                center =
+                    start
+            )
+        }
+
+        EmbroideryDisplayMode.REALISTIC -> {
+            drawLine(
+                color =
+                    Color.Black
+                        .copy(
+                            alpha =
+                                .24f
+                        ),
+                start =
+                    start +
+                        Offset(
+                            0.8.dp.toPx(),
+                            0.8.dp.toPx()
+                        ),
+                end =
+                    end +
+                        Offset(
+                            0.8.dp.toPx(),
+                            0.8.dp.toPx()
+                        ),
+                strokeWidth =
+                    3.2.dp
+                        .toPx(),
+                cap =
+                    StrokeCap.Round
+            )
+
+            drawLine(
+                color =
+                    color,
+                start =
+                    start,
+                end =
+                    end,
+                strokeWidth =
+                    2.6.dp
+                        .toPx(),
+                cap =
+                    StrokeCap.Round
+            )
+
+            drawLine(
+                color =
+                    Color.White
+                        .copy(
+                            alpha =
+                                .20f
+                        ),
+                start =
+                    start,
+                end =
+                    end,
+                strokeWidth =
+                    .65.dp
+                        .toPx(),
+                cap =
+                    StrokeCap.Round
+            )
+        }
+    }
 }
 
 private fun threadColor(
