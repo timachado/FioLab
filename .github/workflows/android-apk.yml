@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/ttf-otf-fonts-0215"]
   workflow_dispatch:
 
 permissions:
@@ -52,24 +52,25 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.4-debug.apk
-          zip -9 FioLab-0.21.4-debug.zip FioLab-0.21.4-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.5-debug.apk
+          zip -9 FioLab-0.21.5-debug.zip FioLab-0.21.5-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.21.4-downloads
+          name: FioLab-0.21.5-downloads
           path: |
-            FioLab-0.21.4-debug.apk
-            FioLab-0.21.4-debug.zip
+            FioLab-0.21.5-debug.apk
+            FioLab-0.21.5-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.21.4 >/dev/null 2>&1; then
-            gh release upload v0.21.4               FioLab-0.21.4-debug.apk               FioLab-0.21.4-debug.zip               --clobber
+          if gh release view v0.21.5 >/dev/null 2>&1; then
+            gh release upload v0.21.5               FioLab-0.21.5-debug.apk               FioLab-0.21.5-debug.zip               --clobber
           else
-            gh release create v0.21.4               FioLab-0.21.4-debug.apk               FioLab-0.21.4-debug.zip               --target main               --title "FioLab 0.21.4"               --notes "FioLab 0.21.4: corrige os recursos gráficos usando Base64 textual versionado e reconstrução binária no GitHub Actions antes do build; Minha Conta continua isolada da inicialização."
+            gh release create v0.21.5               FioLab-0.21.5-debug.apk               FioLab-0.21.5-debug.zip               --target main               --title "FioLab 0.21.5"               --notes "FioLab 0.21.5: adiciona importação e gerenciamento de fontes TTF/OTF, seleção em Criar Nome e conversão dos contornos vetoriais em trajetórias de bordado; preserva as fontes nativas e os recursos existentes."
           fi
