@@ -903,6 +903,137 @@ object ImportedFontMatrixGenerator {
                     height
             )
 
+        val areaPixels =
+            mask.count {
+                it
+            }
+
+        var skeletonPixels =
+            0
+
+        var branchPixels =
+            0
+
+        for (
+            index in
+                skeleton.indices
+        ) {
+            if (
+                !skeleton[index]
+            ) {
+                continue
+            }
+
+            skeletonPixels++
+
+            val x =
+                index %
+                    width
+
+            val y =
+                index /
+                    width
+
+            var neighbors =
+                0
+
+            for (
+                dy in
+                    -1..1
+            ) {
+                for (
+                    dx in
+                        -1..1
+                ) {
+                    if (
+                        dx ==
+                            0 &&
+                        dy ==
+                            0
+                    ) {
+                        continue
+                    }
+
+                    val nx =
+                        x +
+                            dx
+
+                    val ny =
+                        y +
+                            dy
+
+                    if (
+                        nx in
+                            0 until
+                                width &&
+                        ny in
+                            0 until
+                                height &&
+                        skeleton[
+                            ny *
+                                width +
+                                nx
+                        ]
+                    ) {
+                        neighbors++
+                    }
+                }
+            }
+
+            if (
+                neighbors >=
+                    3
+            ) {
+                branchPixels++
+            }
+        }
+
+        val metrics =
+            ImportedGlyphMetrics(
+                areaPixels =
+                    areaPixels,
+                skeletonPixels =
+                    skeletonPixels,
+                branchPixels =
+                    branchPixels,
+                widthPixels =
+                    width,
+                heightPixels =
+                    height
+            )
+
+        val technique =
+            AdaptiveFontPolicy
+                .chooseTechnique(
+                    metrics
+                )
+
+        if (
+            technique ==
+                ImportedGlyphTechnique
+                    .AREA_FILL
+        ) {
+            return buildFilledText(
+                contours =
+                    contours,
+                rowStepUnits =
+                    options
+                        .satinDensityMm *
+                        10f,
+                pullCompensationUnits =
+                    options
+                        .satinPullCompensationMm *
+                        10f,
+                maxStitchUnits =
+                    max(
+                        45f,
+                        options
+                            .satinWidthMm *
+                            10f
+                    )
+            )
+        }
+
         val lines =
             traceSkeleton(
                 skeleton =
@@ -1332,11 +1463,29 @@ object ImportedFontMatrixGenerator {
             }
         }
 
+        val quality =
+            AdaptiveFontPolicy
+                .qualityFromCoordinates(
+                    output.map {
+                            point ->
+                        Triple(
+                            point.xUnits,
+                            point.yUnits,
+                            point.command ==
+                                StitchCommand.STITCH
+                        )
+                    }
+                )
+
         return if (
             output.any {
                 it.command ==
                     StitchCommand.STITCH
-            }
+            } &&
+            AdaptiveFontPolicy
+                .isAcceptable(
+                    quality
+                )
         ) {
             output
         } else {
