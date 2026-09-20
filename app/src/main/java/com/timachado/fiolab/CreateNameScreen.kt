@@ -44,6 +44,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.TextMatrixGenerator
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
+import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -88,6 +89,24 @@ fun CreateNameScreen(
         mutableFloatStateOf(2.5f)
     }
 
+    var stitchStyle by remember {
+        mutableStateOf(
+            TextStitchStyle.SATIN
+        )
+    }
+
+    var satinWidthMm by remember {
+        mutableFloatStateOf(2.4f)
+    }
+
+    var satinDensityMm by remember {
+        mutableFloatStateOf(0.45f)
+    }
+
+    var satinUnderlay by remember {
+        mutableStateOf(true)
+    }
+
     var font by remember {
         mutableStateOf(
             EmbroideryFontPreset.LINE
@@ -112,6 +131,14 @@ fun CreateNameScreen(
                 spacingMm = spacingMm,
                 stitchLengthMm =
                     stitchLengthMm,
+                style =
+                    stitchStyle,
+                satinWidthMm =
+                    satinWidthMm,
+                satinDensityMm =
+                    satinDensityMm,
+                satinUnderlay =
+                    satinUnderlay,
                 color = color,
                 font = font,
                 outputFormat =
@@ -325,6 +352,70 @@ fun CreateNameScreen(
                 }
 
                 Text(
+                    "Tipo de ponto",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 8.dp
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    TextStitchStyle
+                        .entries
+                        .forEach {
+                                option ->
+                            val selected =
+                                stitchStyle ==
+                                    option
+
+                            OutlinedButton(
+                                onClick = {
+                                    stitchStyle =
+                                        option
+                                },
+                                modifier =
+                                    Modifier.weight(
+                                        1f
+                                    ),
+                                colors =
+                                    ButtonDefaults
+                                        .outlinedButtonColors(
+                                            contentColor =
+                                                if (
+                                                    selected
+                                                ) {
+                                                    FioGold
+                                                } else {
+                                                    FioText
+                                                }
+                                        )
+                            ) {
+                                Text(
+                                    if (
+                                        selected
+                                    ) {
+                                        "● " +
+                                            option
+                                                .displayName
+                                    } else {
+                                        option
+                                            .displayName
+                                    }
+                                )
+                            }
+                        }
+                }
+
+                Text(
                     "Altura " +
                         mm(heightMm) +
                         " mm",
@@ -359,25 +450,99 @@ fun CreateNameScreen(
                         0f..6f
                 )
 
-                Text(
-                    "Comprimento do ponto " +
-                        mm(
-                            stitchLengthMm
-                        ) +
-                        " mm",
-                    color = FioText,
-                    fontSize = 12.sp
-                )
+                if (
+                    stitchStyle ==
+                        TextStitchStyle.RUNNING
+                ) {
+                    Text(
+                        "Comprimento do ponto " +
+                            mm(
+                                stitchLengthMm
+                            ) +
+                            " mm",
+                        color = FioText,
+                        fontSize = 12.sp
+                    )
 
-                Slider(
-                    value =
-                        stitchLengthMm,
-                    onValueChange = {
-                        stitchLengthMm = it
-                    },
-                    valueRange =
-                        1f..4f
-                )
+                    Slider(
+                        value =
+                            stitchLengthMm,
+                        onValueChange = {
+                            stitchLengthMm = it
+                        },
+                        valueRange =
+                            1f..4f
+                    )
+                } else {
+                    Text(
+                        "Largura Satin " +
+                            mm(
+                                satinWidthMm
+                            ) +
+                            " mm",
+                        color = FioText,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+
+                    Slider(
+                        value =
+                            satinWidthMm,
+                        onValueChange = {
+                            satinWidthMm = it
+                        },
+                        valueRange =
+                            1.2f..5f
+                    )
+
+                    Text(
+                        "Densidade " +
+                            mm(
+                                satinDensityMm
+                            ) +
+                            " mm",
+                        color = FioText,
+                        fontSize = 12.sp
+                    )
+
+                    Slider(
+                        value =
+                            satinDensityMm,
+                        onValueChange = {
+                            satinDensityMm = it
+                        },
+                        valueRange =
+                            0.35f..0.9f
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            satinUnderlay =
+                                !satinUnderlay
+                        },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                    ) {
+                        Text(
+                            if (
+                                satinUnderlay
+                            ) {
+                                "✓ Underlay central ativado"
+                            } else {
+                                "Underlay central desativado"
+                            }
+                        )
+                    }
+
+                    Text(
+                        "Menor densidade = mais pontadas e cobertura mais fechada.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                }
 
                 Spacer(
                     Modifier.height(8.dp)
@@ -595,7 +760,14 @@ fun CreateNameScreen(
                 )
 
                 Text(
-                    "A fonte desta versão é construída como caminho de costura. Não é uma fonte TTF comum convertida automaticamente.",
+                    if (
+                        stitchStyle ==
+                            TextStitchStyle.SATIN
+                    ) {
+                        "Satin gera underlay e zigue-zague real de pontadas. A simulação mostra o preenchimento exatamente na ordem criada."
+                    } else {
+                        "Ponto corrido segue o centro do traço da letra. Não é uma fonte TTF comum convertida automaticamente."
+                    },
                     color = FioTextMuted,
                     fontSize = 10.sp
                 )
