@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
+import com.timachado.fiolab.core.project.ActiveDesignStore
 import com.timachado.fiolab.core.project.ProjectBackupStore
 import com.timachado.fiolab.core.project.ProjectStore
 import com.timachado.fiolab.core.project.SavedProjectSummary
@@ -138,6 +140,46 @@ private fun FioLabApp() {
         mutableStateOf(false)
     }
 
+    fun activateDesign(
+        design: EmbroideryDesign
+    ) {
+        recent =
+            design
+
+        scope.launch(
+            Dispatchers.IO
+        ) {
+            ActiveDesignStore
+                .save(
+                    context,
+                    design
+                )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val restored =
+            withContext(
+                Dispatchers.IO
+            ) {
+                ActiveDesignStore
+                    .load(
+                        context
+                    )
+                    .getOrNull()
+            }
+
+        if (
+            recent ==
+                null &&
+            restored !=
+                null
+        ) {
+            recent =
+                restored
+        }
+    }
+
     fun goBack() {
         screen =
             when (
@@ -222,8 +264,9 @@ private fun FioLabApp() {
 
                 when (result) {
                     is EmbroideryLoadResult.Success -> {
-                        recent =
+                        activateDesign(
                             result.design
+                        )
 
                         screen =
                             Screen.Viewer(
@@ -756,8 +799,9 @@ private fun FioLabApp() {
             result.fold(
                 onSuccess = {
                         design ->
-                    recent =
+                    activateDesign(
                         design
+                    )
 
                     screen =
                         if (
@@ -1143,8 +1187,9 @@ private fun FioLabApp() {
                         },
                         onCreate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Viewer(
@@ -1153,8 +1198,9 @@ private fun FioLabApp() {
                         },
                         onSimulate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Simulator(
@@ -1171,8 +1217,9 @@ private fun FioLabApp() {
                         },
                         onCreate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Viewer(
@@ -1181,8 +1228,9 @@ private fun FioLabApp() {
                         },
                         onSimulate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Simulator(
@@ -1199,8 +1247,9 @@ private fun FioLabApp() {
                         },
                         onCreate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Viewer(
@@ -1209,8 +1258,9 @@ private fun FioLabApp() {
                         },
                         onSimulate = {
                                 created ->
-                            recent =
+                            activateDesign(
                                 created
+                            )
 
                             screen =
                                 Screen.Simulator(
@@ -1366,8 +1416,9 @@ private fun FioLabApp() {
                         },
                         onApply = {
                                 edited ->
-                            recent =
+                            activateDesign(
                                 edited
+                            )
 
                             screen =
                                 Screen
