@@ -35,6 +35,14 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
+      - name: Prepare brand assets
+        shell: bash
+        run: |
+          bash scripts/prepare_brand_assets.sh
+          file app/src/main/res/drawable-nodpi/fiolab_brand_logo.jpg
+          file app/src/main/res/mipmap-xxxhdpi/ic_launcher_fiolab.jpg
+
+
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
 
@@ -44,24 +52,24 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.3-debug.apk
-          zip -9 FioLab-0.21.3-debug.zip FioLab-0.21.3-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.21.4-debug.apk
+          zip -9 FioLab-0.21.4-debug.zip FioLab-0.21.4-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.21.3-downloads
+          name: FioLab-0.21.4-downloads
           path: |
-            FioLab-0.21.3-debug.apk
-            FioLab-0.21.3-debug.zip
+            FioLab-0.21.4-debug.apk
+            FioLab-0.21.4-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.21.3 >/dev/null 2>&1; then
-            gh release upload v0.21.3               FioLab-0.21.3-debug.apk               FioLab-0.21.3-debug.zip               --clobber
+          if gh release view v0.21.4 >/dev/null 2>&1; then
+            gh release upload v0.21.4               FioLab-0.21.4-debug.apk               FioLab-0.21.4-debug.zip               --clobber
           else
-            gh release create v0.21.3               FioLab-0.21.3-debug.apk               FioLab-0.21.3-debug.zip               --target main               --title "FioLab 0.21.3"               --notes "FioLab 0.21.3: corrige definitivamente os recursos gráficos corrompidos do launcher e da Home usando a arte original FioLab Matrizes validada antes do empacotamento."
+            gh release create v0.21.4               FioLab-0.21.4-debug.apk               FioLab-0.21.4-debug.zip               --target main               --title "FioLab 0.21.4"               --notes "FioLab 0.21.4: corrige os recursos gráficos usando Base64 textual versionado e reconstrução binária no GitHub Actions antes do build; Minha Conta continua isolada da inicialização."
           fi

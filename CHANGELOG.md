@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.21.4
+
+### Correção definitiva do empacotamento da logo
+- A arte da marca passa a ser versionada como Base64 textual.
+- O GitHub Actions reconstrói o JPG válido antes de executar testes e build.
+- Os binários corrompidos deixam de ficar armazenados diretamente no repositório.
+- O mesmo JPG reconstruído alimenta a Home e o ícone do launcher.
+- A imagem continua sendo a arte original FioLab Matrizes, sem redesenho.
+
+
 ## 0.21.3
 
 ### Correção crítica de imagem

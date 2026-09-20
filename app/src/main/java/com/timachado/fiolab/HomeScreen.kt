@@ -148,7 +148,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.21.1 usa a nova identidade FioLab Matrizes no launcher e dentro do aplicativo.",
+                        "FioLab 0.21.4 corrige a identidade FioLab Matrizes no launcher e na Home.",
                         color = FioTextMuted
                     )
                 }
@@ -495,7 +495,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.21.1 • Android",
+                "FioLab 0.21.4 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,
