@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.6
+
+### Navegação e Home
+- Home reorganizada em grade de duas colunas para reduzir rolagem e deixar as ferramentas mais fáceis de localizar.
+- Barra inferior fixa nas áreas principais com Início, Criar, Matrizes, Fontes e Conta.
+- Minha Conta deixa de ocupar um card grande na Home e passa a ficar sempre acessível pela navegação inferior.
+- Minhas Matrizes e Biblioteca de Fontes também ficam disponíveis na barra inferior.
+- Botão/gesto Voltar do Android agora retorna à tela lógica anterior em vez de encerrar o aplicativo quando o usuário está dentro de uma função.
+- Na Home, o Voltar mantém o comportamento normal do Android e pode sair do aplicativo.
+- Mantidos importação TTF/OTF, criação de nomes/monogramas, desenho, simulador, editor, conversor e envio para máquina.
+
 ## 0.21.5
 
 ### Fontes TTF/OTF
