@@ -1,11 +1,12 @@
 package com.timachado.fiolab
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,26 +18,29 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
+import com.timachado.fiolab.ui.theme.FioGoldSoft
 import com.timachado.fiolab.ui.theme.FioSurface
 import com.timachado.fiolab.ui.theme.FioSurfaceAlt
+import com.timachado.fiolab.ui.theme.FioSurfaceHigh
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
 import java.util.Locale
@@ -55,34 +59,24 @@ fun HomeScreen(
     onUnavailable: (String) -> Unit
 ) {
     LazyVerticalGrid(
-        columns =
-            GridCells.Fixed(2),
+        columns = GridCells.Fixed(2),
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(
-                    horizontal =
-                        16.dp
-                ),
+                .padding(horizontal = 16.dp),
         contentPadding =
             PaddingValues(
-                top = 16.dp,
-                bottom = 24.dp
+                top = 10.dp,
+                bottom = 28.dp
             ),
         horizontalArrangement =
-            Arrangement.spacedBy(
-                12.dp
-            ),
+            Arrangement.spacedBy(12.dp),
         verticalArrangement =
-            Arrangement.spacedBy(
-                12.dp
-            )
+            Arrangement.spacedBy(12.dp)
     ) {
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
             Column(
@@ -94,27 +88,24 @@ fun HomeScreen(
                 Image(
                     painter =
                         painterResource(
-                            R.drawable
-                                .fiolab_brand_logo
+                            R.drawable.fiolab_brand_logo
                         ),
                     contentDescription =
                         "FioLab Matrizes",
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(
-                                126.dp
-                            ),
+                            .height(112.dp),
                     contentScale =
                         ContentScale.Fit
                 )
 
                 Text(
                     "Do nome à máquina, direto pelo celular.",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        12.sp,
+                    color = FioTextMuted,
+                    style =
+                        MaterialTheme.typography
+                            .bodyMedium,
                     textAlign =
                         TextAlign.Center
                 )
@@ -123,33 +114,28 @@ fun HomeScreen(
 
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
-            Card(
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            FioSurface
-                    ),
+            Surface(
+                color = FioSurface,
                 shape =
-                    RoundedCornerShape(
-                        22.dp
-                    )
+                    MaterialTheme.shapes
+                        .extraLarge,
+                tonalElevation = 2.dp
             ) {
                 Column(
                     Modifier.padding(
-                        18.dp
+                        horizontal = 20.dp,
+                        vertical = 18.dp
                     )
                 ) {
                     Text(
                         "O que vamos bordar hoje?",
                         color = FioText,
-                        fontSize = 20.sp,
-                        fontWeight =
-                            FontWeight.SemiBold
+                        style =
+                            MaterialTheme.typography
+                                .headlineSmall
                     )
 
                     Spacer(
@@ -157,11 +143,11 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "Acesso rápido às ferramentas principais. Conta, matrizes e fontes ficam sempre na barra inferior.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            12.sp
+                        "Comece pelo nome ou escolha uma ferramenta.",
+                        color = FioTextMuted,
+                        style =
+                            MaterialTheme.typography
+                                .bodyMedium
                     )
                 }
             }
@@ -169,57 +155,62 @@ fun HomeScreen(
 
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
+            }
+        ) {
+            ExpressiveFeatureCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(
+                            min = 132.dp
+                        ),
+                iconRes =
+                    R.drawable
+                        .ic_ms_text_fields_rounded,
+                title = "Criar nome",
+                subtitle =
+                    "Crie a matriz e ajuste fonte, tamanho, cor e ponto.",
+                enabled = true,
+                primary = true,
+                onClick =
+                    onCreateName
+            )
+        }
+
+        item(
+            span = {
+                GridItemSpan(maxLineSpan)
             }
         ) {
             Text(
-                "Criar e trabalhar",
+                "Ferramentas",
                 color = FioText,
-                fontWeight =
-                    FontWeight.Bold,
-                fontSize = 17.sp,
+                style =
+                    MaterialTheme.typography
+                        .titleLarge,
                 modifier =
                     Modifier.padding(
-                        top = 2.dp,
+                        top = 4.dp,
                         bottom = 2.dp
                     )
             )
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "Aa",
-                title =
-                    "Criar nome",
+                iconRes =
+                    R.drawable
+                        .ic_ms_font_download_rounded,
+                title = "Fontes",
                 subtitle =
-                    "Satin ou ponto corrido",
-                enabled = true,
-                onClick =
-                    onCreateName
-            )
-        }
-
-        item {
-            FeatureCard(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(
-                            min = 138.dp
-                        ),
-                icon = "Ff",
-                title =
-                    "Fontes",
-                subtitle =
-                    "Nativas • TTF • OTF",
+                    "Nativas, TTF e OTF",
                 enabled = true,
                 onClick =
                     onFonts
@@ -227,18 +218,19 @@ fun HomeScreen(
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "↗",
-                title =
-                    "Abrir matriz",
+                iconRes =
+                    R.drawable
+                        .ic_ms_folder_open_rounded,
+                title = "Abrir matriz",
                 subtitle =
-                    "DST • JEF • PES",
+                    "DST, JEF e PES",
                 enabled = true,
                 onClick =
                     onOpen
@@ -246,18 +238,19 @@ fun HomeScreen(
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "▶",
-                title =
-                    "Simulador",
+                iconRes =
+                    R.drawable
+                        .ic_ms_play_arrow_rounded,
+                title = "Simulador",
                 subtitle =
-                    "Sequência real",
+                    "Veja a sequência real",
                 enabled =
                     recent != null
             ) {
@@ -274,18 +267,19 @@ fun HomeScreen(
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "✎",
-                title =
-                    "Editor",
+                iconRes =
+                    R.drawable
+                        .ic_ms_edit_rounded,
+                title = "Editor",
                 subtitle =
-                    "Mover • girar • cores",
+                    "Mover, girar e cores",
                 enabled =
                     recent != null
             ) {
@@ -302,18 +296,19 @@ fun HomeScreen(
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "⇄",
-                title =
-                    "Converter",
+                iconRes =
+                    R.drawable
+                        .ic_ms_swap_horiz_rounded,
+                title = "Converter",
                 subtitle =
-                    "DST ⇄ PES ⇄ JEF",
+                    "DST, PES e JEF",
                 enabled =
                     recent != null
             ) {
@@ -330,18 +325,19 @@ fun HomeScreen(
         }
 
         item {
-            FeatureCard(
+            ExpressiveFeatureCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .heightIn(
-                            min = 138.dp
+                            min = 136.dp
                         ),
-                icon = "⇧",
-                title =
-                    "Enviar",
+                iconRes =
+                    R.drawable
+                        .ic_ms_upload_rounded,
+                title = "Enviar",
                 subtitle =
-                    "OTG • Wi-Fi/app",
+                    "OTG ou Wi-Fi/app",
                 enabled =
                     recent != null
             ) {
@@ -359,42 +355,37 @@ fun HomeScreen(
 
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
             Text(
                 "Recente",
                 color = FioText,
-                fontWeight =
-                    FontWeight.Bold,
-                fontSize = 17.sp,
+                style =
+                    MaterialTheme.typography
+                        .titleLarge,
                 modifier =
                     Modifier.padding(
-                        top = 4.dp
+                        top = 6.dp,
+                        bottom = 2.dp
                     )
             )
         }
 
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
-            if (recent == null) {
-                Card(
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                FioSurface
-                        ),
+            if (
+                recent ==
+                    null
+            ) {
+                Surface(
+                    color = FioSurface,
                     shape =
-                        RoundedCornerShape(
-                            20.dp
-                        )
+                        MaterialTheme.shapes
+                            .large
                 ) {
                     Column(
                         Modifier
@@ -404,9 +395,11 @@ fun HomeScreen(
                             Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Nenhuma matriz criada ou aberta nesta sessão.",
-                            color =
-                                FioTextMuted,
+                            "Nenhuma matriz nesta sessão.",
+                            color = FioTextMuted,
+                            style =
+                                MaterialTheme.typography
+                                    .bodyMedium,
                             textAlign =
                                 TextAlign.Center
                         )
@@ -427,73 +420,143 @@ fun HomeScreen(
                                             FioGold,
                                         contentColor =
                                             FioBackground
-                                    )
+                                    ),
+                            shape =
+                                MaterialTheme.shapes
+                                    .large
                         ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        R.drawable
+                                            .ic_ms_text_fields_rounded
+                                    ),
+                                contentDescription =
+                                    null,
+                                modifier =
+                                    Modifier.size(
+                                        20.dp
+                                    )
+                            )
+
+                            Spacer(
+                                Modifier.size(
+                                    8.dp
+                                )
+                            )
+
                             Text(
                                 "Criar primeiro nome",
-                                fontWeight =
-                                    FontWeight.Bold
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .labelLarge
                             )
                         }
                     }
                 }
             } else {
-                Card(
+                ElevatedCard(
                     onClick =
                         onRecent,
                     colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                FioSurface
-                        ),
+                        CardDefaults
+                            .elevatedCardColors(
+                                containerColor =
+                                    FioSurfaceHigh
+                            ),
+                    elevation =
+                        CardDefaults
+                            .elevatedCardElevation(
+                                defaultElevation =
+                                    3.dp
+                            ),
                     shape =
-                        RoundedCornerShape(
-                            20.dp
-                        )
+                        MaterialTheme.shapes
+                            .large
                 ) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp)
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
-                        Text(
-                            recent.fileName,
-                            color = FioText,
-                            fontWeight =
-                                FontWeight.SemiBold
-                        )
-
-                        Text(
-                            recent.format +
-                                " • " +
-                                formatMm(
-                                    recent.bounds
-                                        .widthMm
-                                ) +
-                                " × " +
-                                formatMm(
-                                    recent.bounds
-                                        .heightMm
-                                ) +
-                                " mm • " +
-                                recent.stitchCount +
-                                " pontos" +
-                                when {
-                                    recent.sourceBytes
-                                        .isEmpty() ->
-                                        " • criada"
-
-                                    recent.isModified ->
-                                        " • editada"
-
-                                    else ->
-                                        ""
-                                },
+                        Surface(
+                            modifier =
+                                Modifier.size(
+                                    48.dp
+                                ),
+                            shape =
+                                CircleShape,
                             color =
-                                FioTextMuted,
-                            fontSize =
-                                12.sp
-                        )
+                                FioGold.copy(
+                                    alpha =
+                                        .18f
+                                )
+                        ) {
+                            Box(
+                                contentAlignment =
+                                    Alignment.Center
+                            ) {
+                                Icon(
+                                    painter =
+                                        painterResource(
+                                            R.drawable
+                                                .ic_ms_folder_open_rounded
+                                        ),
+                                    contentDescription =
+                                        null,
+                                    tint = FioGold,
+                                    modifier =
+                                        Modifier.size(
+                                            24.dp
+                                        )
+                                )
+                            }
+                        }
+
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .padding(
+                                    start =
+                                        14.dp
+                                )
+                        ) {
+                            Text(
+                                recent.fileName,
+                                color = FioText,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .titleMedium
+                            )
+
+                            Text(
+                                recent.format +
+                                    " • " +
+                                    formatMm(
+                                        recent.bounds
+                                            .widthMm
+                                    ) +
+                                    " × " +
+                                    formatMm(
+                                        recent.bounds
+                                            .heightMm
+                                    ) +
+                                    " mm • " +
+                                    recent.stitchCount +
+                                    " pontos",
+                                color =
+                                    FioTextMuted,
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .labelMedium
+                            )
+                        }
                     }
                 }
             }
@@ -501,108 +564,280 @@ fun HomeScreen(
 
         item(
             span = {
-                GridItemSpan(
-                    maxLineSpan
-                )
+                GridItemSpan(maxLineSpan)
             }
         ) {
             Text(
-                "FioLab 0.22.0 • Android",
+                "FioLab 0.22.1 • Material 3 Expressive",
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(
-                            top = 4.dp
-                        ),
-                color =
-                    FioTextMuted,
+                        .padding(top = 6.dp),
+                color = FioTextMuted,
+                style =
+                    MaterialTheme.typography
+                        .labelMedium,
                 textAlign =
-                    TextAlign.Center,
-                fontSize =
-                    11.sp
+                    TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun FeatureCard(
+private fun ExpressiveFeatureCard(
     modifier: Modifier,
-    icon: String,
+    @DrawableRes iconRes: Int,
     title: String,
     subtitle: String,
     enabled: Boolean,
+    primary: Boolean = false,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (enabled) {
-                        FioSurfaceAlt
-                    } else {
-                        FioSurface
-                    }
-            ),
-        shape =
-            RoundedCornerShape(
-                20.dp
-            )
-    ) {
-        Column(
-            Modifier.padding(
-                16.dp
-            )
+    val container =
+        when {
+            primary ->
+                FioGold
+
+            enabled ->
+                FioSurfaceHigh
+
+            else ->
+                FioSurface
+        }
+
+    val titleColor =
+        if (
+            primary
         ) {
-            Box(
-                Modifier
-                    .size(40.dp)
-                    .background(
-                        if (enabled) {
-                            FioGold
+            FioBackground
+        } else if (
+            enabled
+        ) {
+            FioText
+        } else {
+            FioTextMuted
+        }
+
+    val subtitleColor =
+        if (
+            primary
+        ) {
+            Color(
+                0xCC241704
+            )
+        } else {
+            FioTextMuted
+        }
+
+    ElevatedCard(
+        modifier =
+            modifier,
+        onClick =
+            onClick,
+        enabled =
+            enabled,
+        colors =
+            CardDefaults
+                .elevatedCardColors(
+                    containerColor =
+                        container,
+                    disabledContainerColor =
+                        FioSurface,
+                    disabledContentColor =
+                        FioTextMuted
+                ),
+        elevation =
+            CardDefaults
+                .elevatedCardElevation(
+                    defaultElevation =
+                        if (
+                            primary
+                        ) {
+                            6.dp
+                        } else {
+                            2.dp
+                        },
+                    pressedElevation =
+                        1.dp
+                ),
+        shape =
+            if (
+                primary
+            ) {
+                MaterialTheme.shapes
+                    .extraLarge
+            } else {
+                MaterialTheme.shapes
+                    .large
+            }
+    ) {
+        if (
+            primary
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier =
+                        Modifier.size(
+                            58.dp
+                        ),
+                    shape =
+                        MaterialTheme.shapes
+                            .large,
+                    color =
+                        FioBackground.copy(
+                            alpha =
+                                .12f
+                        )
+                ) {
+                    Box(
+                        contentAlignment =
+                            Alignment.Center
+                    ) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    iconRes
+                                ),
+                            contentDescription =
+                                null,
+                            tint =
+                                FioBackground,
+                            modifier =
+                                Modifier.size(
+                                    30.dp
+                                )
+                        )
+                    }
+                }
+
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .padding(
+                                start =
+                                    16.dp
+                            )
+                ) {
+                    Text(
+                        title,
+                        color =
+                            titleColor,
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge
+                    )
+
+                    Spacer(
+                        Modifier.height(
+                            4.dp
+                        )
+                    )
+
+                    Text(
+                        subtitle,
+                        color =
+                            subtitleColor,
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium
+                    )
+                }
+            }
+        } else {
+            Column(
+                Modifier.padding(
+                    16.dp
+                )
+            ) {
+                Surface(
+                    modifier =
+                        Modifier.size(
+                            46.dp
+                        ),
+                    shape =
+                        CircleShape,
+                    color =
+                        if (
+                            enabled
+                        ) {
+                            FioGold.copy(
+                                alpha =
+                                    .16f
+                            )
                         } else {
                             FioSurfaceAlt
-                        },
-                        CircleShape
-                    ),
-                contentAlignment =
-                    Alignment.Center
-            ) {
+                        }
+                ) {
+                    Box(
+                        contentAlignment =
+                            Alignment.Center
+                    ) {
+                        Icon(
+                            painter =
+                                painterResource(
+                                    iconRes
+                                ),
+                            contentDescription =
+                                null,
+                            tint =
+                                if (
+                                    enabled
+                                ) {
+                                    FioGoldSoft
+                                } else {
+                                    FioTextMuted
+                                },
+                            modifier =
+                                Modifier.size(
+                                    24.dp
+                                )
+                        )
+                    }
+                }
+
+                Spacer(
+                    Modifier.height(
+                        16.dp
+                    )
+                )
+
                 Text(
-                    icon,
+                    title,
                     color =
-                        if (enabled) {
-                            FioBackground
-                        } else {
-                            FioGold
-                        },
-                    fontWeight =
-                        FontWeight.Bold
+                        titleColor,
+                    style =
+                        MaterialTheme
+                            .typography
+                            .titleMedium
+                )
+
+                Spacer(
+                    Modifier.height(
+                        4.dp
+                    )
+                )
+
+                Text(
+                    subtitle,
+                    color =
+                        subtitleColor,
+                    style =
+                        MaterialTheme
+                            .typography
+                            .labelMedium
                 )
             }
-
-            Spacer(
-                Modifier.height(
-                    14.dp
-                )
-            )
-
-            Text(
-                title,
-                color = FioText,
-                fontWeight =
-                    FontWeight.SemiBold
-            )
-
-            Text(
-                subtitle,
-                color =
-                    FioTextMuted,
-                fontSize =
-                    11.sp
-            )
         }
     }
 }
