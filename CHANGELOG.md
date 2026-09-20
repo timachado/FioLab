@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.19.0
+
+### Minhas Matrizes
+- Nova biblioteca local "Minhas Matrizes".
+- Salva projetos dentro do armazenamento privado do FioLab.
+- Não exige conta, internet ou serviço externo.
+- Botão "Salvar em Minhas Matrizes" no visualizador.
+- Reabrir projeto salvo.
+- Excluir projeto salvo.
+- Enviar uma matriz salva diretamente para a máquina.
+- Salvar novamente a mesma matriz atualiza sua cópia local em vez de gerar duplicatas.
+
+### Projeto FioLab
+- Formato interno versionado para preservar pontadas.
+- Preserva comandos STITCH/JUMP/TRIM/COLOR_CHANGE/END.
+- Preserva paleta de cores.
+- Preserva bastidor.
+- Preserva perfil de tecido.
+- Preserva dados de acabamento automático.
+- Ao reabrir, a matriz volta como projeto editável e pode ser exportada em DST/PES/JEF.
+
+### Qualidade
+- Codec interno testado em round-trip.
+- Projeto corrompido é rejeitado em vez de ser aberto parcialmente.
+- A lista ignora arquivos locais inválidos sem derrubar toda a biblioteca.
+
+
 ## 0.18.0
 
 ### Criar desenho/logo

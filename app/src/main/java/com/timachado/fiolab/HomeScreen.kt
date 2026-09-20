@@ -45,6 +45,7 @@ fun HomeScreen(
     onCreateMonogram: () -> Unit,
     onCreateDrawing: () -> Unit,
     onFonts: () -> Unit,
+    onProjects: () -> Unit,
     onTransfer: () -> Unit,
     onOpen: () -> Unit,
     onRecent: () -> Unit,
@@ -147,7 +148,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.18 cria nomes, monogramas e desenhos/logos para enviar à bordadeira por OTG ou app/rede.",
+                        "FioLab 0.19 salva suas matrizes no celular para reabrir e enviar novamente à bordadeira.",
                         color = FioTextMuted
                     )
                 }
@@ -201,6 +202,21 @@ fun HomeScreen(
                 enabled = true,
                 onClick =
                     onCreateDrawing
+            )
+        }
+
+        item {
+            FeatureCard(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                icon = "▣",
+                title =
+                    "Minhas Matrizes",
+                subtitle =
+                    "Salvas no celular • abrir • enviar",
+                enabled = true,
+                onClick =
+                    onProjects
             )
         }
 
@@ -464,7 +480,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.18.0 • Android",
+                "FioLab 0.19.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

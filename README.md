@@ -1,4 +1,4 @@
-# FioLab 0.18.0
+# FioLab 0.19.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,21 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Minhas Matrizes
+
+A v0.19 adiciona uma biblioteca local e offline.
+
+O usuário pode:
+- criar ou abrir uma matriz;
+- tocar em **Salvar em Minhas Matrizes**;
+- fechar o app;
+- voltar depois e reabrir o projeto;
+- simular ou editar novamente;
+- enviar diretamente para a máquina por OTG ou Wi-Fi/app;
+- excluir quando não precisar mais.
+
+Os projetos ficam no armazenamento privado do FioLab. O formato interno preserva a sequência de pontadas, cores, bastidor, tecido e acabamento necessário para gerar novamente DST, PES ou JEF.
 
 ## Criar desenho/logo
 

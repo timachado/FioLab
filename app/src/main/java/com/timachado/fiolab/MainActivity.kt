@@ -29,6 +29,8 @@ import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
+import com.timachado.fiolab.core.project.ProjectStore
+import com.timachado.fiolab.core.project.SavedProjectSummary
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioLabTheme
@@ -54,6 +56,7 @@ private sealed interface Screen {
     data object CreateMonogram : Screen
     data object CreateDrawing : Screen
     data object FontLibrary : Screen
+    data object ProjectLibrary : Screen
 
     data class Transfer(
         val design: EmbroideryDesign
@@ -111,6 +114,12 @@ private fun FioLabApp() {
         mutableStateOf<
             PendingDocument?
         >(null)
+    }
+
+    var savedProjects by remember {
+        mutableStateOf<
+            List<SavedProjectSummary>
+        >(emptyList())
     }
 
     var loading by remember {
@@ -460,6 +469,170 @@ private fun FioLabApp() {
         )
     }
 
+    fun openProjectLibrary() {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ProjectStore.list(
+                        context
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                        projects ->
+                    savedProjects =
+                        projects
+
+                    screen =
+                        Screen.ProjectLibrary
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível abrir Minhas Matrizes."
+                    )
+                }
+            )
+        }
+    }
+
+    fun saveProject(
+        design: EmbroideryDesign
+    ) {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ProjectStore.save(
+                        context,
+                        design
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                        saved ->
+                    savedProjects =
+                        listOf(
+                            saved
+                        ) +
+                            savedProjects
+                                .filter {
+                                    it.id !=
+                                        saved.id
+                                }
+
+                    snackbar.showSnackbar(
+                        "Matriz salva em Minhas Matrizes."
+                    )
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível salvar a matriz no app."
+                    )
+                }
+            )
+        }
+    }
+
+    fun loadProject(
+        project: SavedProjectSummary,
+        transferDirectly: Boolean
+    ) {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ProjectStore.load(
+                        context,
+                        project.id
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                        design ->
+                    recent =
+                        design
+
+                    screen =
+                        if (
+                            transferDirectly
+                        ) {
+                            Screen.Transfer(
+                                design
+                            )
+                        } else {
+                            Screen.Viewer(
+                                design
+                            )
+                        }
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível reabrir esta matriz."
+                    )
+                }
+            )
+        }
+    }
+
+    fun deleteProject(
+        project: SavedProjectSummary
+    ) {
+        scope.launch {
+            loading = true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ProjectStore.delete(
+                        context,
+                        project.id
+                    )
+                }
+
+            loading = false
+
+            result.fold(
+                onSuccess = {
+                    savedProjects =
+                        savedProjects
+                            .filter {
+                                it.id !=
+                                    project.id
+                            }
+
+                    snackbar.showSnackbar(
+                        "Matriz removida de Minhas Matrizes."
+                    )
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível excluir esta matriz."
+                    )
+                }
+            )
+        }
+    }
+
     Scaffold(
         containerColor =
             FioBackground,
@@ -496,6 +669,9 @@ private fun FioLabApp() {
                         onFonts = {
                             screen =
                                 Screen.FontLibrary
+                        },
+                        onProjects = {
+                            openProjectLibrary()
                         },
                         onTransfer = {
                             recent?.let {
@@ -552,6 +728,39 @@ private fun FioLabApp() {
                                         message
                                     )
                             }
+                        }
+                    )
+                }
+
+                Screen.ProjectLibrary -> {
+                    ProjectLibraryScreen(
+                        projects =
+                            savedProjects,
+                        onBack = {
+                            screen =
+                                Screen.Home
+                        },
+                        onOpen = {
+                                project ->
+                            loadProject(
+                                project,
+                                transferDirectly =
+                                    false
+                            )
+                        },
+                        onTransfer = {
+                                project ->
+                            loadProject(
+                                project,
+                                transferDirectly =
+                                    true
+                            )
+                        },
+                        onDelete = {
+                                project ->
+                            deleteProject(
+                                project
+                            )
                         }
                     )
                 }
@@ -731,6 +940,12 @@ private fun FioLabApp() {
                                 Screen.Transfer(
                                     current.design
                                 )
+                        },
+                        onSaveProject = {
+                            saveProject(
+                                current
+                                    .design
+                            )
                         },
                         onSaveCopy = {
                             requestSave(

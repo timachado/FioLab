@@ -42,6 +42,7 @@ fun ViewerScreen(
     onEdit: () -> Unit,
     onConvert: () -> Unit,
     onTransfer: () -> Unit,
+    onSaveProject: () -> Unit,
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
@@ -291,6 +292,24 @@ fun ViewerScreen(
                         "⇧ Enviar para máquina",
                         fontWeight =
                             FontWeight.Bold
+                    )
+                }
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                OutlinedButton(
+                    onClick =
+                        onSaveProject,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                ) {
+                    Text(
+                        "★ Salvar em Minhas Matrizes"
                     )
                 }
 
