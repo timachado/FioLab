@@ -715,7 +715,7 @@ fun CreateNameScreen(
                             }
 
                             Text(
-                                "A fonte selecionada é convertida em pontos reais de bordado.",
+                                "Conversão adaptativa: o FioLab analisa cada letra e escolhe automaticamente Satin por eixo ou preenchimento seguro conforme a geometria da fonte.",
                                 color =
                                     FioTextMuted,
                                 fontSize =
