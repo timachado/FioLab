@@ -31,7 +31,10 @@ data class TextLayoutOptions(
     val arcHeightMm: Float = 8f,
     val letterAdjustments:
         List<LetterAdjustment> =
-        emptyList()
+        emptyList(),
+    val machineFinishingSettings:
+        MachineFinishingSettings =
+        MachineFinishingSettings()
 )
 
 object TextLayoutGenerator {
@@ -762,6 +765,15 @@ object TextLayoutGenerator {
                             .fabricProfile
                 )
 
+            val finished =
+                MachineFinishing
+                    .apply(
+                        design,
+                        options
+                            .machineFinishingSettings
+                    )
+                    .design
+
             if (
                 options.textOptions
                     .enforceHoop &&
@@ -772,7 +784,7 @@ object TextLayoutGenerator {
                 val fit =
                     HoopValidator
                         .validate(
-                            design,
+                            finished,
                             options
                                 .textOptions
                                 .hoopProfile
@@ -790,6 +802,6 @@ object TextLayoutGenerator {
                 }
             }
 
-            design
+            finished
         }
 }

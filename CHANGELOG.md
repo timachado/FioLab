@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.16.0
+
+### Acabamento de Máquina
+- Tie-in automático no início de cada bloco costurado.
+- Tie-off automático antes de troca de cor, corte e final do bordado.
+- Comprimento curto de arremate para reduzir pontas soltas.
+- Corte automático antes de saltos acima do limite configurado.
+- Limite padrão de corte em 8 mm, editável pelo usuário.
+- Otimização conservadora de deslocamentos e comandos redundantes.
+- A otimização não reordena blocos nem cores.
+
+### Controle de Qualidade
+- Análise de pontos longos.
+- Alerta padrão para pontos acima de 7 mm.
+- Análise de saltos longos.
+- Alerta padrão para saltos acima de 12 mm.
+- Exibição dos alertas diretamente no visualizador da matriz.
+- Matrizes criadas guardam informação de acabamento utilizado.
+
+### Criar Nome e Monograma
+- Controles para ativar/desativar tie-in.
+- Controles para ativar/desativar tie-off.
+- Corte automático de saltos configurável.
+- Limite de corte ajustável.
+- Otimização segura de deslocamentos configurável.
+- Acabamento aplicado depois de Satin, curva, multicor e posicionamento final.
+
+### Segurança da Sequência
+- COLOR_CHANGE é preservado.
+- A ordem dos blocos de cor não é alterada.
+- A geometria visual da matriz não é reorganizada pelo acabamento.
+
+
 ## 0.15.0
 
 ### Multicor real

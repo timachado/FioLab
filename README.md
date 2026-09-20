@@ -1,4 +1,4 @@
-# FioLab 0.15.0
+# FioLab 0.16.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -34,6 +34,23 @@ Se o arquivo contém satin/tatami, as pontadas densas aparecem preenchendo o des
 Se a matriz contém somente ponto corrido, a simulação mostra ponto corrido.
 
 Isso é importante para que a tela represente o que realmente será enviado para a máquina.
+
+## Acabamento de Máquina
+
+A v0.16 adiciona uma etapa de acabamento aplicada à sequência final de pontadas.
+
+Recursos:
+- tie-in no começo do bloco;
+- tie-off no fim do bloco;
+- corte automático antes de saltos longos;
+- limite de corte configurável;
+- remoção de deslocamentos/comandos redundantes;
+- análise de pontos longos;
+- análise de saltos longos.
+
+A otimização é propositalmente conservadora: ela limpa deslocamentos redundantes, mas não reordena cores ou blocos. Isso evita alterar a intenção visual e a sequência multicor definida pelo usuário.
+
+O visualizador informa se existem pontos acima de 7 mm ou saltos acima de 12 mm. Esses valores são alertas de projeto do FioLab, não uma garantia universal de compatibilidade com qualquer máquina.
 
 ## Multicor por Letra e Bloco
 

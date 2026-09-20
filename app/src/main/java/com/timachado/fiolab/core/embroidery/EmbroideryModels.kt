@@ -27,6 +27,14 @@ data class EmbroideryBounds(
     val heightMm: Float get() = (maxYUnits - minYUnits) / 10f
 }
 
+data class MachineFinishingInfo(
+    val tieInEnabled: Boolean,
+    val tieOffEnabled: Boolean,
+    val autoTrimLongJumps: Boolean,
+    val trimJumpThresholdMm: Float,
+    val optimizeTravel: Boolean
+)
+
 data class EmbroideryDesign(
     val fileName: String,
     val format: String,
@@ -41,7 +49,9 @@ data class EmbroideryDesign(
     val threadColors: List<Int> = emptyList(),
     val isModified: Boolean = false,
     val hoopProfile: HoopProfile? = null,
-    val fabricProfile: FabricProfile? = null
+    val fabricProfile: FabricProfile? = null,
+    val machineFinishing:
+        MachineFinishingInfo? = null
 ) {
     val colorCount: Int
         get() = maxOf(

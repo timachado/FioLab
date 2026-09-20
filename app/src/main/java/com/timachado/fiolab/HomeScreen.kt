@@ -145,7 +145,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        "FioLab 0.15 adiciona multicor real por letra e pausa automática nas trocas de linha.",
+                        "FioLab 0.16 adiciona acabamento de máquina, arremates, cortes e análise de qualidade.",
                         color = FioTextMuted
                     )
                 }
@@ -423,7 +423,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "FioLab 0.15.0 • Android",
+                "FioLab 0.16.0 • Android",
                 modifier =
                     Modifier.fillMaxWidth(),
                 color = FioTextMuted,

@@ -35,7 +35,10 @@ data class MonogramOptions(
         HoopProfile.H100X100,
     val fabricProfile: FabricProfile? =
         FabricProfile.COTTON,
-    val enforceHoop: Boolean = false
+    val enforceHoop: Boolean = false,
+    val machineFinishingSettings:
+        MachineFinishingSettings =
+        MachineFinishingSettings()
 )
 
 object MonogramGenerator {
@@ -463,6 +466,15 @@ object MonogramGenerator {
                             .fabricProfile
                 )
 
+            val finished =
+                MachineFinishing
+                    .apply(
+                        design,
+                        options
+                            .machineFinishingSettings
+                    )
+                    .design
+
             if (
                 options.enforceHoop &&
                 options.hoopProfile !=
@@ -471,7 +483,7 @@ object MonogramGenerator {
                 val fit =
                     HoopValidator
                         .validate(
-                            design,
+                            finished,
                             options
                                 .hoopProfile
                         )
@@ -487,7 +499,7 @@ object MonogramGenerator {
                 }
             }
 
-            design
+            finished
         }
 
     private fun sanitizeInitials(
