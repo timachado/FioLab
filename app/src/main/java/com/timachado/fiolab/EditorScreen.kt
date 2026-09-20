@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -224,7 +225,7 @@ fun EditorScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(0.9f)
                     .background(
                         Color(0xFF071017),
                         RoundedCornerShape(
@@ -237,6 +238,7 @@ fun EditorScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .weight(1.25f)
                     .padding(
                         vertical = 12.dp
                     ),
@@ -251,7 +253,11 @@ fun EditorScreen(
                 )
         ) {
             Column(
-                Modifier.padding(16.dp)
+                Modifier
+                    .padding(16.dp)
+                    .verticalScroll(
+                        rememberScrollState()
+                    )
             ) {
                 Text(
                     "Tamanho " +
