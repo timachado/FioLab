@@ -33,7 +33,7 @@ object ProjectCodec {
         "FIOLAB_PROJECT"
 
     private const val VERSION =
-        1
+        2
 
     private const val MAX_POINTS =
         2_000_000
@@ -173,6 +173,40 @@ object ProjectCodec {
                         point.colorIndex
                     )
                 }
+
+            require(
+                design.guidePoints
+                    .size <=
+                    MAX_POINTS
+            ) {
+                "Guia vetorial grande demais para salvar."
+            }
+
+            output.writeInt(
+                design.guidePoints
+                    .size
+            )
+
+            design.guidePoints
+                .forEach {
+                        point ->
+                    output.writeInt(
+                        point.xUnits
+                    )
+
+                    output.writeInt(
+                        point.yUnits
+                    )
+
+                    output.writeUTF(
+                        point.command
+                            .name
+                    )
+
+                    output.writeInt(
+                        point.colorIndex
+                    )
+                }
         }
 
         return buffer
@@ -195,9 +229,12 @@ object ProjectCodec {
                 "Arquivo de projeto inválido."
             }
 
+            val version =
+                input.readInt()
+
             require(
-                input.readInt() ==
-                    VERSION
+                version in
+                    1..VERSION
             ) {
                 "Versão de projeto ainda não suportada."
             }
@@ -316,6 +353,46 @@ object ProjectCodec {
                     }
                 }
 
+            val guidePoints =
+                if (
+                    version >=
+                        2
+                ) {
+                    val guideCount =
+                        input.readInt()
+
+                    require(
+                        guideCount in
+                            0..MAX_POINTS
+                    ) {
+                        "Quantidade de pontos do guia inválida."
+                    }
+
+                    buildList {
+                        repeat(
+                            guideCount
+                        ) {
+                            add(
+                                EmbroideryPoint(
+                                    xUnits =
+                                        input.readInt(),
+                                    yUnits =
+                                        input.readInt(),
+                                    command =
+                                        StitchCommand
+                                            .valueOf(
+                                                input.readUTF()
+                                            ),
+                                    colorIndex =
+                                        input.readInt()
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    emptyList()
+                }
+
             val coordinates =
                 points.filter {
                     it.command !=
@@ -391,6 +468,8 @@ object ProjectCodec {
                     },
                 sourceBytes =
                     ByteArray(0),
+                guidePoints =
+                    guidePoints,
                 threadColors =
                     colors,
                 isModified =
