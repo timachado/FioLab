@@ -6,6 +6,7 @@
 - Removido do caminho principal o esqueleto rasterizado que quebrava curvas, junções e letras cursivas.
 - Implementado gerador baseado em SatinRow e SatinColumn, seguindo a arquitetura observada no comportamento do Mão Design sem copiar código proprietário.
 - Cada linha interna do glifo é calculada diretamente pelas interseções com o contorno vetorial da TTF/OTF.
+- No texto reto normal, a palavra inteira é analisada como uma única forma antes da criação das colunas, preservando melhor ligações e sobreposições de fontes cursivas.
 - As faixas são agrupadas verticalmente por sobreposição e proximidade, formando colunas contínuas de bordado.
 - Mudanças de topologia criam novas colunas em vez de fragmentar a letra em ramos serrilhados.
 - As bordas de cada coluna recebem suavização local antes da geração dos pontos.
