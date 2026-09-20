@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,22 +47,21 @@ import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
-import com.timachado.fiolab.core.embroidery.LetterAdjustment
+import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
+import com.timachado.fiolab.core.embroidery.TextGlyphProvider
 import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
 import com.timachado.fiolab.core.embroidery.TextLayoutMode
 import com.timachado.fiolab.core.embroidery.TextLayoutOptions
-import com.timachado.fiolab.core.embroidery.TextGlyphProvider
-import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
+import com.timachado.fiolab.font.ImportedFontMatrixGenerator
+import com.timachado.fiolab.font.ImportedFontStore
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
 import com.timachado.fiolab.ui.theme.FioSurfaceAlt
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
-import com.timachado.fiolab.font.ImportedFontMatrixGenerator
-import com.timachado.fiolab.font.ImportedFontStore
 import java.util.Locale
 
 private val namePalette =
@@ -93,6 +93,10 @@ fun CreateNameScreen(
                 .list(context)
         }
 
+    var selectedTab by remember {
+        mutableStateOf("Texto")
+    }
+
     var importedFontId by remember {
         mutableStateOf<String?>(
             null
@@ -104,7 +108,7 @@ fun CreateNameScreen(
     }
 
     var heightMm by remember {
-        mutableFloatStateOf(10f)
+        mutableFloatStateOf(18f)
     }
 
     var spacingMm by remember {
@@ -155,7 +159,7 @@ fun CreateNameScreen(
 
     var color by remember {
         mutableIntStateOf(
-            0xE6BE70
+            0xE63946
         )
     }
 
@@ -180,42 +184,6 @@ fun CreateNameScreen(
     var arcHeightMm by remember {
         mutableFloatStateOf(8f)
     }
-
-    var selectedLetterOrdinal by remember {
-        mutableIntStateOf(0)
-    }
-
-    var letterAdjustments by remember {
-        mutableStateOf<
-            Map<Int, LetterAdjustment>
-        >(emptyMap())
-    }
-
-    val letterSourceIndices =
-        text.indices
-            .filter {
-                text[it].isLetter()
-            }
-
-    val selectedSourceIndex =
-        letterSourceIndices
-            .getOrNull(
-                selectedLetterOrdinal
-            )
-            ?: letterSourceIndices
-                .firstOrNull()
-
-    val selectedAdjustment =
-        selectedSourceIndex
-            ?.let {
-                sourceIndex ->
-                letterAdjustments[
-                    sourceIndex
-                ] ?: LetterAdjustment(
-                    sourceIndex =
-                        sourceIndex
-                )
-            }
 
     val importedFont =
         importedFonts
@@ -267,42 +235,38 @@ fun CreateNameScreen(
             TextLayoutOptions(
                 textOptions =
                     TextMatrixOptions(
-                text = text,
-                heightMm = heightMm,
-                spacingMm = spacingMm,
-                stitchLengthMm =
-                    stitchLengthMm,
-                style =
-                    stitchStyle,
-                satinWidthMm =
-                    satinWidthMm,
-                satinDensityMm =
-                    satinDensityMm,
-                satinPullCompensationMm =
-                    satinPullCompensationMm,
-                satinShortStitches =
-                    satinShortStitches,
-                satinUnderlayMode =
-                    satinUnderlayMode,
-                color = color,
-                font = font,
-                outputFormat =
-                    outputFormat,
-                hoopProfile =
-                    hoopProfile,
-                fabricProfile =
-                    fabricProfile
+                        text = text,
+                        heightMm = heightMm,
+                        spacingMm = spacingMm,
+                        stitchLengthMm =
+                            stitchLengthMm,
+                        style =
+                            stitchStyle,
+                        satinWidthMm =
+                            satinWidthMm,
+                        satinDensityMm =
+                            satinDensityMm,
+                        satinPullCompensationMm =
+                            satinPullCompensationMm,
+                        satinShortStitches =
+                            satinShortStitches,
+                        satinUnderlayMode =
+                            satinUnderlayMode,
+                        color = color,
+                        font = font,
+                        outputFormat =
+                            outputFormat,
+                        hoopProfile =
+                            hoopProfile,
+                        fabricProfile =
+                            fabricProfile
                     ),
                 layoutMode =
                     layoutMode,
                 arcHeightMm =
                     arcHeightMm,
-                letterAdjustments =
-                    letterAdjustments
-                        .values
-                        .toList(),
                 glyphProvider =
-                    glyphProvider,
+                    glyphProvider
             )
         )
 
@@ -325,42 +289,53 @@ fun CreateNameScreen(
         Modifier
             .fillMaxSize()
             .padding(
-                horizontal = 14.dp
+                horizontal =
+                    10.dp
             )
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical = 4.dp
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        vertical =
+                            4.dp
+                    ),
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onBack
+                onClick =
+                    onBack
             ) {
                 Text(
                     "‹ Voltar",
-                    color = FioGold
+                    color =
+                        FioGold
                 )
             }
 
             Column(
-                Modifier.weight(1f)
+                Modifier.weight(
+                    1f
+                )
             ) {
                 Text(
                     "Criar Nome",
-                    color = FioText,
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.Bold,
-                    fontSize = 19.sp
+                    fontSize =
+                        19.sp
                 )
 
                 Text(
-                    "Texto vira pontadas reais",
-                    color = FioTextMuted,
-                    fontSize = 10.sp
+                    "Edite por etapas • a prévia atualiza na hora",
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
                 )
             }
         }
@@ -369,17 +344,23 @@ fun CreateNameScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(.82f)
+                    .weight(.92f)
                     .background(
-                        Color(0xFF071017),
+                        Color(
+                            0xFF071017
+                        ),
                         RoundedCornerShape(
-                            24.dp
+                            22.dp
                         )
                     )
         ) {
-            if (preview != null) {
+            if (
+                preview !=
+                    null
+            ) {
                 EmbroideryCanvas(
-                    design = preview,
+                    design =
+                        preview,
                     hoop =
                         hoopProfile,
                     modifier =
@@ -387,12 +368,23 @@ fun CreateNameScreen(
                 )
             } else {
                 Text(
-                    "Digite um nome para gerar a prévia.",
+                    result
+                        .exceptionOrNull()
+                        ?.message
+                        ?: "Digite um nome para gerar a prévia.",
                     modifier =
                         Modifier.align(
                             Alignment.Center
+                        )
+                        .padding(
+                            18.dp
                         ),
-                    color = FioTextMuted
+                    color =
+                        Color(
+                            0xFFFF9F9A
+                        ),
+                    fontSize =
+                        11.sp
                 )
             }
         }
@@ -401,9 +393,10 @@ fun CreateNameScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(1.35f)
+                    .weight(1.25f)
                     .padding(
-                        vertical = 12.dp
+                        top = 10.dp,
+                        bottom = 8.dp
                     ),
             colors =
                 CardDefaults.cardColors(
@@ -417,554 +410,88 @@ fun CreateNameScreen(
         ) {
             Column(
                 Modifier
-                    .padding(16.dp)
-                    .verticalScroll(
-                        rememberScrollState()
+                    .fillMaxSize()
+                    .padding(
+                        12.dp
                     )
             ) {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = {
-                        text = it.take(24)
-
-                        selectedLetterOrdinal =
-                            0
-
-                        letterAdjustments =
-                            emptyMap()
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    label = {
-                        Text(
-                            "Nome ou palavra"
-                        )
-                    },
-                    supportingText = {
-                        Text(
-                            "Até 24 caracteres • acentos do português aceitos"
-                        )
-                    },
-                    singleLine = true
-                )
-
-                Spacer(
-                    Modifier.height(14.dp)
-                )
-
-                Text(
-                    "Composição do texto",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        )
-                        .padding(
-                            vertical = 8.dp
-                        ),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-                    TextLayoutMode
-                        .entries
-                        .forEach {
-                                option ->
-                            val selected =
-                                layoutMode ==
-                                    option
-
-                            OutlinedButton(
-                                onClick = {
-                                    layoutMode =
-                                        option
-                                },
-                                colors =
-                                    ButtonDefaults
-                                        .outlinedButtonColors(
-                                            contentColor =
-                                                if (
-                                                    selected
-                                                ) {
-                                                    FioGold
-                                                } else {
-                                                    FioText
-                                                }
-                                        )
-                            ) {
-                                Text(
-                                    if (
-                                        selected
-                                    ) {
-                                        "● " +
-                                            option.displayName
-                                    } else {
-                                        option.displayName
-                                    }
-                                )
-                            }
-                        }
-                }
-
-                if (
-                    layoutMode !=
-                        TextLayoutMode.STRAIGHT
-                ) {
-                    Text(
-                        "Altura do arco " +
-                            mm(
-                                arcHeightMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontSize = 12.sp
-                    )
-
-                    Slider(
-                        value =
-                            arcHeightMm,
-                        onValueChange = {
-                            arcHeightMm = it
-                        },
-                        valueRange =
-                            0f..30f
-                    )
-                }
-
-                Text(
-                    "Ajuste por letra",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                if (
-                    letterSourceIndices
-                        .isEmpty()
-                ) {
-                    Text(
-                        "Digite pelo menos uma letra para ajustar.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            10.sp
-                    )
-                } else {
-                    Row(
+                    modifier =
                         Modifier
                             .fillMaxWidth()
                             .horizontalScroll(
                                 rememberScrollState()
-                            )
-                            .padding(
-                                vertical = 8.dp
                             ),
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            )
-                    ) {
-                        letterSourceIndices
-                            .forEachIndexed {
-                                    ordinal,
-                                    sourceIndex ->
-                                val selected =
-                                    sourceIndex ==
-                                        selectedSourceIndex
-
-                                OutlinedButton(
-                                    onClick = {
-                                        selectedLetterOrdinal =
-                                            ordinal
-                                    },
-                                    colors =
-                                        ButtonDefaults
-                                            .outlinedButtonColors(
-                                                contentColor =
-                                                    if (
-                                                        selected
-                                                    ) {
-                                                        FioGold
-                                                    } else {
-                                                        FioText
-                                                    }
-                                            )
-                                ) {
-                                    Text(
-                                        (
-                                            ordinal +
-                                                1
-                                            ).toString() +
-                                            " • " +
-                                            text[
-                                                sourceIndex
-                                            ]
-                                                .uppercaseChar()
-                                    )
-                                }
-                            }
-                    }
-
-                    if (
-                        selectedAdjustment !=
-                            null
-                    ) {
-                        val selectedLetterColor =
-                            selectedAdjustment.color
-                                ?: color
-
-                        Text(
-                            "Mover X " +
-                                mm(
-                                    selectedAdjustment
-                                        .offsetXmm
-                                ) +
-                                " mm",
-                            color = FioText,
-                            fontSize = 12.sp
-                        )
-
-                        Slider(
-                            value =
-                                selectedAdjustment
-                                    .offsetXmm,
-                            onValueChange = {
-                                    value ->
-                                letterAdjustments =
-                                    letterAdjustments +
-                                        (
-                                            selectedAdjustment
-                                                .sourceIndex to
-                                                selectedAdjustment
-                                                    .copy(
-                                                        offsetXmm =
-                                                            value
-                                                    )
-                                            )
-                            },
-                            valueRange =
-                                -10f..10f
-                        )
-
-                        Text(
-                            "Mover Y " +
-                                mm(
-                                    selectedAdjustment
-                                        .offsetYmm
-                                ) +
-                                " mm",
-                            color = FioText,
-                            fontSize = 12.sp
-                        )
-
-                        Slider(
-                            value =
-                                selectedAdjustment
-                                    .offsetYmm,
-                            onValueChange = {
-                                    value ->
-                                letterAdjustments =
-                                    letterAdjustments +
-                                        (
-                                            selectedAdjustment
-                                                .sourceIndex to
-                                                selectedAdjustment
-                                                    .copy(
-                                                        offsetYmm =
-                                                            value
-                                                    )
-                                            )
-                            },
-                            valueRange =
-                                -10f..10f
-                        )
-
-                        Text(
-                            "Girar " +
-                                selectedAdjustment
-                                    .rotationDegrees
-                                    .toInt() +
-                                "°",
-                            color = FioText,
-                            fontSize = 12.sp
-                        )
-
-                        Slider(
-                            value =
-                                selectedAdjustment
-                                    .rotationDegrees,
-                            onValueChange = {
-                                    value ->
-                                letterAdjustments =
-                                    letterAdjustments +
-                                        (
-                                            selectedAdjustment
-                                                .sourceIndex to
-                                                selectedAdjustment
-                                                    .copy(
-                                                        rotationDegrees =
-                                                            value
-                                                    )
-                                            )
-                            },
-                            valueRange =
-                                -45f..45f
-                        )
-
-                        Text(
-                            "Espaço após letra " +
-                                mm(
-                                    selectedAdjustment
-                                        .spacingAfterMm
-                                ) +
-                                " mm",
-                            color = FioText,
-                            fontSize = 12.sp
-                        )
-
-                        Slider(
-                            value =
-                                selectedAdjustment
-                                    .spacingAfterMm,
-                            onValueChange = {
-                                    value ->
-                                letterAdjustments =
-                                    letterAdjustments +
-                                        (
-                                            selectedAdjustment
-                                                .sourceIndex to
-                                                selectedAdjustment
-                                                    .copy(
-                                                        spacingAfterMm =
-                                                            value
-                                                    )
-                                            )
-                            },
-                            valueRange =
-                                -3f..8f
-                        )
-
-                        Text(
-                            "Cor da letra",
-                            color = FioText,
-                            fontWeight =
-                                FontWeight.SemiBold
-                        )
-
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(
-                                    rememberScrollState()
-                                )
-                                .padding(
-                                    vertical = 8.dp
-                                ),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(
-                                    9.dp
-                                )
-                        ) {
-                            namePalette.forEach {
-                                    rawColor ->
-                                val selected =
-                                    rawColor ==
-                                        selectedLetterColor
-
-                                Box(
-                                    Modifier
-                                        .size(
-                                            36.dp
-                                        )
-                                        .background(
-                                            Color(
-                                                0xFF000000 or
-                                                    rawColor
-                                                        .toLong()
-                                            ),
-                                            CircleShape
-                                        )
-                                        .border(
-                                            if (
-                                                selected
-                                            ) {
-                                                3.dp
-                                            } else {
-                                                1.dp
-                                            },
-                                            if (
-                                                selected
-                                            ) {
-                                                FioGold
-                                            } else {
-                                                Color(
-                                                    0xFF52616B
-                                                )
-                                            },
-                                            CircleShape
-                                        )
-                                        .clickable {
-                                            letterAdjustments =
-                                                letterAdjustments +
-                                                    (
-                                                        selectedAdjustment
-                                                            .sourceIndex to
-                                                            selectedAdjustment
-                                                                .copy(
-                                                                    color =
-                                                                        rawColor
-                                                                )
-                                                        )
-                                        }
-                                )
-                            }
-                        }
-
-                        if (
-                            selectedAdjustment.color !=
-                                null
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    letterAdjustments =
-                                        letterAdjustments +
-                                            (
-                                                selectedAdjustment
-                                                    .sourceIndex to
-                                                    selectedAdjustment
-                                                        .copy(
-                                                            color =
-                                                                null
-                                                        )
-                                                )
-                                }
-                            ) {
-                                Text(
-                                    "Usar cor geral",
-                                    color =
-                                        FioGold
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                letterAdjustments =
-                                    letterAdjustments -
-                                        selectedAdjustment
-                                            .sourceIndex
-                            },
-                            modifier =
-                                Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                "Redefinir esta letra"
-                            )
-                        }
-                    }
-                }
-
-                Text(
-                    "A matriz final é recentralizada automaticamente no bastidor antes da exportação.",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
-
-                Spacer(
-                    Modifier.height(
-                        14.dp
-                    )
-                )
-
-                Text(
-                    "Bastidor",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        )
-                        .padding(
-                            vertical = 8.dp
-                        ),
                     horizontalArrangement =
                         Arrangement.spacedBy(
-                            8.dp
+                            6.dp
                         )
                 ) {
-                    HoopProfile
-                        .entries
-                        .forEach {
-                                option ->
-                            val selected =
-                                hoopProfile ==
-                                    option
+                    listOf(
+                        "Texto",
+                        "Fonte",
+                        "Tamanho",
+                        "Cor",
+                        "Mais"
+                    ).forEach {
+                            tab ->
+                        val selected =
+                            selectedTab ==
+                                tab
 
-                            OutlinedButton(
-                                onClick = {
-                                    hoopProfile =
-                                        option
+                        Card(
+                            modifier =
+                                Modifier.clickable {
+                                    selectedTab =
+                                        tab
                                 },
-                                colors =
-                                    ButtonDefaults
-                                        .outlinedButtonColors(
-                                            contentColor =
-                                                if (
-                                                    selected
-                                                ) {
-                                                    FioGold
-                                                } else {
-                                                    FioText
-                                                }
-                                        )
-                            ) {
-                                Text(
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        if (
+                                            selected
+                                        ) {
+                                            FioGold
+                                        } else {
+                                            FioSurfaceAlt
+                                        }
+                                ),
+                            shape =
+                                RoundedCornerShape(
+                                    14.dp
+                                )
+                        ) {
+                            Text(
+                                tab,
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal =
+                                            14.dp,
+                                        vertical =
+                                            9.dp
+                                    ),
+                                color =
                                     if (
                                         selected
                                     ) {
-                                        "● " +
-                                            option
-                                                .displayName
+                                        FioBackground
                                     } else {
-                                        option
-                                            .displayName
-                                    }
-                                )
-                            }
+                                        FioTextMuted
+                                    },
+                                fontWeight =
+                                    if (
+                                        selected
+                                    ) {
+                                        FontWeight.Bold
+                                    } else {
+                                        FontWeight.Medium
+                                    },
+                                fontSize =
+                                    11.sp
+                            )
                         }
+                    }
                 }
-
-                Text(
-                    "Área segura: " +
-                        mm(
-                            hoopProfile
-                                .usableWidthMm
-                        ) +
-                        " × " +
-                        mm(
-                            hoopProfile
-                                .usableHeightMm
-                        ) +
-                        " mm",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
 
                 Spacer(
                     Modifier.height(
@@ -972,362 +499,687 @@ fun CreateNameScreen(
                     )
                 )
 
-                Text(
-                    "Tecido",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        )
-                        .padding(
-                            vertical = 8.dp
-                        ),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-                    FabricProfile
-                        .entries
-                        .forEach {
-                                option ->
-                            val selected =
-                                fabricProfile ==
-                                    option
-
-                            OutlinedButton(
-                                onClick = {
-                                    fabricProfile =
-                                        option
-
-                                    satinDensityMm =
-                                        option
-                                            .satinDensityMm
-
-                                    satinPullCompensationMm =
-                                        option
-                                            .pullCompensationMm
-
-                                    satinUnderlayMode =
-                                        option
-                                            .underlayMode
-
-                                    satinShortStitches =
-                                        option
-                                            .shortStitches
-                                },
-                                colors =
-                                    ButtonDefaults
-                                        .outlinedButtonColors(
-                                            contentColor =
-                                                if (
-                                                    selected
-                                                ) {
-                                                    FioGold
-                                                } else {
-                                                    FioText
-                                                }
-                                        )
-                            ) {
-                                Text(
-                                    if (
-                                        selected
-                                    ) {
-                                        "● " +
-                                            option
-                                                .displayName
-                                    } else {
-                                        option
-                                            .displayName
-                                    }
-                                )
-                            }
-                        }
-                }
-
-                Text(
-                    fabricProfile
-                        .helperText +
-                        " • valores iniciais editáveis",
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
-
-                Spacer(
-                    Modifier.height(
-                        12.dp
-                    )
-                )
-
-                Text(
-                    "Biblioteca de fontes",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        )
-                        .padding(
-                            vertical = 8.dp
-                        ),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-                    EmbroideryFontPreset
-                        .entries
-                        .forEach {
-                                option ->
-                            val selected =
-                                importedFontId ==
-                                    null &&
-                                    font ==
-                                        option
-
-                            Card(
-                                onClick = {
-                                    font = option
-                                    importedFontId =
-                                        null
-                                },
-                                colors =
-                                    CardDefaults
-                                        .cardColors(
-                                            containerColor =
-                                                if (
-                                                    selected
-                                                ) {
-                                                    FioSurfaceAlt
-                                                } else {
-                                                    FioSurface
-                                                }
-                                        ),
-                                shape =
-                                    RoundedCornerShape(
-                                        14.dp
-                                    )
-                            ) {
-                                Text(
-                                    option.displayName +
-                                        " • " +
-                                        option.category.displayName,
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal =
-                                                14.dp,
-                                            vertical =
-                                                10.dp
-                                        ),
-                                    color =
-                                        if (
-                                            selected
-                                        ) {
-                                            FioGold
-                                        } else {
-                                            FioText
-                                        },
-                                    fontWeight =
-                                        if (
-                                            selected
-                                        ) {
-                                            FontWeight.Bold
-                                        } else {
-                                            FontWeight.Normal
-                                        }
-                                )
-                            }
-                        }
-                }
-
-                if (
-                    importedFonts
-                        .isNotEmpty()
-                ) {
-                    Text(
-                        "Fontes importadas TTF/OTF",
-                        color = FioText,
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-
-                    Row(
+                Column(
+                    modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(
+                            .weight(1f)
+                            .verticalScroll(
                                 rememberScrollState()
                             )
-                            .padding(
-                                vertical = 8.dp
-                            ),
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            )
+                ) {
+                    when (
+                        selectedTab
                     ) {
-                        importedFonts
-                            .forEach {
-                                    option ->
-                                val selected =
-                                    importedFontId ==
-                                        option.id
+                        "Texto" -> {
+                            OutlinedTextField(
+                                value =
+                                    text,
+                                onValueChange = {
+                                    text =
+                                        it.take(
+                                            24
+                                        )
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth(),
+                                label = {
+                                    Text(
+                                        "Digite o nome"
+                                    )
+                                },
+                                singleLine =
+                                    true
+                            )
 
-                                Card(
-                                    onClick = {
-                                        importedFontId =
-                                            option.id
+                            Spacer(
+                                Modifier.height(
+                                    10.dp
+                                )
+                            )
+
+                            Text(
+                                "Formato do texto",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                TextLayoutMode
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            text =
+                                                option.displayName,
+                                            selected =
+                                                layoutMode ==
+                                                    option,
+                                            onClick = {
+                                                layoutMode =
+                                                    option
+                                            }
+                                        )
+                                    }
+                            }
+
+                            if (
+                                layoutMode !=
+                                    TextLayoutMode.STRAIGHT
+                            ) {
+                                Text(
+                                    "Curvatura " +
+                                        mm(
+                                            arcHeightMm
+                                        ) +
+                                        " mm",
+                                    color =
+                                        FioTextMuted,
+                                    fontSize =
+                                        11.sp
+                                )
+
+                                Slider(
+                                    value =
+                                        arcHeightMm,
+                                    onValueChange = {
+                                        arcHeightMm =
+                                            it
                                     },
-                                    colors =
-                                        CardDefaults
-                                            .cardColors(
-                                                containerColor =
+                                    valueRange =
+                                        0f..30f
+                                )
+                            }
+                        }
+
+                        "Fonte" -> {
+                            Text(
+                                "Fontes FioLab",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                EmbroideryFontPreset
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            text =
+                                                option.displayName,
+                                            selected =
+                                                importedFontId ==
+                                                    null &&
+                                                    font ==
+                                                        option,
+                                            onClick = {
+                                                font =
+                                                    option
+                                                importedFontId =
+                                                    null
+                                            }
+                                        )
+                                    }
+                            }
+
+                            Spacer(
+                                Modifier.height(
+                                    8.dp
+                                )
+                            )
+
+                            Text(
+                                "Fontes importadas",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            if (
+                                importedFonts
+                                    .isEmpty()
+                            ) {
+                                Text(
+                                    "Nenhuma TTF/OTF importada. Use a aba Fontes na barra inferior para adicionar.",
+                                    color =
+                                        FioTextMuted,
+                                    fontSize =
+                                        10.sp
+                                )
+                            } else {
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(
+                                                rememberScrollState()
+                                            )
+                                            .padding(
+                                                vertical =
+                                                    6.dp
+                                            ),
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(
+                                            7.dp
+                                        )
+                                ) {
+                                    importedFonts
+                                        .forEach {
+                                                imported ->
+                                            ChoiceButton(
+                                                text =
+                                                    imported.displayName,
+                                                selected =
+                                                    importedFontId ==
+                                                        imported.id,
+                                                onClick = {
+                                                    importedFontId =
+                                                        imported.id
+                                                }
+                                            )
+                                        }
+                                }
+                            }
+
+                            Text(
+                                "A fonte selecionada é convertida em pontos reais de bordado.",
+                                color =
+                                    FioTextMuted,
+                                fontSize =
+                                    10.sp
+                            )
+                        }
+
+                        "Tamanho" -> {
+                            Text(
+                                "Altura " +
+                                    mm(
+                                        heightMm
+                                    ) +
+                                    " mm",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Slider(
+                                value =
+                                    heightMm,
+                                onValueChange = {
+                                    heightMm =
+                                        it
+                                },
+                                valueRange =
+                                    4f..40f
+                            )
+
+                            Text(
+                                "Espaçamento " +
+                                    mm(
+                                        spacingMm
+                                    ) +
+                                    " mm",
+                                color =
+                                    FioTextMuted,
+                                fontSize =
+                                    11.sp
+                            )
+
+                            Slider(
+                                value =
+                                    spacingMm,
+                                onValueChange = {
+                                    spacingMm =
+                                        it
+                                },
+                                valueRange =
+                                    0f..8f
+                            )
+
+                            Text(
+                                "Tipo de ponto",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                TextStitchStyle
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            modifier =
+                                                Modifier.weight(
+                                                    1f
+                                                ),
+                                            text =
+                                                option.displayName,
+                                            selected =
+                                                stitchStyle ==
+                                                    option,
+                                            onClick = {
+                                                stitchStyle =
+                                                    option
+                                            }
+                                        )
+                                    }
+                            }
+
+                            if (
+                                stitchStyle ==
+                                    TextStitchStyle.RUNNING
+                            ) {
+                                Text(
+                                    "Comprimento do ponto " +
+                                        mm(
+                                            stitchLengthMm
+                                        ) +
+                                        " mm",
+                                    color =
+                                        FioTextMuted,
+                                    fontSize =
+                                        11.sp
+                                )
+
+                                Slider(
+                                    value =
+                                        stitchLengthMm,
+                                    onValueChange = {
+                                        stitchLengthMm =
+                                            it
+                                    },
+                                    valueRange =
+                                        1f..5f
+                                )
+                            } else {
+                                Text(
+                                    "Densidade " +
+                                        mm(
+                                            satinDensityMm
+                                        ) +
+                                        " mm",
+                                    color =
+                                        FioTextMuted,
+                                    fontSize =
+                                        11.sp
+                                )
+
+                                Slider(
+                                    value =
+                                        satinDensityMm,
+                                    onValueChange = {
+                                        satinDensityMm =
+                                            it
+                                    },
+                                    valueRange =
+                                        .3f..1.2f
+                                )
+                            }
+                        }
+
+                        "Cor" -> {
+                            Text(
+                                "Cor da linha",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                8.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        9.dp
+                                    )
+                            ) {
+                                namePalette
+                                    .forEach {
+                                            rawColor ->
+                                        val selected =
+                                            rawColor ==
+                                                color
+
+                                        Box(
+                                            Modifier
+                                                .size(
+                                                    38.dp
+                                                )
+                                                .background(
+                                                    Color(
+                                                        0xFF000000 or
+                                                            rawColor
+                                                                .toLong()
+                                                    ),
+                                                    CircleShape
+                                                )
+                                                .border(
                                                     if (
                                                         selected
                                                     ) {
-                                                        FioSurfaceAlt
+                                                        3.dp
                                                     } else {
-                                                        FioSurface
-                                                    }
-                                            ),
-                                    shape =
-                                        RoundedCornerShape(
-                                            14.dp
+                                                        1.dp
+                                                    },
+                                                    if (
+                                                        selected
+                                                    ) {
+                                                        FioGold
+                                                    } else {
+                                                        Color(
+                                                            0xFF52616B
+                                                        )
+                                                    },
+                                                    CircleShape
+                                                )
+                                                .clickable {
+                                                    color =
+                                                        rawColor
+                                                }
                                         )
-                                ) {
-                                    Text(
-                                        option.displayName +
-                                            " • " +
-                                            option.extension
-                                                .uppercase(
-                                                    Locale.ROOT
-                                                ),
-                                        modifier =
-                                            Modifier.padding(
-                                                horizontal =
-                                                    14.dp,
-                                                vertical =
-                                                    10.dp
-                                            ),
-                                        color =
-                                            if (
-                                                selected
-                                            ) {
-                                                FioGold
-                                            } else {
-                                                FioText
-                                            },
-                                        fontWeight =
-                                            if (
-                                                selected
-                                            ) {
-                                                FontWeight.Bold
-                                            } else {
-                                                FontWeight.Normal
+                                    }
+                            }
+
+                            Text(
+                                "A prévia e a simulação usam a mesma cor selecionada.",
+                                color =
+                                    FioTextMuted,
+                                fontSize =
+                                    10.sp
+                            )
+                        }
+
+                        else -> {
+                            Text(
+                                "Bastidor",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                HoopProfile
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            text =
+                                                option.displayName,
+                                            selected =
+                                                hoopProfile ==
+                                                    option,
+                                            onClick = {
+                                                hoopProfile =
+                                                    option
                                             }
+                                        )
+                                    }
+                            }
+
+                            Text(
+                                "Tecido",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                FabricProfile
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            text =
+                                                option.displayName,
+                                            selected =
+                                                fabricProfile ==
+                                                    option,
+                                            onClick = {
+                                                fabricProfile =
+                                                    option
+                                                satinDensityMm =
+                                                    option
+                                                        .satinDensityMm
+                                                satinPullCompensationMm =
+                                                    option
+                                                        .pullCompensationMm
+                                                satinUnderlayMode =
+                                                    option
+                                                        .underlayMode
+                                                satinShortStitches =
+                                                    option
+                                                        .shortStitches
+                                            }
+                                        )
+                                    }
+                            }
+
+                            Text(
+                                "Formato",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                listOf(
+                                    "DST",
+                                    "PES",
+                                    "JEF"
+                                ).forEach {
+                                        format ->
+                                    ChoiceButton(
+                                        modifier =
+                                            Modifier.weight(
+                                                1f
+                                            ),
+                                        text =
+                                            format,
+                                        selected =
+                                            outputFormat ==
+                                                format,
+                                        onClick = {
+                                            outputFormat =
+                                                format
+                                        }
                                     )
                                 }
                             }
-                    }
 
-                    Text(
-                        "A TTF/OTF é convertida pelo contorno vetorial da própria fonte e passa pelo motor de pontadas do FioLab.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            10.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            10.dp
-                        )
-                    )
-                }
-
-                Text(
-                    "Tipo de ponto",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            vertical = 8.dp
-                        ),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp
-                        )
-                ) {
-                    TextStitchStyle
-                        .entries
-                        .forEach {
-                                option ->
-                            val selected =
+                            if (
                                 stitchStyle ==
-                                    option
-
-                            OutlinedButton(
-                                onClick = {
-                                    stitchStyle =
-                                        option
-                                },
-                                modifier =
-                                    Modifier.weight(
-                                        1f
-                                    ),
-                                colors =
-                                    ButtonDefaults
-                                        .outlinedButtonColors(
-                                            contentColor =
-                                                if (
-                                                    selected
-                                                ) {
-                                                    FioGold
-                                                } else {
-                                                    FioText
-                                                }
-                                        )
+                                    TextStitchStyle.SATIN
                             ) {
                                 Text(
-                                    if (
-                                        selected
-                                    ) {
-                                        "● " +
-                                            option
-                                                .displayName
-                                    } else {
-                                        option
-                                            .displayName
-                                    }
+                                    "Compensação de repuxo " +
+                                        mm(
+                                            satinPullCompensationMm
+                                        ) +
+                                        " mm",
+                                    color =
+                                        FioTextMuted,
+                                    fontSize =
+                                        11.sp
                                 )
+
+                                Slider(
+                                    value =
+                                        satinPullCompensationMm,
+                                    onValueChange = {
+                                        satinPullCompensationMm =
+                                            it
+                                    },
+                                    valueRange =
+                                        0f..1f
+                                )
+
+                                Text(
+                                    "Underlay",
+                                    color =
+                                        FioText,
+                                    fontWeight =
+                                        FontWeight.SemiBold
+                                )
+
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(
+                                                rememberScrollState()
+                                            )
+                                            .padding(
+                                                vertical =
+                                                    6.dp
+                                            ),
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(
+                                            7.dp
+                                        )
+                                ) {
+                                    SatinUnderlayMode
+                                        .entries
+                                        .forEach {
+                                                option ->
+                                            ChoiceButton(
+                                                text =
+                                                    option.displayName,
+                                                selected =
+                                                    satinUnderlayMode ==
+                                                        option,
+                                                onClick = {
+                                                    satinUnderlayMode =
+                                                        option
+                                                }
+                                            )
+                                        }
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        satinShortStitches =
+                                            !satinShortStitches
+                                    },
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        if (
+                                            satinShortStitches
+                                        ) {
+                                            "✓ Short stitches"
+                                        } else {
+                                            "Short stitches desativados"
+                                        }
+                                    )
+                                }
                             }
                         }
+                    }
                 }
-
-                Text(
-                    font.description,
-                    color =
-                        FioTextMuted,
-                    fontSize =
-                        10.sp
-                )
 
                 Spacer(
                     Modifier.height(
@@ -1335,357 +1187,80 @@ fun CreateNameScreen(
                     )
                 )
 
-                Text(
-                    "Altura " +
-                        mm(heightMm) +
-                        " mm",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Slider(
-                    value = heightMm,
-                    onValueChange = {
-                        heightMm = it
-                    },
-                    valueRange =
-                        4f..30f
-                )
-
-                Text(
-                    "Espaçamento " +
-                        mm(spacingMm) +
-                        " mm",
-                    color = FioText,
-                    fontSize = 12.sp
-                )
-
-                Slider(
-                    value = spacingMm,
-                    onValueChange = {
-                        spacingMm = it
-                    },
-                    valueRange =
-                        0f..6f
-                )
-
-                if (
-                    stitchStyle ==
-                        TextStitchStyle.RUNNING
-                ) {
-                    Text(
-                        "Comprimento do ponto " +
-                            mm(
-                                stitchLengthMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontSize = 12.sp
-                    )
-
-                    Slider(
-                        value =
-                            stitchLengthMm,
-                        onValueChange = {
-                            stitchLengthMm = it
-                        },
-                        valueRange =
-                            1f..4f
-                    )
-                } else {
-                    Text(
-                        "Largura Satin " +
-                            mm(
-                                satinWidthMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-
-                    Slider(
-                        value =
-                            satinWidthMm,
-                        onValueChange = {
-                            satinWidthMm = it
-                        },
-                        valueRange =
-                            1.2f..5f
-                    )
-
-                    Text(
-                        "Densidade " +
-                            mm(
-                                satinDensityMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontSize = 12.sp
-                    )
-
-                    Slider(
-                        value =
-                            satinDensityMm,
-                        onValueChange = {
-                            satinDensityMm = it
-                        },
-                        valueRange =
-                            0.35f..0.9f
-                    )
-
-                    Text(
-                        "Compensação de repuxo " +
-                            mm(
-                                satinPullCompensationMm
-                            ) +
-                            " mm",
-                        color = FioText,
-                        fontSize = 12.sp
-                    )
-
-                    Slider(
-                        value =
-                            satinPullCompensationMm,
-                        onValueChange = {
-                            satinPullCompensationMm =
-                                it
-                        },
-                        valueRange =
-                            0f..0.8f
-                    )
-
-                    Text(
-                        "Underlay",
-                        color = FioText,
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(
-                                rememberScrollState()
-                            )
-                            .padding(
-                                vertical = 6.dp
-                            ),
-                        horizontalArrangement =
-                            Arrangement.spacedBy(
-                                8.dp
-                            )
-                    ) {
-                        SatinUnderlayMode
-                            .entries
-                            .forEach {
-                                    option ->
-                                val selected =
-                                    satinUnderlayMode ==
-                                        option
-
-                                OutlinedButton(
-                                    onClick = {
-                                        satinUnderlayMode =
-                                            option
-                                    },
-                                    colors =
-                                        ButtonDefaults
-                                            .outlinedButtonColors(
-                                                contentColor =
-                                                    if (
-                                                        selected
-                                                    ) {
-                                                        FioGold
-                                                    } else {
-                                                        FioText
-                                                    }
-                                            )
-                                ) {
-                                    Text(
-                                        if (
-                                            selected
-                                        ) {
-                                            "● " +
-                                                option
-                                                    .displayName
-                                        } else {
-                                            option
-                                                .displayName
-                                        }
-                                    )
-                                }
-                            }
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            satinShortStitches =
-                                !satinShortStitches
-                        },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                    ) {
-                        Text(
-                            if (
-                                satinShortStitches
-                            ) {
-                                "✓ Short stitches nos cantos"
-                            } else {
-                                "Short stitches desativados"
-                            }
-                        )
-                    }
-
-                    Text(
-                        "A compensação abre levemente a coluna para reduzir o efeito de repuxo. Short stitches encurtam o lado interno de cantos fechados.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            10.sp
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(8.dp)
-                )
-
-                Text(
-                    "Cor da linha",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(
-                            rememberScrollState()
-                        )
-                        .padding(
-                            vertical = 8.dp
-                        ),
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            9.dp
-                        )
-                ) {
-                    namePalette.forEach {
-                            rawColor ->
-                        val selected =
-                            rawColor == color
-
-                        Box(
-                            Modifier
-                                .size(38.dp)
-                                .background(
-                                    Color(
-                                        0xFF000000 or
-                                            rawColor
-                                                .toLong()
-                                    ),
-                                    CircleShape
-                                )
-                                .border(
-                                    if (
-                                        selected
-                                    ) {
-                                        3.dp
-                                    } else {
-                                        1.dp
-                                    },
-                                    if (
-                                        selected
-                                    ) {
-                                        FioGold
-                                    } else {
-                                        Color(
-                                            0xFF52616B
-                                        )
-                                    },
-                                    CircleShape
-                                )
-                                .clickable {
-                                    color =
-                                        rawColor
-                                }
-                        )
-                    }
-                }
-
-                Text(
-                    "Formato de saída",
-                    color = FioText,
-                    fontWeight =
-                        FontWeight.SemiBold
-                )
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            vertical = 8.dp
-                        ),
+                    modifier =
+                        Modifier.fillMaxWidth(),
                     horizontalArrangement =
                         Arrangement.spacedBy(
                             8.dp
                         )
                 ) {
-                    listOf(
-                        "DST",
-                        "PES",
-                        "JEF"
-                    ).forEach {
-                            format ->
-                        val selected =
-                            outputFormat ==
-                                format
-
-                        OutlinedButton(
-                            onClick = {
-                                outputFormat =
-                                    format
-                            },
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                ),
-                            colors =
-                                ButtonDefaults
-                                    .outlinedButtonColors(
-                                        contentColor =
-                                            if (
-                                                selected
-                                            ) {
-                                                FioGold
-                                            } else {
-                                                FioText
-                                            }
-                                    )
-                        ) {
-                            Text(
-                                if (
-                                    selected
-                                ) {
-                                    "● $format"
-                                } else {
-                                    format
-                                }
+                    OutlinedButton(
+                        onClick = {
+                            preview?.let(
+                                onSimulate
                             )
-                        }
+                        },
+                        enabled =
+                            preview !=
+                                null &&
+                                fitsHoop,
+                        modifier =
+                            Modifier.weight(
+                                1f
+                            )
+                    ) {
+                        Text(
+                            "▶ Simular"
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            preview?.let(
+                                onCreate
+                            )
+                        },
+                        enabled =
+                            preview !=
+                                null &&
+                                fitsHoop,
+                        modifier =
+                            Modifier.weight(
+                                1.3f
+                            ),
+                        colors =
+                            ButtonDefaults
+                                .buttonColors(
+                                    containerColor =
+                                        FioGold,
+                                    contentColor =
+                                        FioBackground
+                                )
+                    ) {
+                        Text(
+                            "Criar matriz",
+                            fontWeight =
+                                FontWeight.Bold
+                        )
                     }
                 }
 
-                if (preview != null) {
+                Spacer(
+                    Modifier.height(
+                        4.dp
+                    )
+                )
+
+                if (
+                    preview !=
+                        null
+                ) {
                     Text(
-                        "Prévia: " +
-                            mm(
-                                preview.bounds
-                                    .widthMm
-                            ) +
+                        mm(
+                            preview.bounds
+                                .widthMm
+                        ) +
                             " × " +
                             mm(
                                 preview.bounds
@@ -1693,136 +1268,71 @@ fun CreateNameScreen(
                             ) +
                             " mm • " +
                             preview.stitchCount +
-                            " pontos",
-                        color = FioTextMuted,
-                        fontSize = 11.sp
-                    )
-
-                    Spacer(
-                        Modifier.height(
-                            4.dp
-                        )
-                    )
-
-                    if (fitsHoop) {
-                        Text(
-                            "✓ Cabe na área segura do bastidor " +
-                                hoopProfile
-                                    .displayName,
-                            color =
-                                Color(
-                                    0xFF7ED6A5
-                                ),
-                            fontSize =
-                                11.sp
-                        )
-                    } else {
-                        Text(
-                            "⚠ Ultrapassa a área segura" +
-                                (
-                                    hoopFit?.let {
-                                        fit ->
-                                        " • excesso: " +
-                                            mm(
-                                                fit.widthOverflowMm
-                                            ) +
-                                            " mm largura / " +
-                                            mm(
-                                                fit.heightOverflowMm
-                                            ) +
-                                            " mm altura"
-                                    } ?: ""
-                                ),
-                            color =
+                            " pontos" +
+                            if (
+                                fitsHoop
+                            ) {
+                                " • ✓ cabe no bastidor"
+                            } else {
+                                " • ⚠ fora da área segura"
+                            },
+                        modifier =
+                            Modifier.fillMaxWidth(),
+                        color =
+                            if (
+                                fitsHoop
+                            ) {
+                                FioTextMuted
+                            } else {
                                 Color(
                                     0xFFFF9F9A
-                                ),
-                            fontSize =
-                                11.sp
-                        )
-                    }
-                } else {
-                    Text(
-                        result.exceptionOrNull()
-                            ?.message
-                            ?: "Não foi possível gerar a prévia.",
-                        color = Color(
-                            0xFFFF9F9A
-                        ),
-                        fontSize = 11.sp
+                                )
+                            },
+                        fontSize =
+                            10.sp
                     )
                 }
-
-                Spacer(
-                    Modifier.height(12.dp)
-                )
-
-                Button(
-                    onClick = {
-                        preview?.let(
-                            onCreate
-                        )
-                    },
-                    enabled =
-                        preview != null &&
-                            fitsHoop,
-                    modifier =
-                        Modifier.fillMaxWidth(),
-                    colors =
-                        ButtonDefaults
-                            .buttonColors(
-                                containerColor =
-                                    FioGold,
-                                contentColor =
-                                    FioBackground
-                            )
-                ) {
-                    Text(
-                        "Criar matriz",
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(8.dp)
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        preview?.let(
-                            onSimulate
-                        )
-                    },
-                    enabled =
-                        preview != null &&
-                            fitsHoop,
-                    modifier =
-                        Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "▶ Simular agora"
-                    )
-                }
-
-                Spacer(
-                    Modifier.height(10.dp)
-                )
-
-                Text(
-                    if (
-                        stitchStyle ==
-                            TextStitchStyle.SATIN
-                    ) {
-                        "Satin refinado usa direção suavizada nos cantos, compensação de repuxo, short stitches e underlay configurável. A simulação mostra a mesma sequência exportada."
-                    } else {
-                        "Ponto corrido segue o centro do traço da letra. Não é uma fonte TTF comum convertida automaticamente."
-                    },
-                    color = FioTextMuted,
-                    fontSize = 10.sp
-                )
             }
         }
+    }
+}
+
+@Composable
+private fun ChoiceButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick =
+            onClick,
+        modifier =
+            modifier,
+        colors =
+            ButtonDefaults
+                .outlinedButtonColors(
+                    contentColor =
+                        if (
+                            selected
+                        ) {
+                            FioGold
+                        } else {
+                            FioText
+                        }
+                )
+    ) {
+        Text(
+            if (
+                selected
+            ) {
+                "● $text"
+            } else {
+                text
+            },
+            fontSize =
+                11.sp
+        )
     }
 }
 
