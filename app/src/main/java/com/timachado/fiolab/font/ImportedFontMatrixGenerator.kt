@@ -766,6 +766,11 @@ object ImportedFontMatrixGenerator {
         val y: Int
     )
 
+    private data class FloatSkeletonPoint(
+        val x: Float,
+        val y: Float
+    )
+
     private data class SatinSampleRow(
         val yUnits: Int,
         val leftUnits: Int,
@@ -1069,20 +1074,14 @@ object ImportedFontMatrixGenerator {
 
         lines.forEach {
                 rawLine ->
-            val line =
-                smoothSkeletonLine(
+            val samples =
+                smoothAndResampleSkeleton(
                     source =
                         rawLine,
                     radius =
                         4,
                     passes =
-                        3
-                )
-
-            val samples =
-                sampleSkeletonLine(
-                    line =
-                        line,
+                        3,
                     stepPixels =
                         stepPixels
                 )
@@ -1130,15 +1129,13 @@ object ImportedFontMatrixGenerator {
                 output +=
                     EmbroideryPoint(
                         skeletonXToUnits(
-                            first.x
-                                .toFloat(),
+                            first.x,
                             minX,
                             padding,
                             unitsPerPixel
                         ),
                         skeletonYToUnits(
-                            first.y
-                                .toFloat(),
+                            first.y,
                             maxY,
                             padding,
                             unitsPerPixel
@@ -1154,9 +1151,15 @@ object ImportedFontMatrixGenerator {
                     .forEach {
                             sample ->
                         val distance =
-                            pointDistance(
-                                previous,
-                                sample
+                            hypot(
+                                (
+                                    sample.x -
+                                        previous.x
+                                    ).toDouble(),
+                                (
+                                    sample.y -
+                                        previous.y
+                                    ).toDouble()
                             ) *
                                 unitsPerPixel
 
@@ -1167,15 +1170,13 @@ object ImportedFontMatrixGenerator {
                             output +=
                                 EmbroideryPoint(
                                     skeletonXToUnits(
-                                        sample.x
-                                            .toFloat(),
+                                        sample.x,
                                         minX,
                                         padding,
                                         unitsPerPixel
                                     ),
                                     skeletonYToUnits(
-                                        sample.y
-                                            .toFloat(),
+                                        sample.y,
                                         maxY,
                                         padding,
                                         unitsPerPixel
@@ -3282,6 +3283,323 @@ object ImportedFontMatrixGenerator {
         }
 
         return length.toFloat()
+    }
+
+    private fun smoothAndResampleSkeleton(
+        source: List<SkeletonPoint>,
+        radius: Int,
+        passes: Int,
+        stepPixels: Float
+    ): List<FloatSkeletonPoint> {
+        if (
+            source.size <
+                2
+        ) {
+            return source.map {
+                FloatSkeletonPoint(
+                    it.x.toFloat(),
+                    it.y.toFloat()
+                )
+            }
+        }
+
+        var current =
+            source.map {
+                FloatSkeletonPoint(
+                    it.x.toFloat(),
+                    it.y.toFloat()
+                )
+            }
+
+        repeat(
+            passes.coerceAtLeast(
+                0
+            )
+        ) {
+            val previous =
+                current
+
+            current =
+                previous.mapIndexed {
+                        index,
+                        point ->
+                    if (
+                        index ==
+                            0 ||
+                        index ==
+                            previous.lastIndex
+                    ) {
+                        point
+                    } else {
+                        val start =
+                            (
+                                index -
+                                    radius
+                                ).coerceAtLeast(
+                                0
+                            )
+
+                        val end =
+                            (
+                                index +
+                                    radius
+                                ).coerceAtMost(
+                                previous.lastIndex
+                            )
+
+                        var sumX =
+                            0f
+
+                        var sumY =
+                            0f
+
+                        var count =
+                            0
+
+                        for (
+                            neighborIndex in
+                                start..end
+                        ) {
+                            sumX +=
+                                previous[
+                                    neighborIndex
+                                ].x
+
+                            sumY +=
+                                previous[
+                                    neighborIndex
+                                ].y
+
+                            count++
+                        }
+
+                        FloatSkeletonPoint(
+                            x =
+                                sumX /
+                                    count,
+                            y =
+                                sumY /
+                                    count
+                        )
+                    }
+                }
+        }
+
+        current =
+            current.fold(
+                mutableListOf<
+                    FloatSkeletonPoint
+                >()
+            ) {
+                acc,
+                point ->
+                val last =
+                    acc.lastOrNull()
+
+                if (
+                    last ==
+                        null ||
+                    hypot(
+                        (
+                            point.x -
+                                last.x
+                            ).toDouble(),
+                        (
+                            point.y -
+                                last.y
+                            ).toDouble()
+                    ) >
+                        0.15
+                ) {
+                    acc +=
+                        point
+                }
+
+                acc
+            }
+
+        if (
+            current.size <
+                2
+        ) {
+            return current
+        }
+
+        val cumulative =
+            FloatArray(
+                current.size
+            )
+
+        for (
+            index in
+                1 until
+                    current.size
+        ) {
+            cumulative[index] =
+                cumulative[
+                    index -
+                        1
+                ] +
+                    hypot(
+                        (
+                            current[index].x -
+                                current[
+                                    index -
+                                        1
+                                ].x
+                            ).toDouble(),
+                        (
+                            current[index].y -
+                                current[
+                                    index -
+                                        1
+                                ].y
+                            ).toDouble()
+                    ).toFloat()
+        }
+
+        val total =
+            cumulative.last()
+
+        val safeStep =
+            stepPixels
+                .coerceAtLeast(
+                    1f
+                )
+
+        if (
+            total <=
+                safeStep
+        ) {
+            return listOf(
+                current.first(),
+                current.last()
+            )
+        }
+
+        val result =
+            mutableListOf<
+                FloatSkeletonPoint
+            >()
+
+        var target =
+            0f
+
+        var segment =
+            1
+
+        while (
+            target <=
+                total
+        ) {
+            while (
+                segment <
+                    cumulative.size -
+                        1 &&
+                cumulative[segment] <
+                    target
+            ) {
+                segment++
+            }
+
+            val beforeIndex =
+                (
+                    segment -
+                        1
+                    ).coerceAtLeast(
+                    0
+                )
+
+            val afterIndex =
+                segment.coerceAtMost(
+                    current.lastIndex
+                )
+
+            val beforeDistance =
+                cumulative[
+                    beforeIndex
+                ]
+
+            val afterDistance =
+                cumulative[
+                    afterIndex
+                ]
+
+            val span =
+                (
+                    afterDistance -
+                        beforeDistance
+                    ).coerceAtLeast(
+                    0.0001f
+                )
+
+            val ratio =
+                (
+                    (
+                        target -
+                            beforeDistance
+                        ) /
+                        span
+                    ).coerceIn(
+                    0f,
+                    1f
+                )
+
+            val before =
+                current[
+                    beforeIndex
+                ]
+
+            val after =
+                current[
+                    afterIndex
+                ]
+
+            result +=
+                FloatSkeletonPoint(
+                    x =
+                        before.x +
+                            (
+                                after.x -
+                                    before.x
+                                ) *
+                                ratio,
+                    y =
+                        before.y +
+                            (
+                                after.y -
+                                    before.y
+                                ) *
+                                ratio
+                )
+
+            target +=
+                safeStep
+        }
+
+        val last =
+            current.last()
+
+        if (
+            result.isEmpty() ||
+            hypot(
+                (
+                    last.x -
+                        result.last().x
+                    ).toDouble(),
+                (
+                    last.y -
+                        result.last().y
+                    ).toDouble()
+            ) >
+                safeStep *
+                    0.35f
+        ) {
+            result +=
+                last
+        }
+
+        return result
     }
 
     private fun smoothSkeletonLine(
