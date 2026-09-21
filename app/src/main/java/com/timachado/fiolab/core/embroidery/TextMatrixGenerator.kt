@@ -489,6 +489,23 @@ object TextMatrixGenerator {
                 "O texto não gerou pontadas."
             }
 
+            require(
+                points.size <=
+                    if (
+                        options.specialStitchMode !=
+                            null
+                    ) {
+                        EmbroideryStressPolicy
+                            .MAX_GENERATED_COMMANDS /
+                            16
+                    } else {
+                        EmbroideryStressPolicy
+                            .MAX_GENERATED_COMMANDS
+                    }
+            ) {
+                "O texto ficou complexo demais para gerar com segurança no celular."
+            }
+
             val transformedPoints =
                 SpecialStitchProcessor
                     .apply(
@@ -612,6 +629,11 @@ object TextMatrixGenerator {
                         options.hoopProfile,
                     fabricProfile =
                         options.fabricProfile
+                )
+
+            EmbroideryStressPolicy
+                .requireGeneratedSafe(
+                    design
                 )
 
             if (

@@ -159,6 +159,11 @@ object TextLayoutGenerator {
                         )
                         .design
 
+                EmbroideryStressPolicy
+                    .requireGeneratedSafe(
+                        finished
+                    )
+
                 if (
                     options.textOptions
                         .enforceHoop &&
@@ -675,6 +680,14 @@ object TextLayoutGenerator {
 
                 translated.forEach {
                         point ->
+                    require(
+                        merged.size <
+                            EmbroideryStressPolicy
+                                .MAX_GENERATED_COMMANDS
+                    ) {
+                        "O texto ficou complexo demais para montar com segurança no celular."
+                    }
+
                     merged +=
                         point
 
@@ -899,6 +912,11 @@ object TextLayoutGenerator {
                             .machineFinishingSettings
                     )
                     .design
+
+            EmbroideryStressPolicy
+                .requireGeneratedSafe(
+                    finished
+                )
 
             if (
                 options.textOptions

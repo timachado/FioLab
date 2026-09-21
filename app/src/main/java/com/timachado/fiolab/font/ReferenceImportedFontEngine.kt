@@ -7,6 +7,7 @@ import android.graphics.RectF
 import com.timachado.fiolab.core.embroidery.EmbroideryBounds
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
+import com.timachado.fiolab.core.embroidery.EmbroideryStressPolicy
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
@@ -51,6 +52,18 @@ internal object ReferenceImportedFontEngine {
 
     private const val LOCK_UNITS =
         6f
+
+    private const val MAX_CONTOUR_SAMPLES =
+        50_000
+
+    private const val MAX_POLYGON_SAMPLES_PER_GLYPH =
+        200_000
+
+    private const val MAX_SCAN_LINES =
+        20_000
+
+    private const val MAX_FONT_GEOMETRY_UNITS =
+        100_000f
 
     private data class FPoint(
         val x: Float,
@@ -241,6 +254,19 @@ internal object ReferenceImportedFontEngine {
                     0.5f
             ) {
                 "A fonte não gerou uma área bordável."
+            }
+
+            require(
+                unionBounds.left.isFinite() &&
+                    unionBounds.top.isFinite() &&
+                    unionBounds.right.isFinite() &&
+                    unionBounds.bottom.isFinite() &&
+                    unionBounds.width() <=
+                        MAX_FONT_GEOMETRY_UNITS &&
+                    unionBounds.height() <=
+                        MAX_FONT_GEOMETRY_UNITS
+            ) {
+                "A geometria da fonte é extrema demais para processar com segurança."
             }
 
             val centerX =
@@ -436,6 +462,11 @@ internal object ReferenceImportedFontEngine {
                         options.hoopProfile,
                     fabricProfile =
                         options.fabricProfile
+                )
+
+            EmbroideryStressPolicy
+                .requireGeneratedSafe(
+                    design
                 )
 
             if (
@@ -722,6 +753,9 @@ internal object ReferenceImportedFontEngine {
                 2
             )
 
+        var totalSamples =
+            0
+
         do {
             val length =
                 measure.length
@@ -733,6 +767,12 @@ internal object ReferenceImportedFontEngine {
                 continue
             }
 
+            require(
+                length.isFinite()
+            ) {
+                "A fonte contém um contorno inválido."
+            }
+
             val sampleCount =
                 max(
                     8,
@@ -741,6 +781,23 @@ internal object ReferenceImportedFontEngine {
                             2f
                     ).toInt()
                 )
+
+            require(
+                sampleCount <=
+                    MAX_CONTOUR_SAMPLES
+            ) {
+                "Um glifo da fonte possui contorno complexo demais."
+            }
+
+            totalSamples +=
+                sampleCount
+
+            require(
+                totalSamples <=
+                    MAX_POLYGON_SAMPLES_PER_GLYPH
+            ) {
+                "Um glifo da fonte possui detalhes demais para digitalizar com segurança."
+            }
 
             val points =
                 mutableListOf<
@@ -922,6 +979,22 @@ internal object ReferenceImportedFontEngine {
             mutableListOf<
                 List<SpanSegment>
             >()
+
+        val estimatedLines =
+            ceil(
+                (
+                    maximum -
+                        minimum
+                    ).toDouble() /
+                    safePitch
+            ).toLong()
+
+        require(
+            estimatedLines in
+                0..MAX_SCAN_LINES.toLong()
+        ) {
+            "A geometria da fonte exige varredura complexa demais."
+        }
 
         var scan =
             minimum +
@@ -1674,6 +1747,21 @@ internal object ReferenceImportedFontEngine {
             point: FPoint,
             command: StitchCommand
         ) {
+            require(
+                point.x.isFinite() &&
+                    point.y.isFinite()
+            ) {
+                "A fonte gerou coordenadas inválidas."
+            }
+
+            require(
+                output.size <
+                    EmbroideryStressPolicy
+                        .MAX_GENERATED_COMMANDS
+            ) {
+                "A fonte gerou pontos demais para processar com segurança no celular."
+            }
+
             output +=
                 EmbroideryPoint(
                     xUnits =
@@ -1703,6 +1791,13 @@ internal object ReferenceImportedFontEngine {
 
         polygons.forEach {
                 polygon ->
+            require(
+                result.size <=
+                    EmbroideryStressPolicy
+                        .MAX_GUIDE_COMMANDS
+            ) {
+                "O contorno da fonte ficou complexo demais para processar com segurança no celular."
+            }
             val first =
                 polygon.points
                     .firstOrNull()

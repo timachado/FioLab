@@ -73,6 +73,15 @@ object SpecialStitchProcessor {
                         )
                 }
 
+            require(
+                result.size +
+                    transformed.size <=
+                    EmbroideryStressPolicy
+                        .MAX_GENERATED_COMMANDS
+            ) {
+                "O ponto especial gerou comandos demais para processar com segurança no celular."
+            }
+
             result +=
                 transformed
 
@@ -112,6 +121,14 @@ object SpecialStitchProcessor {
                 StitchCommand.SEQUIN,
                 StitchCommand.END -> {
                     flushRun()
+
+                    require(
+                        result.size <
+                            EmbroideryStressPolicy
+                                .MAX_GENERATED_COMMANDS
+                    ) {
+                        "O ponto especial gerou comandos demais para processar com segurança no celular."
+                    }
 
                     result +=
                         point

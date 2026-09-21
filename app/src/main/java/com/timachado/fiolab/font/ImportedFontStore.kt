@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.timachado.fiolab.core.storage.AtomicFileWriter
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
@@ -182,10 +183,23 @@ object ImportedFontStore {
                     )
 
                 if (!temp.renameTo(destination)) {
-                    temp.copyTo(
-                        target = destination,
-                        overwrite = true
-                    )
+                    AtomicFileWriter.write(
+                        target =
+                            destination
+                    ) {
+                            output ->
+                        temp.inputStream()
+                            .buffered()
+                            .use {
+                                input ->
+                                input.copyTo(
+                                    output,
+                                    bufferSize =
+                                        32 * 1024
+                                )
+                            }
+                    }
+
                     temp.delete()
                 }
 
@@ -292,8 +306,20 @@ object ImportedFontStore {
             context.filesDir,
             DIRECTORY
         ).apply {
-            if (!exists()) {
-                mkdirs()
+            if (
+                !exists()
+            ) {
+                check(
+                    mkdirs()
+                ) {
+                    "Não foi possível preparar a biblioteca de fontes."
+                }
+            }
+
+            check(
+                isDirectory
+            ) {
+                "A biblioteca de fontes está indisponível."
             }
         }
 
