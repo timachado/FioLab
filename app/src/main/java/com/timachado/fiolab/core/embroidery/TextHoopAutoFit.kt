@@ -140,6 +140,10 @@ object TextHoopAutoFit {
             var highIsLimit =
                 false
 
+            var highFillRatio:
+                Float? =
+                null
+
             repeat(
                 MAX_SEARCH_PASSES
             ) {
@@ -179,11 +183,44 @@ object TextHoopAutoFit {
                     if (
                         highIsLimit
                     ) {
-                        (
-                            lowHeight +
-                                highHeight
-                            ) /
-                            2f
+                        val upperFill =
+                            highFillRatio
+
+                        if (
+                            upperFill !=
+                                null &&
+                            upperFill >
+                                lowFill +
+                                    0.0001f
+                        ) {
+                            (
+                                lowHeight +
+                                    (
+                                        1f -
+                                            lowFill
+                                        ) *
+                                    (
+                                        highHeight -
+                                            lowHeight
+                                        ) /
+                                    (
+                                        upperFill -
+                                            lowFill
+                                        )
+                                )
+                                .coerceIn(
+                                    lowHeight +
+                                        0.05f,
+                                    highHeight -
+                                        0.05f
+                                )
+                        } else {
+                            (
+                                lowHeight +
+                                    highHeight
+                                ) /
+                                2f
+                        }
                     } else {
                         estimated
                             .coerceAtLeast(
@@ -218,6 +255,13 @@ object TextHoopAutoFit {
                 ) {
                     highHeight =
                         candidateHeight
+
+                    highFillRatio =
+                        candidate?.let {
+                            targetFillRatio(
+                                it
+                            )
+                        }
 
                     highIsLimit =
                         true
