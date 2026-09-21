@@ -72,25 +72,68 @@ class MatrixConverterTest {
     }
 
     @Test
-    fun conversionPreservesVisualOrientationForCartesianFioLabDesigns() {
-        assertVisualOrientationPreserved(
+    fun cartesianDesignKeepsGeometryInDst() {
+        assertVisualGeometryPreserved(
             asymmetricDesign(
                 sourceYAxisDown = false
-            )
+            ),
+            "DST"
         )
     }
 
     @Test
-    fun conversionPreservesVisualOrientationForImportedScreenCoordinates() {
-        assertVisualOrientationPreserved(
+    fun cartesianDesignKeepsGeometryInPes() {
+        assertVisualGeometryPreserved(
             asymmetricDesign(
-                sourceYAxisDown = true
-            )
+                sourceYAxisDown = false
+            ),
+            "PES"
         )
     }
 
-    private fun assertVisualOrientationPreserved(
-        source: EmbroideryDesign
+    @Test
+    fun cartesianDesignKeepsGeometryInJef() {
+        assertVisualGeometryPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = false
+            ),
+            "JEF"
+        )
+    }
+
+    @Test
+    fun importedScreenDesignKeepsGeometryInDst() {
+        assertVisualGeometryPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = true
+            ),
+            "DST"
+        )
+    }
+
+    @Test
+    fun importedScreenDesignKeepsGeometryInPes() {
+        assertVisualGeometryPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = true
+            ),
+            "PES"
+        )
+    }
+
+    @Test
+    fun importedScreenDesignKeepsGeometryInJef() {
+        assertVisualGeometryPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = true
+            ),
+            "JEF"
+        )
+    }
+
+    private fun assertVisualGeometryPreserved(
+        source: EmbroideryDesign,
+        format: String
     ) {
         val sourceStitches =
             source.points
@@ -99,74 +142,69 @@ class MatrixConverterTest {
                         StitchCommand.STITCH
                 }
 
-        for (
-            format in
-                MatrixConverter.supportedFormats
-        ) {
-            val converted =
-                MatrixConverter.convert(
-                    source,
-                    format,
-                    outputSuffix =
-                        "orientacao"
-                ).getOrThrow()
+        val converted =
+            MatrixConverter.convert(
+                source,
+                format,
+                outputSuffix =
+                    "orientacao"
+            ).getOrThrow()
 
-            val parsed =
-                when (format) {
-                    "DST" ->
-                        DstParser.parse(
-                            converted.fileName,
-                            converted.bytes
-                        )
+        val parsed =
+            when (format) {
+                "DST" ->
+                    DstParser.parse(
+                        converted.fileName,
+                        converted.bytes
+                    )
 
-                    "PES",
-                    "JEF" ->
-                        EmbroideryIoParser.parse(
-                            converted.fileName,
-                            converted.bytes
-                        )
+                "PES",
+                "JEF" ->
+                    EmbroideryIoParser.parse(
+                        converted.fileName,
+                        converted.bytes
+                    )
 
-                    else ->
-                        error(
-                            "Formato inesperado."
-                        )
+                else ->
+                    error(
+                        "Formato inesperado."
+                    )
+            }
+
+        assertTrue(
+            parsed is
+                EmbroideryLoadResult.Success
+        )
+
+        val target =
+            (parsed as
+                EmbroideryLoadResult.Success)
+                .design
+
+        val targetStitches =
+            target.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
                 }
 
-            assertTrue(
-                parsed is
-                    EmbroideryLoadResult.Success
+        assertEquals(
+            "Quantidade de pontos mudou em $format",
+            sourceStitches.size,
+            targetStitches.size
+        )
+
+        assertEquals(
+            "A geometria foi refletida/espelhada ao gerar $format",
+            normalizedVisualPoints(
+                design = source,
+                points = sourceStitches
+            ),
+            normalizedVisualPoints(
+                design = target,
+                points = targetStitches
             )
-
-            val target =
-                (parsed as
-                    EmbroideryLoadResult.Success)
-                    .design
-
-            val targetStitches =
-                target.points
-                    .filter {
-                        it.command ==
-                            StitchCommand.STITCH
-                    }
-
-            assertEquals(
-                "Quantidade de pontos mudou em $format",
-                sourceStitches.size,
-                targetStitches.size
-            )
-
-            assertEquals(
-                "A geometria foi refletida/espelhada ao gerar $format",
-                normalizedVisualPoints(
-                    design = source,
-                    points = sourceStitches
-                ),
-                normalizedVisualPoints(
-                    design = target,
-                    points = targetStitches
-                )
-            )
-        }
+        )
     }
 
     private fun normalizedVisualPoints(
