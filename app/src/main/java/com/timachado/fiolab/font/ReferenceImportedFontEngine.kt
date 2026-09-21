@@ -1846,6 +1846,73 @@ internal object ReferenceImportedFontEngine {
                         ratio
         )
 
+    internal fun debugColumnWidths(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): List<Float> =
+        sampleColumns(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .flatMap {
+                it.rows
+            }
+            .map {
+                distance(
+                    it.a,
+                    it.b
+                )
+            }
+
+    internal fun debugColumnCount(
+        polygons:
+            List<List<Pair<Float, Float>>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): Int =
+        sampleColumns(
+            polygons =
+                polygons.map {
+                    points ->
+                    Polygon(
+                        points.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                },
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .size
+
     private fun safeName(
         value: String
     ): String =
