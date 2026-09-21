@@ -475,6 +475,22 @@ private fun FioLabApp(
 
                 result.fold(
                     onSuccess = {
+                        if (
+                            document.machineMethod !=
+                                null &&
+                            document.machineFormat !=
+                                null
+                        ) {
+                            recordMachineDelivery(
+                                fileName =
+                                    document.fileName,
+                                format =
+                                    document.machineFormat,
+                                method =
+                                    document.machineMethod
+                            )
+                        }
+
                         snackbar.showSnackbar(
                             document.successMessage
                         )
@@ -570,7 +586,8 @@ private fun FioLabApp(
     fun openShareIntent(
         matrix: ConvertedMatrix,
         chooserTitle: String =
-            "Compartilhar matriz"
+            "Compartilhar matriz",
+        machineMethod: String? = null
     ) {
         scope.launch {
             loading = true
@@ -601,6 +618,20 @@ private fun FioLabApp(
                                 chooserTitle
                             )
                         )
+
+                        if (
+                            machineMethod !=
+                                null
+                        ) {
+                            recordMachineDelivery(
+                                fileName =
+                                    matrix.fileName,
+                                format =
+                                    matrix.format,
+                                method =
+                                    machineMethod
+                            )
+                        }
                     }.onFailure {
                         snackbar.showSnackbar(
                             "Nenhum aplicativo disponível para compartilhar."
@@ -671,6 +702,24 @@ private fun FioLabApp(
                                         "Matriz convertida para " +
                                             converted.format +
                                             " e salva com sucesso."
+                                },
+                            machineMethod =
+                                if (
+                                    suffix ==
+                                        "maquina"
+                                ) {
+                                    "USB / OTG"
+                                } else {
+                                    null
+                                },
+                            machineFormat =
+                                if (
+                                    suffix ==
+                                        "maquina"
+                                ) {
+                                    converted.format
+                                } else {
+                                    null
                                 }
                         )
 
@@ -716,8 +765,19 @@ private fun FioLabApp(
             result.fold(
                 onSuccess = {
                     openShareIntent(
-                        it,
-                        chooserTitle
+                        matrix =
+                            it,
+                        chooserTitle =
+                            chooserTitle,
+                        machineMethod =
+                            if (
+                                suffix ==
+                                    "maquina"
+                            ) {
+                                "Wi-Fi / app"
+                            } else {
+                                null
+                            }
                     )
                 },
                 onFailure = {
@@ -873,6 +933,8 @@ private fun FioLabApp(
                     savedProjects =
                         projects
 
+                    refreshLibraryActivity()
+
                     screen =
                         Screen.ProjectLibrary
                 },
@@ -955,6 +1017,14 @@ private fun FioLabApp(
                         design
                     )
 
+                    LibraryActivityStore
+                        .markRecent(
+                            context,
+                            project.id
+                        )
+
+                    refreshLibraryActivity()
+
                     screen =
                         if (
                             transferDirectly
@@ -1004,6 +1074,14 @@ private fun FioLabApp(
                                     project.id
                             }
 
+                    LibraryActivityStore
+                        .removeProjectMetadata(
+                            context,
+                            project.id
+                        )
+
+                    refreshLibraryActivity()
+
                     snackbar.showSnackbar(
                         "Matriz removida de Minhas Matrizes."
                     )
@@ -1012,6 +1090,31 @@ private fun FioLabApp(
                     snackbar.showSnackbar(
                         "Não foi possível excluir esta matriz."
                     )
+                }
+            )
+        }
+    }
+
+    fun toggleFavorite(
+        project: SavedProjectSummary
+    ) {
+        val favorite =
+            LibraryActivityStore
+                .toggleFavorite(
+                    context,
+                    project.id
+                )
+
+        refreshLibraryActivity()
+
+        scope.launch {
+            snackbar.showSnackbar(
+                if (
+                    favorite
+                ) {
+                    "Matriz adicionada aos favoritos."
+                } else {
+                    "Matriz removida dos favoritos."
                 }
             )
         }
