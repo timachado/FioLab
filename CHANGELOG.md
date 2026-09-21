@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.37.0
+
+### Minha Conta e assinaturas
+- Minha Conta passa a acompanhar o plano vinculado à conta Supabase com atualização manual imediata.
+- Catálogo oficial de planos: Gratuito, FioLab Pro Mensal, FioLab Pro Anual, FioLab Vitalício e FioLab Vitalício • Lançamento.
+- Planos vitalícios aparecem como acesso permanente e não exibem renovação ou próxima cobrança.
+- O Vitalício Promocional de Lançamento mantém identificação própria e recebe o selo de Membro de Lançamento.
+- A assinatura passa a guardar data da compra, preço pago, moeda, provedor e referência externa sem permitir alteração desses dados pelo APK.
+- Adicionada estrutura de histórico para ativações, renovações, upgrades, cancelamentos, reembolsos e compras vitalícias.
+- A tela passa a mostrar catálogo de planos, plano atual, status, renovação quando aplicável, valor pago e histórico.
+- Preços comerciais não foram inventados: permanecem configuráveis no backend/checkout e aparecem como Valor no checkout enquanto não definidos.
+- RLS e permissões mantêm planos/assinaturas como leitura no cliente; o usuário só pode ler a própria assinatura e o próprio histórico.
+- Testes cobrem identificação dos planos recorrentes, vitalício e vitalício promocional.
+
 ## 0.36.0
 
 ### Orientação correta e consistência entre todos os modos de exibição
