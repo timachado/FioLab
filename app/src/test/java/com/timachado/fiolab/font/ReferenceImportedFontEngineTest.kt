@@ -8,6 +8,56 @@ import org.junit.Test
 class ReferenceImportedFontEngineTest {
 
     @Test
+    fun adaptiveSatinChangesDirectionInsideBentStroke() {
+        val vectors =
+            ReferenceImportedFontEngine
+                .debugAdaptiveRowVectors(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            22f to 0f,
+                            22f to 78f,
+                            82f to 78f,
+                            82f to 100f,
+                            0f to 100f
+                        )
+                )
+
+        assertTrue(
+            "O Satin adaptativo deve gerar linhas de direção válidas.",
+            vectors.isNotEmpty()
+        )
+
+        assertTrue(
+            "O trecho vertical deve produzir travessas majoritariamente horizontais.",
+            vectors.any {
+                    vector ->
+                kotlin.math.abs(
+                    vector.first
+                ) >
+                    kotlin.math.abs(
+                        vector.second
+                    ) *
+                        1.5f
+            }
+        )
+
+        assertTrue(
+            "O trecho horizontal deve produzir travessas majoritariamente verticais.",
+            vectors.any {
+                    vector ->
+                kotlin.math.abs(
+                    vector.second
+                ) >
+                    kotlin.math.abs(
+                        vector.first
+                    ) *
+                        1.5f
+            }
+        )
+    }
+
+    @Test
     fun samplerChoosesNarrowerAxisForWideRectangle() {
         val widths =
             ReferenceImportedFontEngine

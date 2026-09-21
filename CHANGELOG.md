@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.46.12
+
+### Satin por blocos adaptativos — direção acompanha o traço
+- Corrigida a causa estrutural de a costura ainda parecer com o Mão Design: o motor anterior escolhia um único eixo global (horizontal ou vertical) para varrer cada glifo.
+- O gerador TTF/OTF Satin passa a rasterizar a forma da letra, extrair um eixo medial fino e dividir o glifo em percursos/ramificações de traço.
+- Cada percurso gera travessas Satin perpendiculares à direção local do traço; assim a direção pode mudar dentro da mesma letra e acompanhar curvas, pernas e voltas.
+- Junções e voltas fechadas são tratadas como blocos independentes conectáveis; regiões realmente separadas continuam usando JUMP para não atravessar vazio.
+- Mantidos densidade, compensação de repuxo, limite de largura Satin, underlay edge-run, início visual, roteamento por continuidade e proteção contra geometrias extremas.
+- Para glifos minúsculos/compactos em que o eixo medial não gera um caminho estável, permanece fallback conservador para o scanner anterior.
+- Adicionado teste de regressão com um traço em L: a mesma forma precisa produzir travessas Satin em pelo menos duas direções distintas.
+- A mudança segue o comportamento público documentado do PE-DESIGN de trabalhar blocos com múltiplas linhas/direções de costura, sem copiar código proprietário.
+- Interface, autoajuste ao bastidor, biblioteca, conta, simulação, PES/DST/JEF e demais fluxos da 0.46.11 foram preservados.
+
 ## 0.46.11
 
 ### Roteamento Satin por continuidade — referência de comportamento PE-DESIGN

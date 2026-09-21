@@ -944,7 +944,1539 @@ internal object ReferenceImportedFontEngine {
                 }
             )
 
+    private data class RasterGlyph(
+        val originX: Float,
+        val originY: Float,
+        val step: Float,
+        val width: Int,
+        val height: Int,
+        val mask: BooleanArray
+    ) {
+        fun index(
+            x: Int,
+            y: Int
+        ): Int =
+            y *
+                width +
+                x
+
+        fun inside(
+            x: Int,
+            y: Int
+        ): Boolean =
+            x in
+                0 until width &&
+                y in
+                    0 until height &&
+                mask[
+                    index(
+                        x,
+                        y
+                    )
+                ]
+
+        fun center(
+            index: Int
+        ): FPoint {
+            val x =
+                index %
+                    width
+
+            val y =
+                index /
+                    width
+
+            return FPoint(
+                originX +
+                    (
+                        x +
+                            0.5f
+                        ) *
+                        step,
+                originY +
+                    (
+                        y +
+                            0.5f
+                        ) *
+                        step
+            )
+        }
+    }
+
+    private const val MAX_ADAPTIVE_RASTER_CELLS =
+        360_000
+
+    private const val MAX_ADAPTIVE_THINNING_PASSES =
+        256
+
+    private const val ADAPTIVE_RAY_STEP_UNITS =
+        0.75f
+
     private fun sampleColumns(
+        polygons: List<Polygon>,
+        densityMm: Float,
+        maxSatinWidthMm: Float,
+        pullCompensationMm: Float
+    ): List<SatinColumn> {
+        if (
+            polygons.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val adaptive =
+            buildAdaptiveSatinBlocks(
+                polygons =
+                    polygons,
+                densityMm =
+                    densityMm,
+                maxSatinWidthMm =
+                    maxSatinWidthMm,
+                pullCompensationMm =
+                    pullCompensationMm
+            )
+
+        if (
+            adaptive.isNotEmpty()
+        ) {
+            return adaptive
+        }
+
+        /*
+         * Fallback conservador para sinais muito pequenos/compactos em que
+         * o eixo medial não produz um percurso estável. O motor antigo fica
+         * disponível somente como proteção, não como estratégia principal.
+         */
+        return sampleColumnsByAxis(
+            polygons =
+                polygons,
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxSatinWidthMm,
+            pullCompensationMm =
+                pullCompensationMm
+        )
+    }
+
+    private fun buildAdaptiveSatinBlocks(
+        polygons: List<Polygon>,
+        densityMm: Float,
+        maxSatinWidthMm: Float,
+        pullCompensationMm: Float
+    ): List<SatinColumn> {
+        val all =
+            polygons.flatMap {
+                it.points
+            }
+
+        if (
+            all.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val minX =
+            all.minOf {
+                it.x
+            }
+
+        val maxX =
+            all.maxOf {
+                it.x
+            }
+
+        val minY =
+            all.minOf {
+                it.y
+            }
+
+        val maxY =
+            all.maxOf {
+                it.y
+            }
+
+        val widthUnits =
+            maxX -
+                minX
+
+        val heightUnits =
+            maxY -
+                minY
+
+        if (
+            widthUnits <
+                2f ||
+            heightUnits <
+                2f
+        ) {
+            return emptyList()
+        }
+
+        val pitchUnits =
+            (
+                densityMm *
+                    10f
+                ).coerceAtLeast(
+                1f
+            )
+
+        var rasterStep =
+            (
+                pitchUnits /
+                    2f
+                ).coerceIn(
+                1f,
+                2.5f
+            )
+
+        fun estimatedCells(
+            step: Float
+        ): Long {
+            val width =
+                ceil(
+                    (
+                        widthUnits /
+                            step
+                        ).toDouble()
+                ).toLong() +
+                    3L
+
+            val height =
+                ceil(
+                    (
+                        heightUnits /
+                            step
+                        ).toDouble()
+                ).toLong() +
+                    3L
+
+            return width *
+                height
+        }
+
+        val initialCells =
+            estimatedCells(
+                rasterStep
+            )
+
+        if (
+            initialCells >
+                MAX_ADAPTIVE_RASTER_CELLS
+        ) {
+            val factor =
+                kotlin.math.sqrt(
+                    initialCells.toDouble() /
+                        MAX_ADAPTIVE_RASTER_CELLS
+                )
+                    .toFloat()
+
+            rasterStep *=
+                factor
+        }
+
+        val raster =
+            rasterizeGlyph(
+                polygons =
+                    polygons,
+                minX =
+                    minX,
+                minY =
+                    minY,
+                maxX =
+                    maxX,
+                maxY =
+                    maxY,
+                step =
+                    rasterStep
+            )
+
+        if (
+            raster.mask.none {
+                it
+            }
+        ) {
+            return emptyList()
+        }
+
+        val skeleton =
+            thinMask(
+                raster
+            )
+
+        val paths =
+            traceSkeletonPaths(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            )
+
+        if (
+            paths.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val maxWidthUnits =
+            maxSatinWidthMm *
+                10f
+
+        val pullUnits =
+            pullCompensationMm *
+                10f
+
+        val rawColumns =
+            paths.mapNotNull {
+                    path ->
+                satinColumnFromSkeletonPath(
+                    path =
+                        path,
+                    raster =
+                        raster,
+                    polygons =
+                        polygons,
+                    pitchUnits =
+                        pitchUnits,
+                    maxRayUnits =
+                        max(
+                            maxWidthUnits *
+                                4f,
+                            max(
+                                widthUnits,
+                                heightUnits
+                            ) *
+                                1.1f
+                        ),
+                    pullUnits =
+                        pullUnits
+                )
+            }
+                .filter {
+                    it.rows.size >=
+                        2
+                }
+
+        if (
+            rawColumns.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val rowsTotal =
+            rawColumns.sumOf {
+                it.rows.size
+            }
+
+        /*
+         * Um eixo medial degenerado (por exemplo, um ponto isolado em um
+         * glifo minúsculo) não deve substituir a varredura estável antiga.
+         */
+        if (
+            rowsTotal <
+                3
+        ) {
+            return emptyList()
+        }
+
+        val limited =
+            rawColumns.flatMap {
+                    column ->
+                splitWideColumn(
+                    column =
+                        column,
+                    maxWidthUnits =
+                        maxWidthUnits
+                )
+            }
+
+        return standardSewingOrder(
+            limited
+        )
+    }
+
+    private fun rasterizeGlyph(
+        polygons: List<Polygon>,
+        minX: Float,
+        minY: Float,
+        maxX: Float,
+        maxY: Float,
+        step: Float
+    ): RasterGlyph {
+        val originX =
+            minX -
+                step
+
+        val originY =
+            minY -
+                step
+
+        val width =
+            (
+                ceil(
+                    (
+                        (
+                            maxX -
+                                minX
+                            ) /
+                            step
+                        ).toDouble()
+                ).toInt() +
+                    3
+                ).coerceAtLeast(
+                3
+            )
+
+        val height =
+            (
+                ceil(
+                    (
+                        (
+                            maxY -
+                                minY
+                            ) /
+                            step
+                        ).toDouble()
+                ).toInt() +
+                    3
+                ).coerceAtLeast(
+                3
+            )
+
+        require(
+            width.toLong() *
+                height.toLong() <=
+                MAX_ADAPTIVE_RASTER_CELLS
+                    .toLong() *
+                    2L
+        ) {
+            "A geometria da fonte ficou complexa demais para o Satin adaptativo."
+        }
+
+        val mask =
+            BooleanArray(
+                width *
+                    height
+            )
+
+        for (
+            y in
+                0 until height
+        ) {
+            for (
+                x in
+                    0 until width
+            ) {
+                val point =
+                    FPoint(
+                        originX +
+                            (
+                                x +
+                                    0.5f
+                                ) *
+                                step,
+                        originY +
+                            (
+                                y +
+                                    0.5f
+                                ) *
+                                step
+                    )
+
+                if (
+                    pointInsideGlyphAdaptive(
+                        point =
+                            point,
+                        polygons =
+                            polygons
+                    )
+                ) {
+                    mask[
+                        y *
+                            width +
+                            x
+                    ] =
+                        true
+                }
+            }
+        }
+
+        return RasterGlyph(
+            originX =
+                originX,
+            originY =
+                originY,
+            step =
+                step,
+            width =
+                width,
+            height =
+                height,
+            mask =
+                mask
+        )
+    }
+
+    private fun pointInsideGlyphAdaptive(
+        point: FPoint,
+        polygons: List<Polygon>
+    ): Boolean {
+        var inside =
+            false
+
+        polygons.forEach {
+                polygon ->
+            if (
+                pointInsidePolygonAdaptive(
+                    point =
+                        point,
+                    polygon =
+                        polygon
+                )
+            ) {
+                inside =
+                    !inside
+            }
+        }
+
+        return inside
+    }
+
+    private fun pointInsidePolygonAdaptive(
+        point: FPoint,
+        polygon: Polygon
+    ): Boolean {
+        val points =
+            polygon.points
+
+        if (
+            points.size <
+                3
+        ) {
+            return false
+        }
+
+        var inside =
+            false
+
+        var previous =
+            points.last()
+
+        points.forEach {
+                current ->
+            val crosses =
+                (
+                    current.y >
+                        point.y
+                    ) !=
+                    (
+                        previous.y >
+                            point.y
+                    )
+
+            if (
+                crosses
+            ) {
+                val denominator =
+                    previous.y -
+                        current.y
+
+                if (
+                    kotlin.math.abs(
+                        denominator
+                    ) >
+                        0.00001f
+                ) {
+                    val crossX =
+                        (
+                            previous.x -
+                                current.x
+                            ) *
+                            (
+                                point.y -
+                                    current.y
+                                ) /
+                            denominator +
+                            current.x
+
+                    if (
+                        point.x <
+                            crossX
+                    ) {
+                        inside =
+                            !inside
+                    }
+                }
+            }
+
+            previous =
+                current
+        }
+
+        return inside
+    }
+
+    private fun thinMask(
+        raster: RasterGlyph
+    ): BooleanArray {
+        val skeleton =
+            raster.mask.copyOf()
+
+        val width =
+            raster.width
+
+        val height =
+            raster.height
+
+        fun value(
+            x: Int,
+            y: Int
+        ): Boolean =
+            x in
+                0 until width &&
+                y in
+                    0 until height &&
+                skeleton[
+                    y *
+                        width +
+                        x
+                ]
+
+        fun shouldRemove(
+            x: Int,
+            y: Int,
+            secondPass: Boolean
+        ): Boolean {
+            if (
+                !value(
+                    x,
+                    y
+                )
+            ) {
+                return false
+            }
+
+            val p2 =
+                value(
+                    x,
+                    y -
+                        1
+                )
+
+            val p3 =
+                value(
+                    x +
+                        1,
+                    y -
+                        1
+                )
+
+            val p4 =
+                value(
+                    x +
+                        1,
+                    y
+                )
+
+            val p5 =
+                value(
+                    x +
+                        1,
+                    y +
+                        1
+                )
+
+            val p6 =
+                value(
+                    x,
+                    y +
+                        1
+                )
+
+            val p7 =
+                value(
+                    x -
+                        1,
+                    y +
+                        1
+                )
+
+            val p8 =
+                value(
+                    x -
+                        1,
+                    y
+                )
+
+            val p9 =
+                value(
+                    x -
+                        1,
+                    y -
+                        1
+                )
+
+            val neighbors =
+                booleanArrayOf(
+                    p2,
+                    p3,
+                    p4,
+                    p5,
+                    p6,
+                    p7,
+                    p8,
+                    p9
+                )
+
+            val count =
+                neighbors.count {
+                    it
+                }
+
+            if (
+                count !in
+                    2..6
+            ) {
+                return false
+            }
+
+            var transitions =
+                0
+
+            for (
+                index in
+                    neighbors.indices
+            ) {
+                val current =
+                    neighbors[
+                        index
+                    ]
+
+                val next =
+                    neighbors[
+                        (
+                            index +
+                                1
+                            ) %
+                            neighbors.size
+                    ]
+
+                if (
+                    !current &&
+                    next
+                ) {
+                    transitions++
+                }
+            }
+
+            if (
+                transitions !=
+                    1
+            ) {
+                return false
+            }
+
+            return if (
+                !secondPass
+            ) {
+                !(
+                    p2 &&
+                        p4 &&
+                        p6
+                    ) &&
+                    !(
+                        p4 &&
+                            p6 &&
+                            p8
+                        )
+            } else {
+                !(
+                    p2 &&
+                        p4 &&
+                        p8
+                    ) &&
+                    !(
+                        p2 &&
+                            p6 &&
+                            p8
+                        )
+            }
+        }
+
+        var pass =
+            0
+
+        while (
+            pass <
+                MAX_ADAPTIVE_THINNING_PASSES
+        ) {
+            var removedAny =
+                false
+
+            for (
+                secondPass in
+                    listOf(
+                        false,
+                        true
+                    )
+            ) {
+                val remove =
+                    mutableListOf<Int>()
+
+                for (
+                    y in
+                        1 until
+                            height -
+                                1
+                ) {
+                    for (
+                        x in
+                            1 until
+                                width -
+                                    1
+                    ) {
+                        if (
+                            shouldRemove(
+                                x =
+                                    x,
+                                y =
+                                    y,
+                                secondPass =
+                                    secondPass
+                            )
+                        ) {
+                            remove +=
+                                y *
+                                    width +
+                                    x
+                        }
+                    }
+                }
+
+                if (
+                    remove.isNotEmpty()
+                ) {
+                    removedAny =
+                        true
+
+                    remove.forEach {
+                            index ->
+                        skeleton[
+                            index
+                        ] =
+                            false
+                    }
+                }
+            }
+
+            if (
+                !removedAny
+            ) {
+                break
+            }
+
+            pass++
+        }
+
+        return skeleton
+    }
+
+    private fun skeletonNeighbors(
+        index: Int,
+        raster: RasterGlyph,
+        skeleton: BooleanArray
+    ): List<Int> {
+        val x =
+            index %
+                raster.width
+
+        val y =
+            index /
+                raster.width
+
+        val result =
+            mutableListOf<Int>()
+
+        for (
+            dy in
+                -1..1
+        ) {
+            for (
+                dx in
+                    -1..1
+            ) {
+                if (
+                    dx ==
+                        0 &&
+                    dy ==
+                        0
+                ) {
+                    continue
+                }
+
+                val nx =
+                    x +
+                        dx
+
+                val ny =
+                    y +
+                        dy
+
+                if (
+                    nx !in
+                        0 until raster.width ||
+                    ny !in
+                        0 until raster.height
+                ) {
+                    continue
+                }
+
+                val neighbor =
+                    ny *
+                        raster.width +
+                        nx
+
+                if (
+                    skeleton[
+                        neighbor
+                    ]
+                ) {
+                    result +=
+                        neighbor
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun skeletonEdgeKey(
+        first: Int,
+        second: Int
+    ): Long {
+        val low =
+            minOf(
+                first,
+                second
+            )
+
+        val high =
+            maxOf(
+                first,
+                second
+            )
+
+        return (
+            low.toLong() shl
+                32
+            ) xor
+            (
+                high.toLong() and
+                    0xffffffffL
+                )
+    }
+
+    private fun traceSkeletonPaths(
+        raster: RasterGlyph,
+        skeleton: BooleanArray
+    ): List<List<Int>> {
+        val skeletonIndices =
+            skeleton.indices.filter {
+                skeleton[
+                    it
+                ]
+            }
+
+        if (
+            skeletonIndices.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val degree =
+            IntArray(
+                skeleton.size
+            )
+
+        skeletonIndices.forEach {
+                index ->
+            degree[
+                index
+            ] =
+                skeletonNeighbors(
+                    index =
+                        index,
+                    raster =
+                        raster,
+                    skeleton =
+                        skeleton
+                ).size
+        }
+
+        val visitedEdges =
+            mutableSetOf<Long>()
+
+        fun trace(
+            start: Int,
+            firstNext: Int
+        ): List<Int> {
+            val path =
+                mutableListOf(
+                    start
+                )
+
+            var previous =
+                start
+
+            var current =
+                firstNext
+
+            visitedEdges +=
+                skeletonEdgeKey(
+                    previous,
+                    current
+                )
+
+            path +=
+                current
+
+            var guard =
+                0
+
+            while (
+                guard <
+                    skeleton.size
+            ) {
+                if (
+                    current !=
+                        start &&
+                    degree[
+                        current
+                    ] !=
+                        2
+                ) {
+                    break
+                }
+
+                val next =
+                    skeletonNeighbors(
+                        index =
+                            current,
+                        raster =
+                            raster,
+                        skeleton =
+                            skeleton
+                    )
+                        .firstOrNull {
+                                neighbor ->
+                            neighbor !=
+                                previous &&
+                                skeletonEdgeKey(
+                                    current,
+                                    neighbor
+                                ) !in
+                                visitedEdges
+                        }
+                    ?: break
+
+                visitedEdges +=
+                    skeletonEdgeKey(
+                        current,
+                        next
+                    )
+
+                previous =
+                    current
+
+                current =
+                    next
+
+                path +=
+                    current
+
+                if (
+                    current ==
+                        start
+                ) {
+                    break
+                }
+
+                guard++
+            }
+
+            return path
+        }
+
+        val paths =
+            mutableListOf<
+                List<Int>
+            >()
+
+        val nodes =
+            skeletonIndices.filter {
+                degree[
+                    it
+                ] !=
+                    2
+            }
+
+        nodes.forEach {
+                node ->
+            skeletonNeighbors(
+                index =
+                    node,
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            ).forEach {
+                    neighbor ->
+                val edge =
+                    skeletonEdgeKey(
+                        node,
+                        neighbor
+                    )
+
+                if (
+                    edge in
+                        visitedEdges
+                ) {
+                    return@forEach
+                }
+
+                val path =
+                    trace(
+                        start =
+                            node,
+                        firstNext =
+                            neighbor
+                    )
+
+                if (
+                    path.size >=
+                        2
+                ) {
+                    paths +=
+                        path
+                }
+            }
+        }
+
+        /*
+         * Componentes fechados, como anéis e voltas cursivas, podem não
+         * possuir endpoint/junção. Percorremos as arestas restantes para
+         * preservar essas voltas como blocos Satin curvos.
+         */
+        skeletonIndices.forEach {
+                node ->
+            skeletonNeighbors(
+                index =
+                    node,
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            ).forEach {
+                    neighbor ->
+                val edge =
+                    skeletonEdgeKey(
+                        node,
+                        neighbor
+                    )
+
+                if (
+                    edge in
+                        visitedEdges
+                ) {
+                    return@forEach
+                }
+
+                val path =
+                    trace(
+                        start =
+                            node,
+                        firstNext =
+                            neighbor
+                    )
+
+                if (
+                    path.size >=
+                        2
+                ) {
+                    paths +=
+                        path
+                }
+            }
+        }
+
+        return paths
+    }
+
+    private fun satinColumnFromSkeletonPath(
+        path: List<Int>,
+        raster: RasterGlyph,
+        polygons: List<Polygon>,
+        pitchUnits: Float,
+        maxRayUnits: Float,
+        pullUnits: Float
+    ): SatinColumn? {
+        if (
+            path.size <
+                2
+        ) {
+            return null
+        }
+
+        val centers =
+            path.map {
+                raster.center(
+                    it
+                )
+            }
+
+        val sampledIndices =
+            mutableListOf<Int>()
+
+        var lastAccepted:
+            FPoint? =
+            null
+
+        centers.forEachIndexed {
+                index,
+                point ->
+            val shouldKeep =
+                lastAccepted ==
+                    null ||
+                    distance(
+                        lastAccepted!!,
+                        point
+                    ) >=
+                    pitchUnits *
+                        0.82f ||
+                    index ==
+                        centers.lastIndex
+
+            if (
+                shouldKeep
+            ) {
+                sampledIndices +=
+                    index
+
+                lastAccepted =
+                    point
+            }
+        }
+
+        if (
+            sampledIndices.size <
+                2
+        ) {
+            return null
+        }
+
+        val rows =
+            mutableListOf<
+                SatinRow
+            >()
+
+        var previousRow:
+            SatinRow? =
+            null
+
+        sampledIndices.forEach {
+                centerIndex ->
+            val beforeIndex =
+                (
+                    centerIndex -
+                        2
+                    ).coerceAtLeast(
+                    0
+                )
+
+            val afterIndex =
+                (
+                    centerIndex +
+                        2
+                    ).coerceAtMost(
+                    centers.lastIndex
+                )
+
+            val before =
+                centers[
+                    beforeIndex
+                ]
+
+            val after =
+                centers[
+                    afterIndex
+                ]
+
+            val tangent =
+                normalize(
+                    FPoint(
+                        after.x -
+                            before.x,
+                        after.y -
+                            before.y
+                    )
+                )
+
+            if (
+                kotlin.math.abs(
+                    tangent.x
+                ) <
+                    0.0001f &&
+                kotlin.math.abs(
+                    tangent.y
+                ) <
+                    0.0001f
+            ) {
+                return@forEach
+            }
+
+            val normal =
+                FPoint(
+                    -tangent.y,
+                    tangent.x
+                )
+
+            val center =
+                centers[
+                    centerIndex
+                ]
+
+            if (
+                !pointInsideGlyphAdaptive(
+                    point =
+                        center,
+                    polygons =
+                        polygons
+                )
+            ) {
+                return@forEach
+            }
+
+            val positive =
+                rayToGlyphBoundary(
+                    center =
+                        center,
+                    direction =
+                        normal,
+                    polygons =
+                        polygons,
+                    maxDistance =
+                        maxRayUnits
+                )
+
+            val negative =
+                rayToGlyphBoundary(
+                    center =
+                        center,
+                    direction =
+                        FPoint(
+                            -normal.x,
+                            -normal.y
+                        ),
+                    polygons =
+                        polygons,
+                    maxDistance =
+                        maxRayUnits
+                )
+
+            if (
+                positive <=
+                    0.25f ||
+                negative <=
+                    0.25f
+            ) {
+                return@forEach
+            }
+
+            var row =
+                SatinRow(
+                    a =
+                        FPoint(
+                            center.x -
+                                normal.x *
+                                    (
+                                        negative +
+                                            pullUnits
+                                        ),
+                            center.y -
+                                normal.y *
+                                    (
+                                        negative +
+                                            pullUnits
+                                        )
+                        ),
+                    b =
+                        FPoint(
+                            center.x +
+                                normal.x *
+                                    (
+                                        positive +
+                                            pullUnits
+                                        ),
+                            center.y +
+                                normal.y *
+                                    (
+                                        positive +
+                                            pullUnits
+                                        )
+                        )
+                )
+
+            val previous =
+                previousRow
+
+            if (
+                previous !=
+                    null
+            ) {
+                val direct =
+                    distance(
+                        previous.a,
+                        row.a
+                    ) +
+                        distance(
+                            previous.b,
+                            row.b
+                        )
+
+                val swapped =
+                    distance(
+                        previous.a,
+                        row.b
+                    ) +
+                        distance(
+                            previous.b,
+                            row.a
+                        )
+
+                if (
+                    swapped <
+                        direct
+                ) {
+                    row =
+                        SatinRow(
+                            a =
+                                row.b,
+                            b =
+                                row.a
+                        )
+                }
+            }
+
+            rows +=
+                row
+
+            previousRow =
+                row
+        }
+
+        if (
+            rows.size <
+                2
+        ) {
+            return null
+        }
+
+        return SatinColumn(
+            rows =
+                rows
+        )
+    }
+
+    private fun rayToGlyphBoundary(
+        center: FPoint,
+        direction: FPoint,
+        polygons: List<Polygon>,
+        maxDistance: Float
+    ): Float {
+        var lastInside =
+            0f
+
+        var distanceValue =
+            ADAPTIVE_RAY_STEP_UNITS
+
+        while (
+            distanceValue <=
+                maxDistance
+        ) {
+            val point =
+                FPoint(
+                    center.x +
+                        direction.x *
+                            distanceValue,
+                    center.y +
+                        direction.y *
+                            distanceValue
+                )
+
+            if (
+                !pointInsideGlyphAdaptive(
+                    point =
+                        point,
+                    polygons =
+                        polygons
+                )
+            ) {
+                var low =
+                    lastInside
+
+                var high =
+                    distanceValue
+
+                repeat(
+                    6
+                ) {
+                    val middle =
+                        (
+                            low +
+                                high
+                            ) /
+                            2f
+
+                    val middlePoint =
+                        FPoint(
+                            center.x +
+                                direction.x *
+                                    middle,
+                            center.y +
+                                direction.y *
+                                    middle
+                        )
+
+                    if (
+                        pointInsideGlyphAdaptive(
+                            point =
+                                middlePoint,
+                            polygons =
+                                polygons
+                        )
+                    ) {
+                        low =
+                            middle
+                    } else {
+                        high =
+                            middle
+                    }
+                }
+
+                return low
+            }
+
+            lastInside =
+                distanceValue
+
+            distanceValue +=
+                ADAPTIVE_RAY_STEP_UNITS
+        }
+
+        return lastInside
+    }
+
+    private fun sampleColumnsByAxis(
         polygons: List<Polygon>,
         densityMm: Float,
         maxSatinWidthMm: Float,
@@ -3262,6 +4794,46 @@ internal object ReferenceImportedFontEngine {
                         ) *
                         ratio
         )
+
+    internal fun debugAdaptiveRowVectors(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): List<Pair<Float, Float>> =
+        buildAdaptiveSatinBlocks(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .flatMap {
+                it.rows
+            }
+            .map {
+                    row ->
+                Pair(
+                    row.b.x -
+                        row.a.x,
+                    row.b.y -
+                        row.a.y
+                )
+            }
 
     internal fun debugColumnWidths(
         polygon:
