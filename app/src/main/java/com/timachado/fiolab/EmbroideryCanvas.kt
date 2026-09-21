@@ -99,11 +99,29 @@ fun EmbroideryCanvas(
         Canvas(
             Modifier.fillMaxSize()
         ) {
-            drawGrid()
+            val realistic =
+                displayMode ==
+                    EmbroideryDisplayMode.REALISTIC
+
+            if (realistic) {
+                drawRect(
+                    color =
+                        Color(
+                            0xFFF4EDDD
+                        )
+                )
+            }
+
+            drawGrid(
+                realistic =
+                    realistic
+            )
 
             if (hoop != null) {
                 drawHoopPreview(
-                    hoop = hoop
+                    hoop = hoop,
+                    realistic =
+                        realistic
                 )
             }
 
@@ -124,7 +142,8 @@ fun EmbroideryCanvas(
 
 
 private fun DrawScope.drawHoopPreview(
-    hoop: HoopProfile
+    hoop: HoopProfile,
+    realistic: Boolean
 ) {
     val padding =
         36.dp.toPx()
@@ -177,9 +196,17 @@ private fun DrawScope.drawHoopPreview(
 
     drawRoundRect(
         color =
-            Color(
-                0xFF6B7780
-            ),
+            if (
+                realistic
+            ) {
+                Color(
+                    0xD9F0A62B
+                )
+            } else {
+                Color(
+                    0xFF6B7780
+                )
+            },
         topLeft =
             Offset(
                 left,
@@ -198,7 +225,27 @@ private fun DrawScope.drawHoopPreview(
         style =
             Stroke(
                 width =
-                    2.dp.toPx()
+                    if (
+                        realistic
+                    ) {
+                        1.45.dp.toPx()
+                    } else {
+                        2.dp.toPx()
+                    },
+                pathEffect =
+                    if (
+                        realistic
+                    ) {
+                        PathEffect
+                            .dashPathEffect(
+                                floatArrayOf(
+                                    9.dp.toPx(),
+                                    7.dp.toPx()
+                                )
+                            )
+                    } else {
+                        null
+                    }
             )
     )
 
@@ -257,31 +304,119 @@ private fun DrawScope.drawHoopPreview(
     )
 }
 
-private fun DrawScope.drawGrid() {
+private fun DrawScope.drawGrid(
+    realistic: Boolean
+) {
     val step =
-        32.dp.toPx()
+        if (
+            realistic
+        ) {
+            18.dp.toPx()
+        } else {
+            32.dp.toPx()
+        }
 
     var x = 0f
+    var index = 0
+
     while (x < size.width) {
         drawLine(
-            Color(0x152F4858),
-            Offset(x, 0f),
-            Offset(x, size.height),
-            1f
+            color =
+                if (
+                    realistic
+                ) {
+                    if (
+                        index % 4 ==
+                            0
+                    ) {
+                        Color(
+                            0x288C877C
+                        )
+                    } else {
+                        Color(
+                            0x148C877C
+                        )
+                    }
+                } else {
+                    Color(
+                        0x152F4858
+                    )
+                },
+            start =
+                Offset(
+                    x,
+                    0f
+                ),
+            end =
+                Offset(
+                    x,
+                    size.height
+                ),
+            strokeWidth =
+                if (
+                    realistic &&
+                    index % 4 ==
+                        0
+                ) {
+                    1.15f
+                } else {
+                    .75f
+                }
         )
 
+        index++
         x += step
     }
 
     var y = 0f
+    index = 0
+
     while (y < size.height) {
         drawLine(
-            Color(0x152F4858),
-            Offset(0f, y),
-            Offset(size.width, y),
-            1f
+            color =
+                if (
+                    realistic
+                ) {
+                    if (
+                        index % 4 ==
+                            0
+                    ) {
+                        Color(
+                            0x288C877C
+                        )
+                    } else {
+                        Color(
+                            0x148C877C
+                        )
+                    }
+                } else {
+                    Color(
+                        0x152F4858
+                    )
+                },
+            start =
+                Offset(
+                    0f,
+                    y
+                ),
+            end =
+                Offset(
+                    size.width,
+                    y
+                ),
+            strokeWidth =
+                if (
+                    realistic &&
+                    index % 4 ==
+                        0
+                ) {
+                    1.15f
+                } else {
+                    .75f
+                }
         )
 
+        index++
         y += step
     }
 }
@@ -562,27 +697,64 @@ private fun DrawScope.drawStitchByDisplay(
         }
 
         EmbroideryDisplayMode.REALISTIC -> {
+            val vector =
+                end -
+                    start
+
+            val length =
+                kotlin.math.sqrt(
+                    vector.x *
+                        vector.x +
+                        vector.y *
+                            vector.y
+                ).coerceAtLeast(
+                    0.001f
+                )
+
+            val normal =
+                Offset(
+                    x =
+                        -vector.y /
+                            length,
+                    y =
+                        vector.x /
+                            length
+                )
+
+            val shadowOffset =
+                normal *
+                    .32.dp.toPx()
+
+            val highlightOffset =
+                normal *
+                    -.18.dp.toPx()
+
+            val shadow =
+                Color(
+                    red =
+                        color.red *
+                            .38f,
+                    green =
+                        color.green *
+                            .38f,
+                    blue =
+                        color.blue *
+                            .38f,
+                    alpha =
+                        .58f
+                )
+
             drawLine(
                 color =
-                    Color.Black
-                        .copy(
-                            alpha =
-                                .24f
-                        ),
+                    shadow,
                 start =
                     start +
-                        Offset(
-                            0.8.dp.toPx(),
-                            0.8.dp.toPx()
-                        ),
+                        shadowOffset,
                 end =
                     end +
-                        Offset(
-                            0.8.dp.toPx(),
-                            0.8.dp.toPx()
-                        ),
+                        shadowOffset,
                 strokeWidth =
-                    3.2.dp
+                    1.75.dp
                         .toPx(),
                 cap =
                     StrokeCap.Round
@@ -590,13 +762,16 @@ private fun DrawScope.drawStitchByDisplay(
 
             drawLine(
                 color =
-                    color,
+                    color.copy(
+                        alpha =
+                            .98f
+                    ),
                 start =
                     start,
                 end =
                     end,
                 strokeWidth =
-                    2.6.dp
+                    1.18.dp
                         .toPx(),
                 cap =
                     StrokeCap.Round
@@ -607,14 +782,16 @@ private fun DrawScope.drawStitchByDisplay(
                     Color.White
                         .copy(
                             alpha =
-                                .20f
+                                .30f
                         ),
                 start =
-                    start,
+                    start +
+                        highlightOffset,
                 end =
-                    end,
+                    end +
+                        highlightOffset,
                 strokeWidth =
-                    .65.dp
+                    .28.dp
                         .toPx(),
                 cap =
                     StrokeCap.Round
