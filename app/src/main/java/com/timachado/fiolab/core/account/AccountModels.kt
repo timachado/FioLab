@@ -141,18 +141,21 @@ data class AccountSnapshot(
     val isPaid: Boolean
         get() =
             currentPlan
-                ?.isPaid
-                ?: (
-                    planCode
-                        .lowercase() !=
-                        "free"
-                    )
+                ?.isPaid ==
+                true ||
+                planCode
+                    .trim()
+                    .lowercase() !=
+                    "free"
 
     val isLifetime: Boolean
         get() =
             currentPlan
-                ?.isLifetime
-                ?: planCode.lowercase() in
+                ?.isLifetime ==
+                true ||
+                planCode
+                    .trim()
+                    .lowercase() in
                     setOf(
                         "lifetime",
                         "lifetime_launch"
@@ -201,8 +204,12 @@ object AccountPresentation {
             "free" ->
                 "Gratuito"
 
-            "pro",
-            "premium",
+            "pro" ->
+                "FioLab Pro"
+
+            "premium" ->
+                "FioLab Premium"
+
             "pro_monthly" ->
                 "FioLab Pro Mensal"
 
