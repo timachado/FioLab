@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.42.0
+
+### Resistência real no Android
+- Autossalvamento do trabalho ativo passa a usar gravação atômica; uma interrupção no meio não substitui a cópia válida por um arquivo parcial.
+- Projetos salvos em Minhas Matrizes também usam gravação atômica.
+- Autossalvamento corrompido é isolado e o usuário recebe aviso, evitando ciclo de erro em toda abertura do app.
+- Falha de autossalvamento por armazenamento/espaço insuficiente deixa de ser silenciosa.
+- Operações pendentes do seletor Android são persistidas em disco, permitindo recuperar o arquivo preparado mesmo se o processo do app for recriado enquanto o seletor estiver aberto.
+- Documento pendente é gravado por streaming para evitar uma segunda cópia grande em memória.
+- Gravação em pendrive/OTG força flush/sync antes de confirmar sucesso; remoção do dispositivo durante a escrita não entra no histórico de envios como concluída.
+- Arquivos temporários usados no compartilhamento são gravados atomicamente.
+- Restore de backup usa leitura limitada e o total descompactado do backup foi reduzido para 128 MB por segurança de memória no Android.
+- Mensagens de falha de backup e armazenamento passam a expor o motivo útil ao usuário.
+- Adicionados testes de gravação atômica, leitura limitada e persistência do documento pendente.
+- Motor de bordado, renderização, Satin, fontes, login, assinatura e regras comerciais permanecem inalterados.
+
 ## 0.41.0
 
 ### Maturidade e QA — integridade de arquivos

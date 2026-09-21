@@ -45,6 +45,9 @@ import com.timachado.fiolab.core.project.ActiveDesignStore
 import com.timachado.fiolab.core.project.ProjectBackupStore
 import com.timachado.fiolab.core.project.ProjectStore
 import com.timachado.fiolab.core.project.SavedProjectSummary
+import com.timachado.fiolab.core.storage.DurablePendingDocument
+import com.timachado.fiolab.core.storage.PendingDocumentStore
+import com.timachado.fiolab.core.storage.SafeInputReader
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioLabTheme
@@ -153,14 +156,6 @@ private sealed interface Screen {
     ) : Screen
 }
 
-private data class PendingDocument(
-    val fileName: String,
-    val bytes: ByteArray,
-    val successMessage: String,
-    val machineMethod: String? = null,
-    val machineFormat: String? = null
-)
-
 @Composable
 private fun FioLabApp(
     openAccountRequest: Int = 0
@@ -190,7 +185,7 @@ private fun FioLabApp(
 
     var pendingDocument by remember {
         mutableStateOf<
-            PendingDocument?
+            DurablePendingDocument?
         >(null)
     }
 
@@ -291,19 +286,28 @@ private fun FioLabApp(
         recent =
             design
 
-        scope.launch(
-            Dispatchers.IO
-        ) {
-            ActiveDesignStore
-                .save(
-                    context,
-                    design
+        scope.launch {
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ActiveDesignStore
+                        .save(
+                            context,
+                            design
+                        )
+                }
+
+            result.onFailure {
+                snackbar.showSnackbar(
+                    "Não foi possível atualizar a cópia automática do trabalho. Verifique o espaço disponível no aparelho."
                 )
+            }
         }
     }
 
     LaunchedEffect(Unit) {
-        val restored =
+        val result =
             withContext(
                 Dispatchers.IO
             ) {
@@ -311,18 +315,27 @@ private fun FioLabApp(
                     .load(
                         context
                     )
-                    .getOrNull()
             }
 
-        if (
-            recent ==
-                null &&
-            restored !=
-                null
-        ) {
-            recent =
-                restored
-        }
+        result.fold(
+            onSuccess = {
+                    restored ->
+                if (
+                    recent ==
+                        null &&
+                    restored !=
+                        null
+                ) {
+                    recent =
+                        restored
+                }
+            },
+            onFailure = {
+                snackbar.showSnackbar(
+                    "O trabalho automático anterior não pôde ser recuperado. A cópia corrompida foi isolada."
+                )
+            }
+        )
     }
 
     fun goBack() {
@@ -441,21 +454,65 @@ private fun FioLabApp(
                 .CreateDocument(
                     "application/octet-stream"
                 )
-        ) { destination: Uri? ->
-            val document =
+        ) {
+                destination: Uri? ->
+            val memoryDocument =
                 pendingDocument
 
-            pendingDocument = null
-
-            if (
-                destination == null ||
-                document == null
-            ) {
-                return@rememberLauncherForActivityResult
-            }
+            pendingDocument =
+                null
 
             scope.launch {
-                loading = true
+                val document =
+                    memoryDocument
+                        ?: withContext(
+                            Dispatchers.IO
+                        ) {
+                            PendingDocumentStore
+                                .load(
+                                    context
+                                )
+                                .getOrNull()
+                        }
+
+                if (
+                    destination ==
+                        null
+                ) {
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        PendingDocumentStore
+                            .clear(
+                                context
+                            )
+                    }
+
+                    return@launch
+                }
+
+                if (
+                    document ==
+                        null
+                ) {
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        PendingDocumentStore
+                            .clear(
+                                context
+                            )
+                    }
+
+                    snackbar.showSnackbar(
+                        "Não foi possível recuperar o arquivo preparado para salvar."
+                    )
+
+                    return@launch
+                }
+
+                loading =
+                    true
 
                 val result =
                     withContext(
@@ -471,7 +528,17 @@ private fun FioLabApp(
                         )
                     }
 
-                loading = false
+                loading =
+                    false
+
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    PendingDocumentStore
+                        .clear(
+                            context
+                        )
+                }
 
                 result.fold(
                     onSuccess = {
@@ -496,13 +563,57 @@ private fun FioLabApp(
                         )
                     },
                     onFailure = {
+                            error ->
                         snackbar.showSnackbar(
-                            "Não foi possível salvar o arquivo."
+                            if (
+                                document.machineMethod !=
+                                    null
+                            ) {
+                                "Não foi possível concluir a gravação. Verifique se o pendrive/OTG continua conectado e tente novamente."
+                            } else {
+                                error.message
+                                    ?: "Não foi possível salvar o arquivo."
+                            }
                         )
                     }
                 )
             }
         }
+
+    fun stageDocumentSave(
+        document:
+            DurablePendingDocument
+    ) {
+        scope.launch {
+            val staged =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    PendingDocumentStore
+                        .save(
+                            context,
+                            document
+                        )
+                }
+
+            staged.fold(
+                onSuccess = {
+                    pendingDocument =
+                        document
+
+                    saveDocumentLauncher
+                        .launch(
+                            document.fileName
+                        )
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível preparar o arquivo para salvar. Verifique o espaço disponível no aparelho."
+                    )
+                }
+            )
+        }
+    }
 
     val restoreBackupLauncher =
         rememberLauncherForActivityResult(
@@ -532,7 +643,15 @@ private fun FioLabApp(
                                         uri
                                     )
                                     ?.use {
-                                        it.readBytes()
+                                        SafeInputReader
+                                            .readBytes(
+                                                input =
+                                                    it,
+                                                maxBytes =
+                                                    128 *
+                                                        1024 *
+                                                        1024
+                                            )
                                     }
                                     ?: error(
                                         "Não foi possível ler o backup."
@@ -575,8 +694,10 @@ private fun FioLabApp(
                         )
                     },
                     onFailure = {
+                            error ->
                         snackbar.showSnackbar(
-                            "Não foi possível restaurar este backup."
+                            error.message
+                                ?: "Não foi possível restaurar este backup."
                         )
                     }
                 )
@@ -682,9 +803,10 @@ private fun FioLabApp(
                                     .fileName
                             )
 
-                    pendingDocument =
-                        PendingDocument(
-                            fileName = name,
+                    stageDocumentSave(
+                        DurablePendingDocument(
+                            fileName =
+                                name,
                             bytes =
                                 converted.bytes,
                             successMessage =
@@ -722,9 +844,7 @@ private fun FioLabApp(
                                     null
                                 }
                         )
-
-                    saveDocumentLauncher
-                        .launch(name)
+                    )
                 },
                 onFailure = {
                     snackbar.showSnackbar(
@@ -817,17 +937,16 @@ private fun FioLabApp(
                 design.fileName
             )
 
-        pendingDocument =
-            PendingDocument(
-                fileName = name,
+        stageDocumentSave(
+            DurablePendingDocument(
+                fileName =
+                    name,
                 bytes =
                     design.sourceBytes,
                 successMessage =
                     "Cópia salva com sucesso."
             )
-
-        saveDocumentLauncher
-            .launch(name)
+        )
     }
 
     fun requestShare(
@@ -887,8 +1006,8 @@ private fun FioLabApp(
                     val fileName =
                         "FioLab-backup.fiolab-backup"
 
-                    pendingDocument =
-                        PendingDocument(
+                    stageDocumentSave(
+                        DurablePendingDocument(
                             fileName =
                                 fileName,
                             bytes =
@@ -896,11 +1015,7 @@ private fun FioLabApp(
                             successMessage =
                                 "Backup de Minhas Matrizes salvo com sucesso."
                         )
-
-                    saveDocumentLauncher
-                        .launch(
-                            fileName
-                        )
+                    )
                 },
                 onFailure = {
                     snackbar.showSnackbar(

@@ -9,6 +9,7 @@ import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.MachineFinishingInfo
 import com.timachado.fiolab.core.embroidery.StitchCommand
+import com.timachado.fiolab.core.storage.AtomicFileWriter
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -601,10 +602,13 @@ object ProjectStore {
                         EXTENSION
                 )
 
-            file.writeBytes(
-                ProjectCodec.encode(
-                    design
-                )
+            AtomicFileWriter.write(
+                target =
+                    file,
+                bytes =
+                    ProjectCodec.encode(
+                        design
+                    )
             )
 
             file.setLastModified(

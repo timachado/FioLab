@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.timachado.fiolab.core.storage.AtomicFileWriter
 import java.io.File
+import java.io.FileOutputStream
 
 object MatrixExporter {
     fun saveCopy(
@@ -24,11 +26,62 @@ object MatrixExporter {
         destination: Uri,
         bytes: ByteArray
     ): Result<Unit> = runCatching {
-        val output =
-            contentResolver.openOutputStream(destination, "w")
-                ?: error("Não foi possível abrir o destino selecionado.")
+        require(
+            bytes.isNotEmpty()
+        ) {
+            "O arquivo preparado está vazio."
+        }
 
-        output.use { it.write(bytes) }
+        val descriptor =
+            contentResolver
+                .openFileDescriptor(
+                    destination,
+                    "w"
+                )
+
+        if (
+            descriptor !=
+                null
+        ) {
+            descriptor.use {
+                    parcel ->
+                FileOutputStream(
+                    parcel.fileDescriptor
+                ).use {
+                        output ->
+                    output.write(
+                        bytes
+                    )
+
+                    output.flush()
+
+                    // Alguns provedores SAF (ex.: nuvem) não implementam fsync.
+                    // A escrita/flush continuam obrigatórios; fsync é reforço
+                    // quando o destino expõe um descritor de arquivo real.
+                    runCatching {
+                        output.fd.sync()
+                    }
+                }
+            }
+        } else {
+            val output =
+                contentResolver
+                    .openOutputStream(
+                        destination,
+                        "w"
+                    )
+                    ?: error(
+                        "Não foi possível abrir o destino selecionado."
+                    )
+
+            output.use {
+                it.write(
+                    bytes
+                )
+
+                it.flush()
+            }
+        }
     }
 
     fun createShareIntent(
@@ -53,12 +106,21 @@ object MatrixExporter {
                 }
             }
 
+        require(
+            bytes.isNotEmpty()
+        ) {
+            "O arquivo preparado está vazio."
+        }
+
         val safeName = safeFileName(fileName)
         val file = File(sharedDir, safeName)
 
-        file.outputStream().use {
-            it.write(bytes)
-        }
+        AtomicFileWriter.write(
+            target =
+                file,
+            bytes =
+                bytes
+        )
 
         val contentUri =
             FileProvider.getUriForFile(

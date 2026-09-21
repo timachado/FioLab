@@ -24,7 +24,7 @@ object ProjectBackupCodec {
         64 * 1024 * 1024
 
     private const val MAX_TOTAL_BYTES =
-        512 * 1024 * 1024
+        128 * 1024 * 1024
 
     fun encode(
         projects: List<ByteArray>
