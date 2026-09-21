@@ -1349,6 +1349,99 @@ private fun SignedInAccount(
 }
 
 @Composable
+private fun AccountAvatar(
+    account: AccountSnapshot
+) {
+    var avatar by remember(
+        account.avatarUrl
+    ) {
+        mutableStateOf<
+            androidx.compose.ui.graphics.ImageBitmap?
+        >(null)
+    }
+
+    LaunchedEffect(
+        account.avatarUrl
+    ) {
+        avatar =
+            account.avatarUrl
+                ?.takeIf {
+                    it.startsWith(
+                        "https://"
+                    )
+                }
+                ?.let {
+                        url ->
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        runCatching {
+                            URL(
+                                url
+                            ).openStream()
+                                .use {
+                                    BitmapFactory
+                                        .decodeStream(
+                                            it
+                                        )
+                                        ?.asImageBitmap()
+                                }
+                        }.getOrNull()
+                    }
+                }
+    }
+
+    Box(
+        Modifier
+            .size(
+                72.dp
+            )
+            .clip(
+                CircleShape
+            )
+            .background(
+                FioGold
+            ),
+        contentAlignment =
+            Alignment.Center
+    ) {
+        val image =
+            avatar
+
+        if (
+            image !=
+                null
+        ) {
+            Image(
+                bitmap =
+                    image,
+                contentDescription =
+                    "Foto do perfil",
+                modifier =
+                    Modifier
+                        .fillMaxSize(),
+                contentScale =
+                    ContentScale.Crop
+            )
+        } else {
+            Text(
+                account.displayName
+                    .trim()
+                    .firstOrNull()
+                    ?.uppercase()
+                    ?: "F",
+                color =
+                    FioBackground,
+                fontWeight =
+                    FontWeight.Black,
+                fontSize =
+                    30.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun AboutFioLabCard() {
     val context =
         LocalContext.current
