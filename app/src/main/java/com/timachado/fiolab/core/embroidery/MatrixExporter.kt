@@ -54,7 +54,13 @@ object MatrixExporter {
                     )
 
                     output.flush()
-                    output.fd.sync()
+
+                    // Alguns provedores SAF (ex.: nuvem) não implementam fsync.
+                    // A escrita/flush continuam obrigatórios; fsync é reforço
+                    // quando o destino expõe um descritor de arquivo real.
+                    runCatching {
+                        output.fd.sync()
+                    }
                 }
             }
         } else {
