@@ -12,6 +12,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryPoint
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.StitchCommand
+import com.timachado.fiolab.core.embroidery.SpecialStitchProcessor
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import java.text.Normalizer
