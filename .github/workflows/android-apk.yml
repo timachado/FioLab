@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/reference-text-engine-0300"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
