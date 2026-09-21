@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feature/simulation-vector-guide-0270"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
