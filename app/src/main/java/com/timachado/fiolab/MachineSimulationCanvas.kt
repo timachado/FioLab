@@ -153,20 +153,58 @@ private data class SimulationTransform(
     val canvasHeight: Float,
     val padding: Float
 ) {
+    private val referencePoints =
+        (
+            design.points +
+                design.guidePoints
+            )
+            .filter {
+                it.command !=
+                    StitchCommand.END
+            }
+
+    private val minXUnits =
+        referencePoints
+            .minOfOrNull {
+                it.xUnits
+            }
+            ?: design.bounds
+                .minXUnits
+
+    private val maxXUnits =
+        referencePoints
+            .maxOfOrNull {
+                it.xUnits
+            }
+            ?: design.bounds
+                .maxXUnits
+
+    private val minYUnits =
+        referencePoints
+            .minOfOrNull {
+                it.yUnits
+            }
+            ?: design.bounds
+                .minYUnits
+
+    private val maxYUnits =
+        referencePoints
+            .maxOfOrNull {
+                it.yUnits
+            }
+            ?: design.bounds
+                .maxYUnits
+
     private val widthUnits =
         (
-            design.bounds
-                .maxXUnits -
-                design.bounds
-                    .minXUnits
+            maxXUnits -
+                minXUnits
             ).coerceAtLeast(1)
 
     private val heightUnits =
         (
-            design.bounds
-                .maxYUnits -
-                design.bounds
-                    .minYUnits
+            maxYUnits -
+                minYUnits
             ).coerceAtLeast(1)
 
     private val availableWidth =
@@ -236,19 +274,15 @@ private data class SimulationTransform(
 
     private val centerXUnits =
         (
-            design.bounds
-                .minXUnits +
-                design.bounds
-                    .maxXUnits
+            minXUnits +
+                maxXUnits
             ) /
             2f
 
     private val centerYUnits =
         (
-            design.bounds
-                .minYUnits +
-                design.bounds
-                    .maxYUnits
+            minYUnits +
+                maxYUnits
             ) /
             2f
 
@@ -645,7 +679,7 @@ private fun DrawScope.drawReferenceGuide(
         color =
             guideColor.copy(
                 alpha =
-                    0.12f
+                    0.19f
             )
     )
 
@@ -655,12 +689,27 @@ private fun DrawScope.drawReferenceGuide(
         color =
             guideColor.copy(
                 alpha =
-                    0.34f
+                    0.16f
             ),
         style =
             Stroke(
                 width =
-                    1.15.dp.toPx()
+                    3.4.dp.toPx()
+            )
+    )
+
+    drawPath(
+        path =
+            path,
+        color =
+            guideColor.copy(
+                alpha =
+                    0.62f
+            ),
+        style =
+            Stroke(
+                width =
+                    1.45.dp.toPx()
             )
     )
 }
