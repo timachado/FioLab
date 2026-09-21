@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.timachado.fiolab.core.account.AccountErrorMessage
 import com.timachado.fiolab.core.account.FioLabAccountService
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
@@ -141,8 +142,11 @@ class AuthCallbackActivity :
                 onError = {
                         error ->
                     errorMessage =
-                        error.message
-                            ?: "A autenticação foi cancelada ou não pôde ser concluída."
+                        AccountErrorMessage
+                            .forUser(
+                                error,
+                                "A autenticação foi cancelada ou não pôde ser concluída."
+                            )
                 }
             )
     }
