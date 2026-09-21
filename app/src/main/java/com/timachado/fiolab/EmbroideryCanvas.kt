@@ -525,7 +525,7 @@ private fun DrawScope.drawStitchByDisplay(
                 end =
                     end,
                 strokeWidth =
-                    2.25.dp
+                    1.35.dp
                         .toPx(),
                 cap =
                     StrokeCap.Round
