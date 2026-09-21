@@ -92,7 +92,8 @@ object DstParser {
                 colorChanges = colorChanges,
                 endFound = endFound,
                 sourceBytes = bytes.copyOf(),
-                threadColors = emptyList()
+                threadColors = emptyList(),
+                sourceYAxisDown = true
             )
 
         return EmbroideryIntegrity
@@ -126,31 +127,34 @@ object DstParser {
 
     private fun decodeX(b0: Int, b1: Int, b2: Int): Int {
         var x = 0
-        if ((b0 and 0x01) != 0) x -= 1
-        if ((b0 and 0x02) != 0) x += 1
-        if ((b0 and 0x04) != 0) x -= 9
-        if ((b0 and 0x08) != 0) x += 9
-        if ((b1 and 0x01) != 0) x -= 3
-        if ((b1 and 0x02) != 0) x += 3
-        if ((b1 and 0x04) != 0) x -= 27
-        if ((b1 and 0x08) != 0) x += 27
-        if ((b2 and 0x04) != 0) x -= 81
-        if ((b2 and 0x08) != 0) x += 81
+        if ((b0 and 0x01) != 0) x += 1
+        if ((b0 and 0x02) != 0) x -= 1
+        if ((b0 and 0x04) != 0) x += 9
+        if ((b0 and 0x08) != 0) x -= 9
+        if ((b1 and 0x01) != 0) x += 3
+        if ((b1 and 0x02) != 0) x -= 3
+        if ((b1 and 0x04) != 0) x += 27
+        if ((b1 and 0x08) != 0) x -= 27
+        if ((b2 and 0x04) != 0) x += 81
+        if ((b2 and 0x08) != 0) x -= 81
         return x
     }
 
     private fun decodeY(b0: Int, b1: Int, b2: Int): Int {
-        var y = 0
-        if ((b0 and 0x40) != 0) y -= 1
-        if ((b0 and 0x80) != 0) y += 1
-        if ((b0 and 0x10) != 0) y -= 9
-        if ((b0 and 0x20) != 0) y += 9
-        if ((b1 and 0x40) != 0) y -= 3
-        if ((b1 and 0x80) != 0) y += 3
-        if ((b1 and 0x10) != 0) y -= 27
-        if ((b1 and 0x20) != 0) y += 27
-        if ((b2 and 0x10) != 0) y -= 81
-        if ((b2 and 0x20) != 0) y += 81
-        return y
+        var encodedY = 0
+        if ((b0 and 0x40) != 0) encodedY -= 1
+        if ((b0 and 0x80) != 0) encodedY += 1
+        if ((b0 and 0x10) != 0) encodedY -= 9
+        if ((b0 and 0x20) != 0) encodedY += 9
+        if ((b1 and 0x40) != 0) encodedY -= 3
+        if ((b1 and 0x80) != 0) encodedY += 3
+        if ((b1 and 0x10) != 0) encodedY -= 27
+        if ((b1 and 0x20) != 0) encodedY += 27
+        if ((b2 and 0x10) != 0) encodedY -= 81
+        if ((b2 and 0x20) != 0) encodedY += 81
+
+        // DST armazena o eixo Y no sentido oposto ao sistema interno
+        // do EmbroideryIO/FioLab para arquivos importados.
+        return -encodedY
     }
 }

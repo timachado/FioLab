@@ -26,6 +26,30 @@ class DstParserTest {
         assertEquals(2, design.colorCount)
         assertEquals(0.9f, design.bounds.widthMm, 0.001f)
         assertEquals(0.9f, design.bounds.heightMm, 0.001f)
+        assertTrue(design.sourceYAxisDown)
+
+        val stitches =
+            design.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+
+        assertEquals(
+            listOf(
+                Pair(-9, 0),
+                Pair(-9, -9),
+                Pair(0, -9),
+                Pair(0, 0)
+            ),
+            stitches.map {
+                Pair(
+                    it.xUnits,
+                    it.yUnits
+                )
+            }
+        )
+
         assertTrue(design.endFound)
     }
 }

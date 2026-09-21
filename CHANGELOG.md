@@ -8,6 +8,7 @@
 - Matrizes importadas por PES/JEF preservam a convenção de origem e não recebem dupla inversão.
 - Salvamento USB OTG continua apenas gravando os bytes preparados; nenhuma transformação é aplicada pelo pendrive.
 - Adicionados testes assimétricos de round-trip nos três formatos para detectar regressão de espelhamento.
+- Parser DST alinhado à convenção de sinais do EmbroideryIO, corrigindo X/Y na reabertura e marcando o eixo importado como positivo para baixo.
 - Correção tratada como bloqueadora de RC até nova validação em bordadeira real.
 
 ## 0.46.1
