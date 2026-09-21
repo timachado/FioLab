@@ -38,6 +38,15 @@ private val simulationPalette =
 fun MachineSimulationCanvas(
     design: EmbroideryDesign,
     pointLimit: Int,
+    displayMode:
+        EmbroideryDisplayMode =
+        EmbroideryDisplayMode.REALISTIC,
+    hoop:
+        HoopProfile? =
+        design.hoopProfile,
+    showConnections:
+        Boolean =
+        false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -64,7 +73,9 @@ fun MachineSimulationCanvas(
                     canvasHeight =
                         size.height,
                     padding =
-                        38.dp.toPx()
+                        38.dp.toPx(),
+                    hoop =
+                        hoop
                 )
 
             drawFabricGrid(
@@ -73,7 +84,7 @@ fun MachineSimulationCanvas(
 
             drawHoop(
                 hoop =
-                    design.hoopProfile
+                    hoop
             )
 
             if (
@@ -95,7 +106,11 @@ fun MachineSimulationCanvas(
                     pointLimit =
                         design.points.size,
                     ghost =
-                        true
+                        true,
+                    displayMode =
+                        displayMode,
+                    showConnections =
+                        showConnections
                 )
             }
 
@@ -106,7 +121,11 @@ fun MachineSimulationCanvas(
                     transform,
                 pointLimit =
                     pointLimit,
-                ghost = false
+                ghost = false,
+                displayMode =
+                    displayMode,
+                showConnections =
+                    showConnections
             )
 
             val visiblePoints =
@@ -151,7 +170,8 @@ private data class SimulationTransform(
     val design: EmbroideryDesign,
     val canvasWidth: Float,
     val canvasHeight: Float,
-    val padding: Float
+    val padding: Float,
+    val hoop: HoopProfile?
 ) {
     private val referencePoints =
         (
@@ -240,7 +260,7 @@ private data class SimulationTransform(
         )
 
     private val hoopScale =
-        design.hoopProfile
+        hoop
             ?.let {
                 hoop ->
                 minOf(
@@ -719,7 +739,11 @@ private fun DrawScope.drawStitches(
     transform:
         SimulationTransform,
     pointLimit: Int,
-    ghost: Boolean
+    ghost: Boolean,
+    displayMode:
+        EmbroideryDisplayMode,
+    showConnections:
+        Boolean
 ) {
     var previous:
         EmbroideryPoint? =
@@ -753,8 +777,38 @@ private fun DrawScope.drawStitches(
             }
 
             StitchCommand.JUMP -> {
-                // JUMP é apenas deslocamento da máquina sem costura.
-                // Não desenhar uma linha evita mostrar um fio que não existe.
+                if (
+                    showConnections &&
+                    previous !=
+                        null
+                ) {
+                    drawLine(
+                        color =
+                            Color(
+                                0x668C8F94
+                            ),
+                        start =
+                            transform.point(
+                                previous
+                            ),
+                        end =
+                            transform.point(
+                                point
+                            ),
+                        strokeWidth =
+                            0.9.dp
+                                .toPx(),
+                        pathEffect =
+                            PathEffect
+                                .dashPathEffect(
+                                    floatArrayOf(
+                                        5.dp.toPx(),
+                                        4.dp.toPx()
+                                    )
+                                )
+                    )
+                }
+
                 previous =
                     point
             }
@@ -853,63 +907,114 @@ private fun DrawScope.drawStitches(
                                 StrokeCap.Round
                         )
                     } else {
-                        drawLine(
-                            color =
-                                Color.Black
-                                    .copy(
-                                        alpha =
-                                            0.22f
-                                    ),
-                            start =
-                                start +
-                                    Offset(
-                                        0.7.dp.toPx(),
-                                        0.7.dp.toPx()
-                                    ),
-                            end =
-                                end +
-                                    Offset(
-                                        0.7.dp.toPx(),
-                                        0.7.dp.toPx()
-                                    ),
-                            strokeWidth =
-                                2.9.dp
-                                    .toPx(),
-                            cap =
-                                StrokeCap.Round
-                        )
+                        when (
+                            displayMode
+                        ) {
+                            EmbroideryDisplayMode.SOLID -> {
+                                drawLine(
+                                    color =
+                                        baseColor,
+                                    start =
+                                        start,
+                                    end =
+                                        end,
+                                    strokeWidth =
+                                        1.35.dp
+                                            .toPx(),
+                                    cap =
+                                        StrokeCap.Round
+                                )
+                            }
 
-                        drawLine(
-                            color =
-                                color,
-                            start =
-                                start,
-                            end =
-                                end,
-                            strokeWidth =
-                                2.35.dp
-                                    .toPx(),
-                            cap =
-                                StrokeCap.Round
-                        )
+                            EmbroideryDisplayMode.POINTS -> {
+                                drawLine(
+                                    color =
+                                        baseColor.copy(
+                                            alpha =
+                                                0.28f
+                                        ),
+                                    start =
+                                        start,
+                                    end =
+                                        end,
+                                    strokeWidth =
+                                        0.75.dp
+                                            .toPx(),
+                                    cap =
+                                        StrokeCap.Round
+                                )
 
-                        drawLine(
-                            color =
-                                Color.White
-                                    .copy(
-                                        alpha =
-                                            0.18f
-                                    ),
-                            start =
-                                start,
-                            end =
-                                end,
-                            strokeWidth =
-                                0.55.dp
-                                    .toPx(),
-                            cap =
-                                StrokeCap.Round
-                        )
+                                drawCircle(
+                                    color =
+                                        baseColor,
+                                    radius =
+                                        1.8.dp
+                                            .toPx(),
+                                    center =
+                                        end
+                                )
+                            }
+
+                            EmbroideryDisplayMode.REALISTIC -> {
+                                drawLine(
+                                    color =
+                                        Color.Black
+                                            .copy(
+                                                alpha =
+                                                    0.22f
+                                            ),
+                                    start =
+                                        start +
+                                            Offset(
+                                                0.7.dp.toPx(),
+                                                0.7.dp.toPx()
+                                            ),
+                                    end =
+                                        end +
+                                            Offset(
+                                                0.7.dp.toPx(),
+                                                0.7.dp.toPx()
+                                            ),
+                                    strokeWidth =
+                                        2.9.dp
+                                            .toPx(),
+                                    cap =
+                                        StrokeCap.Round
+                                )
+
+                                drawLine(
+                                    color =
+                                        color,
+                                    start =
+                                        start,
+                                    end =
+                                        end,
+                                    strokeWidth =
+                                        2.35.dp
+                                            .toPx(),
+                                    cap =
+                                        StrokeCap.Round
+                                )
+
+                                drawLine(
+                                    color =
+                                        Color.White
+                                            .copy(
+                                                alpha =
+                                                    0.18f
+                                            ),
+                                    start =
+                                        start,
+                                    end =
+                                        end,
+                                    strokeWidth =
+                                        0.55.dp
+                                            .toPx(),
+                                    cap =
+                                        StrokeCap.Round
+                                )
+                            }
+                        }
                     }
                 }
 
