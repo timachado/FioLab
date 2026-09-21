@@ -320,6 +320,9 @@ create table if not exists public.fiolab_subscription_history (
 create index if not exists fiolab_subscription_history_user_time_idx
 on public.fiolab_subscription_history(user_id, occurred_at desc);
 
+create index if not exists fiolab_subscription_history_plan_code_idx
+on public.fiolab_subscription_history(plan_code);
+
 alter table public.fiolab_plans enable row level security;
 alter table public.fiolab_subscription_history enable row level security;
 
