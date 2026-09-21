@@ -47,6 +47,7 @@ import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
+import com.timachado.fiolab.core.embroidery.SpecialStitchMode
 import com.timachado.fiolab.core.embroidery.TextGlyphProvider
 import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
 import com.timachado.fiolab.core.embroidery.TextLayoutMode
@@ -143,6 +144,14 @@ fun CreateNameScreen(
     var satinUnderlayMode by remember {
         mutableStateOf(
             SatinUnderlayMode.CENTER
+        )
+    }
+
+    var specialStitchMode by remember {
+        mutableStateOf<
+            SpecialStitchMode?
+        >(
+            null
         )
     }
 
@@ -251,6 +260,8 @@ fun CreateNameScreen(
                             satinShortStitches,
                         satinUnderlayMode =
                             satinUnderlayMode,
+                        specialStitchMode =
+                            specialStitchMode,
                         color = color,
                         font = font,
                         outputFormat =
@@ -808,6 +819,8 @@ fun CreateNameScreen(
                                             onClick = {
                                                 stitchStyle =
                                                     option
+                                                specialStitchMode =
+                                                    null
                                             }
                                         )
                                     }
@@ -1115,67 +1128,103 @@ fun CreateNameScreen(
                                         0f..1f
                                 )
 
-                                Text(
-                                    "Underlay",
-                                    color =
-                                        FioText,
-                                    fontWeight =
-                                        FontWeight.SemiBold
-                                )
 
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(
-                                                rememberScrollState()
-                                            )
-                                            .padding(
-                                                vertical =
-                                                    6.dp
-                                            ),
-                                    horizontalArrangement =
-                                        Arrangement.spacedBy(
-                                            7.dp
+                            }
+
+                            Text(
+                                "Tipo de ponto especial",
+                                modifier =
+                                    Modifier.padding(
+                                        top =
+                                            10.dp
+                                    ),
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
                                         )
-                                ) {
-                                    SatinUnderlayMode
-                                        .entries
-                                        .forEach {
-                                                option ->
-                                            ChoiceButton(
-                                                text =
-                                                    option.displayName,
-                                                selected =
-                                                    satinUnderlayMode ==
-                                                        option,
-                                                onClick = {
-                                                    satinUnderlayMode =
-                                                        option
-                                                }
-                                            )
-                                        }
-                                }
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                SpecialStitchMode
+                                    .entries
+                                    .forEach {
+                                            option ->
+                                        ChoiceButton(
+                                            text =
+                                                when (
+                                                    option
+                                                ) {
+                                                    SpecialStitchMode.BEAN ->
+                                                        "Feijão"
 
-                                OutlinedButton(
-                                    onClick = {
-                                        satinShortStitches =
-                                            !satinShortStitches
-                                    },
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                ) {
+                                                    SpecialStitchMode.TRIPLE_RUNNING ->
+                                                        "Corrido triplo"
+
+                                                    SpecialStitchMode.PROGRAMMED_MOTIF ->
+                                                        "Motivo"
+                                                },
+                                            selected =
+                                                specialStitchMode ==
+                                                    option,
+                                            onClick = {
+                                                specialStitchMode =
+                                                    if (
+                                                        specialStitchMode ==
+                                                            option
+                                                    ) {
+                                                        null
+                                                    } else {
+                                                        option
+                                                    }
+
+                                                if (
+                                                    specialStitchMode !=
+                                                        null
+                                                ) {
+                                                    stitchStyle =
+                                                        TextStitchStyle.RUNNING
+                                                }
+                                            }
+                                        )
+                                    }
+                            }
+
+                            specialStitchMode
+                                ?.let {
+                                        selected ->
                                     Text(
-                                        if (
-                                            satinShortStitches
-                                        ) {
-                                            "✓ Short stitches"
-                                        } else {
-                                            "Short stitches desativados"
-                                        }
+                                        selected.displayName,
+                                        color =
+                                            FioGold,
+                                        fontWeight =
+                                            FontWeight.SemiBold,
+                                        fontSize =
+                                            11.sp
+                                    )
+
+                                    Text(
+                                        selected.description,
+                                        color =
+                                            FioTextMuted,
+                                        fontSize =
+                                            10.sp
                                     )
                                 }
-                            }
                         }
                     }
                 }
