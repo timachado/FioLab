@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.13
+
+### Correção do travamento na tela Criar Nome
+- Corrigido o ANR ("FioLab não está respondendo") introduzido pela digitalização Satin adaptativa da 0.46.12.
+- A prévia não é mais calculada durante a recomposição do Jetpack Compose: toda geração de matriz passa a ocorrer em `Dispatchers.Default`, fora da thread principal.
+- Adicionado debounce de 140 ms para evitar iniciar digitalizações caras durante ajustes rápidos.
+- Quando o auto-fit está ativo, o design final já calculado pelo auto-fit é reutilizado diretamente como prévia, eliminando uma geração duplicada.
+- O auto-fit deixou de fazer até cerca de 15 gerações por ajuste; agora usa a proporção real do desenho para aproximar o tamanho ideal e limita o refinamento a no máximo 5 passos, com até 7 chamadas totais incluindo arredondamento.
+- Enquanto a matriz está sendo calculada, a tela mostra "Gerando prévia…" e mantém Simular/Criar matriz desativados até a conclusão.
+- Mantido o Satin adaptativo por eixo medial e múltiplas direções da 0.46.12; esta correção não retorna ao preenchimento de eixo único.
+- Adicionado teste de regressão que limita o número de chamadas do auto-fit e preserva o encaixe no bastidor.
+
 ## 0.46.12
 
 ### Satin por blocos adaptativos — direção acompanha o traço
