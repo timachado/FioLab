@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.35.0
+
+### Simulação alinhada ao comportamento de referência
+- Corrigida a escala física da simulação: quando há bastidor selecionado, o tamanho da matriz passa a ser calculado diretamente pelo tamanho real do bastidor, sem o fator artificial de ampliação anterior.
+- O contorno do bastidor e o desenho agora usam a mesma geometria e a mesma escala, evitando discrepância visual entre matriz e área de referência.
+- A matriz ainda não bordada fica mais suave durante a simulação, funcionando como guia visual; os pontos já executados permanecem fortes e progressivos.
+- O fio ativo no modo Realista foi afinado para que o preenchimento resulte da densidade real dos pontos, e não da espessura artificial da linha desenhada.
+- O contorno da área de simulação foi aproximado do estilo neutro da referência.
+- Incluídos testes de regressão para garantir que bastidores diferentes mantenham escalas coerentes.
+- Leitura PES/DST/JEF, geração de matrizes, TTF/OTF, Satin e sequência original de pontos permanecem inalterados.
+
 ## 0.34.0
 
 ### Simulação realista de bordado

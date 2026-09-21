@@ -83,8 +83,8 @@ fun MachineSimulationCanvas(
             )
 
             drawHoop(
-                hoop =
-                    hoop
+                transform =
+                    transform
             )
 
             if (
@@ -245,52 +245,63 @@ private data class SimulationTransform(
                 1f
             )
 
-    private val designScale =
-        minOf(
-            availableWidth /
-                (
-                    widthUnits *
-                        1.04f
-                    ),
-            availableHeight /
-                (
-                    heightUnits *
-                        1.04f
-                    )
-        )
-
-    private val hoopScale =
+    private val hoopWidthUnits =
         hoop
-            ?.let {
-                hoop ->
-                minOf(
-                    availableWidth /
-                        (
-                            hoop.widthMm *
-                                10f
-                            ),
-                    availableHeight /
-                        (
-                            hoop.heightMm *
-                                10f
-                            )
-                )
-            }
+            ?.widthMm
+            ?.times(
+                10f
+            )
+
+    private val hoopHeightUnits =
+        hoop
+            ?.heightMm
+            ?.times(
+                10f
+            )
 
     val scale: Float =
-        (
-            hoopScale
-                ?.let {
-                    minOf(
-                        designScale,
-                        it *
-                            8f
-                    )
-                }
-                ?: designScale
-            ).coerceAtLeast(
-            0.01f
+        simulationScale(
+            availableWidth =
+                availableWidth,
+            availableHeight =
+                availableHeight,
+            designWidthUnits =
+                widthUnits.toFloat(),
+            designHeightUnits =
+                heightUnits.toFloat(),
+            hoopWidthUnits =
+                hoopWidthUnits,
+            hoopHeightUnits =
+                hoopHeightUnits
         )
+
+    val hoopFrameWidthPx: Float =
+        (
+            hoopWidthUnits
+                ?: widthUnits.toFloat()
+            ) *
+            scale
+
+    val hoopFrameHeightPx: Float =
+        (
+            hoopHeightUnits
+                ?: heightUnits.toFloat()
+            ) *
+            scale
+
+    val hoopFrameLeftPx: Float =
+        (
+            canvasWidth -
+                hoopFrameWidthPx
+            ) /
+            2f
+
+    val hoopFrameTopPx: Float =
+        (
+            canvasHeight -
+                hoopFrameHeightPx
+            ) /
+            2f
 
     private val centerXUnits =
         (
@@ -340,6 +351,71 @@ private data class SimulationTransform(
     ): Float =
         units *
             scale
+}
+
+internal fun simulationScale(
+    availableWidth: Float,
+    availableHeight: Float,
+    designWidthUnits: Float,
+    designHeightUnits: Float,
+    hoopWidthUnits: Float?,
+    hoopHeightUnits: Float?
+): Float {
+    val safeWidth =
+        availableWidth
+            .coerceAtLeast(
+                1f
+            )
+
+    val safeHeight =
+        availableHeight
+            .coerceAtLeast(
+                1f
+            )
+
+    val designScale =
+        minOf(
+            safeWidth /
+                designWidthUnits
+                    .coerceAtLeast(
+                        1f
+                    ),
+            safeHeight /
+                designHeightUnits
+                    .coerceAtLeast(
+                        1f
+                    )
+        )
+
+    val hoopScale =
+        if (
+            hoopWidthUnits !=
+                null &&
+            hoopHeightUnits !=
+                null
+        ) {
+            minOf(
+                safeWidth /
+                    hoopWidthUnits
+                        .coerceAtLeast(
+                            1f
+                        ),
+                safeHeight /
+                    hoopHeightUnits
+                        .coerceAtLeast(
+                            1f
+                        )
+            )
+        } else {
+            null
+        }
+
+    return (
+        hoopScale
+            ?: designScale
+        ).coerceAtLeast(
+        0.01f
+    )
 }
 
 private fun DrawScope.drawFabricGrid(
@@ -494,91 +570,29 @@ private fun DrawScope.drawFabricGrid(
 }
 
 private fun DrawScope.drawHoop(
-    hoop: HoopProfile?
+    transform:
+        SimulationTransform
 ) {
-    val fallbackInset =
-        13.dp.toPx()
-
-    val frameWidth =
-        if (
-            hoop == null
-        ) {
-            size.width -
-                fallbackInset *
-                    2f
-        } else {
-            val ratio =
-                hoop.widthMm /
-                    hoop.heightMm
-
-            minOf(
-                size.width -
-                    fallbackInset *
-                        2f,
-                (
-                    size.height -
-                        fallbackInset *
-                            2f
-                    ) *
-                    ratio
-            )
-        }
-
-    val frameHeight =
-        if (
-            hoop == null
-        ) {
-            size.height -
-                fallbackInset *
-                    2f
-        } else {
-            val ratio =
-                hoop.widthMm /
-                    hoop.heightMm
-
-            minOf(
-                size.height -
-                    fallbackInset *
-                        2f,
-                (
-                    size.width -
-                        fallbackInset *
-                            2f
-                    ) /
-                    ratio
-            )
-        }
-
-    val left =
-        (
-            size.width -
-                frameWidth
-            ) /
-            2f
-
-    val top =
-        (
-            size.height -
-                frameHeight
-            ) /
-            2f
-
     drawRoundRect(
         color =
             Color(
-                0xD9F0A62B
+                0xB346433E
             ),
         topLeft =
             Offset(
-                left,
-                top
+                transform
+                    .hoopFrameLeftPx,
+                transform
+                    .hoopFrameTopPx
             ),
         size =
             androidx.compose.ui.geometry.Size(
                 width =
-                    frameWidth,
+                    transform
+                        .hoopFrameWidthPx,
                 height =
-                    frameHeight
+                    transform
+                        .hoopFrameHeightPx
             ),
         cornerRadius =
             CornerRadius(
@@ -588,13 +602,13 @@ private fun DrawScope.drawHoop(
         style =
             Stroke(
                 width =
-                    1.5.dp.toPx(),
+                    1.35.dp.toPx(),
                 pathEffect =
                     PathEffect
                         .dashPathEffect(
                             floatArrayOf(
-                                9.dp.toPx(),
-                                7.dp.toPx()
+                                8.dp.toPx(),
+                                6.dp.toPx()
                             )
                         )
             )
@@ -821,7 +835,7 @@ private fun DrawScope.drawStitches(
                         if (ghost) {
                             color.copy(
                                 alpha =
-                                    0.52f
+                                    0.24f
                             )
                         } else {
                             color
@@ -864,7 +878,7 @@ private fun DrawScope.drawStitches(
                             baseColor
                                 .copy(
                                     alpha =
-                                        0.52f
+                                        0.24f
                                 )
                         } else {
                             baseColor
@@ -897,7 +911,7 @@ private fun DrawScope.drawStitches(
                             end =
                                 end,
                             strokeWidth =
-                                .58.dp
+                                .42.dp
                                     .toPx(),
                             cap =
                                 StrokeCap.Round
@@ -996,7 +1010,7 @@ private fun DrawScope.drawStitches(
                                             baseColor.blue *
                                                 .38f,
                                         alpha =
-                                            .58f
+                                            .36f
                                     )
 
                                 drawLine(
@@ -1009,7 +1023,7 @@ private fun DrawScope.drawStitches(
                                         end +
                                             shadowOffset,
                                     strokeWidth =
-                                        1.75.dp
+                                        1.35.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
@@ -1026,7 +1040,7 @@ private fun DrawScope.drawStitches(
                                     end =
                                         end,
                                     strokeWidth =
-                                        1.18.dp
+                                        1.00.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
@@ -1037,7 +1051,7 @@ private fun DrawScope.drawStitches(
                                         Color.White
                                             .copy(
                                                 alpha =
-                                                    .30f
+                                                    .18f
                                             ),
                                     start =
                                         start +
@@ -1046,7 +1060,7 @@ private fun DrawScope.drawStitches(
                                         end +
                                             highlightOffset,
                                     strokeWidth =
-                                        .28.dp
+                                        .22.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
