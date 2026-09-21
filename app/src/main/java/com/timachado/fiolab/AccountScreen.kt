@@ -75,6 +75,7 @@ fun AccountScreen(
     onSaveName: (
         displayName: String
     ) -> Unit,
+    onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -153,6 +154,8 @@ fun AccountScreen(
                     account,
                 onSaveName =
                     onSaveName,
+                onRefresh =
+                    onRefresh,
                 onSignOut =
                     onSignOut
             )
@@ -461,6 +464,7 @@ private fun SignedInAccount(
     onSaveName: (
         displayName: String
     ) -> Unit,
+    onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
     var displayName by remember(
@@ -834,6 +838,28 @@ private fun SignedInAccount(
                     fontSize =
                         10.sp
                 )
+
+                Spacer(
+                    Modifier.height(
+                        12.dp
+                    )
+                )
+
+                OutlinedButton(
+                    onClick =
+                        onRefresh,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                ) {
+                    Text(
+                        "↻ Atualizar assinatura",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+                }
             }
         }
 
