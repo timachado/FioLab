@@ -235,6 +235,8 @@ object ImportedFontMatrixGenerator {
                 if (
                     options.style ==
                         TextStitchStyle.SATIN &&
+                    options.specialStitchMode ==
+                        null &&
                     renderableText.length >
                         1
                 ) {
@@ -284,8 +286,18 @@ object ImportedFontMatrixGenerator {
                     )
                 }
 
+            val processedPoints =
+                SpecialStitchProcessor
+                    .apply(
+                        points =
+                            points,
+                        mode =
+                            options
+                                .specialStitchMode
+                    )
+
             require(
-                points.any {
+                processedPoints.any {
                     it.command ==
                         StitchCommand.STITCH
                 }
@@ -294,7 +306,7 @@ object ImportedFontMatrixGenerator {
             }
 
             val coordinates =
-                points.filter {
+                processedPoints.filter {
                     it.command !=
                         StitchCommand.END
                 }
@@ -334,7 +346,7 @@ object ImportedFontMatrixGenerator {
                     2f
 
             val centered =
-                points.map {
+                processedPoints.map {
                         point ->
                     point.copy(
                         xUnits =
@@ -643,7 +655,14 @@ object ImportedFontMatrixGenerator {
                 contours ->
             val glyphPoints =
                 when (
-                    options.style
+                    if (
+                        options.specialStitchMode !=
+                            null
+                    ) {
+                        TextStitchStyle.RUNNING
+                    } else {
+                        options.style
+                    }
                 ) {
                     TextStitchStyle.RUNNING ->
                         buildRunningOutline(
