@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.30.0
+
+### Novo motor de texto TTF/OTF
+- O caminho Satin experimental anterior deixa de ser usado para fontes importadas.
+- Reimplementado o pipeline funcional observado no app de referência: extração de contorno por glifo, polygonize, scan spans nos eixos X/Y, escolha do eixo com menor largura média, BuildColumns e SplitWideColumn.
+- A altura passa a ser resolvida por cap-height da fonte, em vez de escalar a caixa inteira da palavra.
+- Densidade Satin padrão passa a 0,4 mm.
+- A largura máxima Satin para divisão de colunas passa a 7,0 mm; a largura real continua vindo do desenho da fonte.
+- Pull compensation padrão permanece 0,2 mm.
+- O espaçamento base passa a ser proporcional à altura da letra (4%), com ajuste manual adicional.
+- Cada glifo é digitalizado em suas próprias colunas, preservando melhor contraformas e ligações do desenho.
+- Underlay central faz ida e volta pelos centros das linhas da coluna.
+- Cada coluna recebe lock de 0,6 mm no início e no fim.
+- Viagens acima de 5 mm geram TRIM; jumps e stitches são segmentados em no máximo 7 mm.
+- O guia vetorial original da fonte continua independente dos pontos e permanece disponível na simulação.
+- A implementação Kotlin é própria; o APK de referência foi usado para reproduzir o comportamento e os parâmetros, não para incorporar código ou assets.
+
 ## 0.29.0
 
 ### Espessura fiel em fontes importadas
