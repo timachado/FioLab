@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "qa/pre-rc-hardening-0.44.0"]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -46,22 +46,28 @@ jobs:
       - name: Unit tests
         run: gradle :app:testDebugUnitTest --stacktrace
 
+      - name: Android lint
+        run: gradle :app:lintDebug --stacktrace
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
+
+      - name: Build unsigned release candidate
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.43.0-debug.apk
-          zip -9 FioLab-0.43.0-debug.zip FioLab-0.43.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.44.0-debug.apk
+          zip -9 FioLab-0.44.0-debug.zip FioLab-0.44.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.43.0-downloads
+          name: FioLab-0.44.0-downloads
           path: |
-            FioLab-0.43.0-debug.apk
-            FioLab-0.43.0-debug.zip
+            FioLab-0.44.0-debug.apk
+            FioLab-0.44.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +75,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.43.0 >/dev/null 2>&1; then
-            gh release upload v0.43.0               FioLab-0.43.0-debug.apk               FioLab-0.43.0-debug.zip               --clobber
+          if gh release view v0.44.0 >/dev/null 2>&1; then
+            gh release upload v0.44.0               FioLab-0.44.0-debug.apk               FioLab-0.44.0-debug.zip               --clobber
           else
-            gh release create v0.43.0               FioLab-0.43.0-debug.apk               FioLab-0.43.0-debug.zip               --target main               --title "FioLab 0.43.0"               --notes "FioLab 0.43.0: adiciona stress QA para matrizes, fontes TTF/OTF, conversão PES/DST/JEF e ciclos completos de edição e reabertura."
+            gh release create v0.44.0               FioLab-0.44.0-debug.apk               FioLab-0.44.0-debug.zip               --target main               --title "FioLab 0.44.0"               --notes "FioLab 0.44.0: pré-RC com endurecimento de rede/autenticação, segurança Android, lint e validação da build release sem assinatura."
           fi
