@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.38.0
+
+### Login com Google
+- Adicionada a opção “Continuar com Google” em Minha Conta, mantendo login e cadastro por e-mail/senha.
+- OAuth do Supabase usa PKCE e callback próprio do Android: `com.timachado.fiolab://login-callback`.
+- Após autenticar no navegador, o FioLab retorna automaticamente para Minha Conta e recarrega perfil e assinatura.
+- Login Google usa a mesma sessão Supabase dos demais logins; não cria um sistema de conta paralelo.
+- O fluxo continua compatível com o vínculo de planos do WooCommerce pelo usuário/e-mail no backend.
+- Adicionada tela de callback para sucesso/erro sem expor tokens no app.
+- Motor de bordado, visualização, fontes, transferência e esquema de assinaturas 0.37.0 não foram alterados.
+
 ## 0.37.0
 
 ### Minha Conta e assinaturas
