@@ -495,6 +495,15 @@ private fun FioLabApp(
                     document ==
                         null
                 ) {
+                    withContext(
+                        Dispatchers.IO
+                    ) {
+                        PendingDocumentStore
+                            .clear(
+                                context
+                            )
+                    }
+
                     snackbar.showSnackbar(
                         "Não foi possível recuperar o arquivo preparado para salvar."
                     )
