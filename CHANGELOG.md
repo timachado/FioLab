@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.43.0
+
+### Stress de matrizes e fontes
+- Adicionado orçamento de complexidade para matrizes geradas no celular, evitando geração descontrolada de centenas de milhares de comandos.
+- Conversão PES/DST/JEF agora normaliza a integridade da matriz antes de exportar e rejeita deslocamentos patológicos antes de expandi-los em milhões de segmentos.
+- Cálculo de deslocamentos na conversão usa aritmética Long, evitando overflow de Int em coordenadas extremas.
+- Geração de nomes aplica limite seguro antes e depois de pontos especiais.
+- Ponto Feijão, Corrido Triplo e Motivo passam a respeitar o orçamento central de comandos.
+- Layout reto/curvo e ajustes por letra aplicam a mesma validação final de complexidade.
+- Motor de TTF/OTF passa a limitar amostragem de contornos, quantidade de detalhes por glifo, linhas de varredura, coordenadas inválidas e total de pontos Satin.
+- Importação TTF/OTF mantém limite de 12 MB e agora finaliza o arquivo salvo de forma atômica.
+- Adicionados testes com nome de 24 caracteres no limite das opções, matriz de 20 mil pontos/32 blocos de cor e ciclo editar → salvar → reabrir → converter → reabrir → simular.
+- Adicionado teste para garantir que deslocamento patológico falhe rápido em vez de consumir memória.
+- Motor visual, login, conta, biblioteca, assinatura e regras comerciais permanecem inalterados.
+
 ## 0.42.0
 
 ### Resistência real no Android
