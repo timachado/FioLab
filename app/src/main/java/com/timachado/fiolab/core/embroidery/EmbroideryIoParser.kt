@@ -131,7 +131,8 @@ object EmbroideryIoParser {
                 colorChanges = colorChanges,
                 endFound = endFound,
                 sourceBytes = bytes.copyOf(),
-                threadColors = colors
+                threadColors = colors,
+                sourceYAxisDown = true
             )
         )
     }
