@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/simulation-guide-0271"]
+    branches: ["main", "feature/special-stitches-0280"]
   workflow_dispatch:
 
 permissions:
@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.27.1-debug.apk
-          zip -9 FioLab-0.27.1-debug.zip FioLab-0.27.1-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.28.0-debug.apk
+          zip -9 FioLab-0.28.0-debug.zip FioLab-0.28.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.27.1-downloads
+          name: FioLab-0.28.0-downloads
           path: |
-            FioLab-0.27.1-debug.apk
-            FioLab-0.27.1-debug.zip
+            FioLab-0.28.0-debug.apk
+            FioLab-0.28.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.27.1 >/dev/null 2>&1; then
-            gh release upload v0.27.1               FioLab-0.27.1-debug.apk               FioLab-0.27.1-debug.zip               --clobber
+          if gh release view v0.28.0 >/dev/null 2>&1; then
+            gh release upload v0.28.0               FioLab-0.28.0-debug.apk               FioLab-0.28.0-debug.zip               --clobber
           else
-            gh release create v0.27.1               FioLab-0.27.1-debug.apk               FioLab-0.27.1-debug.zip               --target main               --title "FioLab 0.27.1"               --notes "FioLab 0.27.1: reforça o molde vetorial da fonte na simulação, melhora contraste e contorno, adiciona halo suave e enquadra usando a união entre pontos costurados e guia original."
+            gh release create v0.28.0               FioLab-0.28.0-debug.apk               FioLab-0.28.0-debug.zip               --target main               --title "FioLab 0.28.0"               --notes "FioLab 0.28.0: substitui a área de Underlay por pontos especiais reais — Ponto Feijão, Ponto Corrido Triplo e Ponto de Motivo — integrados às fontes nativas e TTF/OTF, mantendo o guia vetorial aprimorado da simulação."
           fi
