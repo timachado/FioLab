@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.45.0
+
+### Atualização segura e integridade de distribuição
+- Minha Conta passa a exibir um cartão próprio de atualizações para usuários autenticados e não autenticados.
+- A verificação consulta somente a release pública oficial do repositório FioLab por HTTPS e nunca instala APK silenciosamente.
+- Comparação de versões é feita localmente e o botão de atualização só abre a página HTTPS da release quando existir versão mais nova.
+- Falhas de rede ou indisponibilidade do serviço não bloqueiam o uso do aplicativo; o usuário pode tentar novamente manualmente.
+- A versão exibida na Home passa a usar BuildConfig.VERSION_NAME, evitando rótulo manual desatualizado em futuras builds.
+- O pipeline passa a executar uma checagem estática para impedir chave service-role/privada e URLs HTTP literais no código Kotlin/Gradle de produção.
+- Downloads da release passam a incluir arquivo SHA-256 para conferência de integridade do APK e ZIP.
+- Motor de bordado, matrizes, TTF/OTF, Satin, biblioteca, envio, login e regras comerciais permanecem funcionalmente inalterados.
+
 ## 0.44.0
 
 ### Pré-RC — segurança, rede e build de produção

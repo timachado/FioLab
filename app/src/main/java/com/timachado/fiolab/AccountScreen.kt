@@ -594,6 +594,14 @@ private fun SignedOutAccount(
         )
 
         AboutFioLabCard()
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
+        UpdateStatusCard()
     }
 }
 
@@ -1409,6 +1417,14 @@ private fun SignedInAccount(
         )
 
         AboutFioLabCard()
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
+        UpdateStatusCard()
 
         Spacer(
             Modifier.height(

@@ -568,7 +568,7 @@ fun HomeScreen(
             }
         ) {
             Text(
-                "FioLab 0.44.0 • Material 3 Expressive",
+                "FioLab ${BuildConfig.VERSION_NAME} • Material 3 Expressive",
                 modifier =
                     Modifier
                         .fillMaxWidth()
