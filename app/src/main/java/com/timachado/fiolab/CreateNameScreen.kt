@@ -67,6 +67,7 @@ import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private val namePalette =
@@ -307,6 +308,22 @@ fun CreateNameScreen(
                 glyphProvider
         )
 
+    var preview by remember {
+        mutableStateOf<EmbroideryDesign?>(
+            null
+        )
+    }
+
+    var previewError by remember {
+        mutableStateOf<String?>(
+            null
+        )
+    }
+
+    var previewLoading by remember {
+        mutableStateOf(true)
+    }
+
     LaunchedEffect(
         autoFitToHoop,
         text,
@@ -326,14 +343,29 @@ fun CreateNameScreen(
         layoutMode,
         arcHeightMm
     ) {
-        if (
-            !autoFitToHoop ||
-            text.isBlank()
-        ) {
+        if (!autoFitToHoop) {
             return@LaunchedEffect
         }
 
-        val fitted =
+        if (text.isBlank()) {
+            preview = null
+            previewError = "Digite um nome para gerar a prévia."
+            previewLoading = false
+            return@LaunchedEffect
+        }
+
+        preview = null
+        previewError = null
+        previewLoading = true
+
+        delay(140L)
+
+        val baseOptions =
+            layoutOptionsFor(
+                heightMm
+            )
+
+        val fittedResult =
             withContext(
                 Dispatchers.Default
             ) {
@@ -345,40 +377,117 @@ fun CreateNameScreen(
                             candidateHeight ->
                         TextLayoutGenerator
                             .generate(
-                                layoutOptionsFor(
-                                    candidateHeight
+                                baseOptions.copy(
+                                    textOptions =
+                                        baseOptions
+                                            .textOptions
+                                            .copy(
+                                                heightMm =
+                                                    candidateHeight
+                                            )
                                 )
                             )
                     }
             }
-                .getOrNull()
 
-        fitted
-            ?.let {
-                    fit ->
-                if (
-                    kotlin.math.abs(
-                        heightMm -
-                            fit.heightMm
-                    ) >=
+        val fitted =
+            fittedResult.getOrNull()
+
+        if (fitted != null) {
+            if (
+                kotlin.math.abs(
+                    heightMm -
+                        fitted.heightMm
+                ) >=
                     0.05f
-                ) {
-                    heightMm =
-                        fit.heightMm
-                }
+            ) {
+                heightMm =
+                    fitted.heightMm
             }
+
+            preview =
+                fitted.design
+
+            previewError =
+                null
+        } else {
+            preview =
+                null
+
+            previewError =
+                fittedResult
+                    .exceptionOrNull()
+                    ?.message
+                    ?: "Não foi possível gerar a prévia."
+        }
+
+        previewLoading =
+            false
     }
 
-    val result =
-        TextLayoutGenerator
-            .generate(
-                layoutOptionsFor(
-                    heightMm
-                )
+    LaunchedEffect(
+        autoFitToHoop,
+        heightMm,
+        text,
+        spacingMm,
+        stitchLengthMm,
+        stitchStyle,
+        satinWidthMm,
+        satinDensityMm,
+        satinPullCompensationMm,
+        satinShortStitches,
+        satinUnderlayMode,
+        specialStitchMode,
+        font,
+        importedFontId,
+        hoopProfile,
+        fabricProfile,
+        layoutMode,
+        arcHeightMm
+    ) {
+        if (autoFitToHoop) {
+            return@LaunchedEffect
+        }
+
+        if (text.isBlank()) {
+            preview = null
+            previewError = "Digite um nome para gerar a prévia."
+            previewLoading = false
+            return@LaunchedEffect
+        }
+
+        preview = null
+        previewError = null
+        previewLoading = true
+
+        delay(140L)
+
+        val options =
+            layoutOptionsFor(
+                heightMm
             )
 
-    val preview =
-        result.getOrNull()
+        val generated =
+            withContext(
+                Dispatchers.Default
+            ) {
+                TextLayoutGenerator
+                    .generate(
+                        options
+                    )
+            }
+
+        preview =
+            generated.getOrNull()
+
+        previewError =
+            generated
+                .exceptionOrNull()
+                ?.message
+
+        previewLoading =
+            false
+    }
 
     val hoopFit =
         preview?.let {
@@ -483,10 +592,12 @@ fun CreateNameScreen(
                 )
             } else {
                 Text(
-                    result
-                        .exceptionOrNull()
-                        ?.message
-                        ?: "Digite um nome para gerar a prévia.",
+                    if (previewLoading) {
+                        "Gerando prévia…"
+                    } else {
+                        previewError
+                            ?: "Digite um nome para gerar a prévia."
+                    },
                     modifier =
                         Modifier.align(
                             Alignment.Center
@@ -495,9 +606,13 @@ fun CreateNameScreen(
                             18.dp
                         ),
                     color =
-                        Color(
-                            0xFFFF9F9A
-                        ),
+                        if (previewLoading) {
+                            FioTextMuted
+                        } else {
+                            Color(
+                                0xFFFF9F9A
+                            )
+                        },
                     fontSize =
                         11.sp
                 )
@@ -1558,7 +1673,8 @@ fun CreateNameScreen(
                         enabled =
                             preview !=
                                 null &&
-                                fitsHoop,
+                                fitsHoop &&
+                                !previewLoading,
                         modifier =
                             Modifier.weight(
                                 1f
@@ -1581,7 +1697,8 @@ fun CreateNameScreen(
                         enabled =
                             preview !=
                                 null &&
-                                fitsHoop,
+                                fitsHoop &&
+                                !previewLoading,
                         modifier =
                             Modifier.weight(
                                 1.3f
