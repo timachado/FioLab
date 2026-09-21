@@ -155,70 +155,62 @@ class MatrixConverterTest {
                 targetStitches.size
             )
 
-            val sourceOrientation =
-                signedVisualArea(
+            assertEquals(
+                "A geometria foi refletida/espelhada ao gerar $format",
+                normalizedVisualPoints(
                     design = source,
                     points = sourceStitches
-                ).compareTo(
-                    0L
-                )
-
-            val targetOrientation =
-                signedVisualArea(
+                ),
+                normalizedVisualPoints(
                     design = target,
                     points = targetStitches
-                ).compareTo(
-                    0L
                 )
-
-            assertTrue(
-                "A geometria de teste precisa ter orientação definida.",
-                sourceOrientation != 0
-            )
-
-            assertEquals(
-                "A matriz foi refletida/espelhada ao gerar $format",
-                sourceOrientation,
-                targetOrientation
             )
         }
     }
 
-    private fun signedVisualArea(
+    private fun normalizedVisualPoints(
         design: EmbroideryDesign,
         points: List<EmbroideryPoint>
-    ): Long {
-        if (points.size < 3) {
-            return 0L
+    ): List<Pair<Int, Int>> {
+        if (points.isEmpty()) {
+            return emptyList()
         }
 
-        var twiceArea = 0L
+        val minX =
+            points.minOf {
+                it.xUnits
+            }
 
-        points.indices.forEach {
-                index ->
-            val current =
-                points[index]
+        val visualYs =
+            points.map {
+                visualY(
+                    design,
+                    it.yUnits
+                )
+            }
 
-            val next =
-                points[
-                    (index + 1) %
-                        points.size
-                ]
+        val minVisualY =
+            visualYs.min()
 
-            twiceArea +=
-                current.xUnits.toLong() *
-                    visualY(
-                        design,
-                        next.yUnits
-                    ).toLong() -
-                    next.xUnits.toLong() *
-                        visualY(
-                            design,
-                            current.yUnits
-                        ).toLong()
-        }
-
-        return twiceArea
+        return points
+            .mapIndexed {
+                    index,
+                    point ->
+                Pair(
+                    point.xUnits -
+                        minX,
+                    visualYs[index] -
+                        minVisualY
+                )
+            }
+            .sortedWith(
+                compareBy<Pair<Int, Int>> {
+                    it.first
+                }.thenBy {
+                    it.second
+                }
+            )
     }
 
     private fun visualY(
