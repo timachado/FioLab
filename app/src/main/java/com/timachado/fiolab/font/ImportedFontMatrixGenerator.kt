@@ -175,6 +175,62 @@ object ImportedFontMatrixGenerator {
                 targetHeightUnits /
                     pathBounds.height()
 
+            val guideContours =
+                samplePath(
+                    path
+                )
+                    .map {
+                            contour ->
+                        SampledContour(
+                            points =
+                                contour.points
+                                    .map {
+                                        point ->
+                                        Pair(
+                                            (
+                                                (
+                                                    point.first -
+                                                        pathBounds
+                                                            .centerX()
+                                                    ) *
+                                                    scale
+                                                ).roundToInt(),
+                                            (
+                                                (
+                                                    pathBounds
+                                                        .centerY() -
+                                                        point.second
+                                                    ) *
+                                                    scale
+                                                ).roundToInt()
+                                        )
+                                    }
+                                    .fold(
+                                        mutableListOf<
+                                            Pair<Int, Int>
+                                        >()
+                                    ) {
+                                        acc,
+                                        point ->
+                                        if (
+                                            acc.lastOrNull() !=
+                                                point
+                                        ) {
+                                            acc +=
+                                                point
+                                        }
+
+                                        acc
+                                    },
+                            closed =
+                                contour.closed
+                        )
+                    }
+                    .filter {
+                        it.points.size >=
+                            2
+                    }
+
             val points =
                 if (
                     options.style ==
@@ -183,60 +239,7 @@ object ImportedFontMatrixGenerator {
                         1
                 ) {
                     val wholeTextContours =
-                        samplePath(
-                            path
-                        )
-                            .map {
-                                    contour ->
-                                SampledContour(
-                                    points =
-                                        contour.points
-                                            .map {
-                                                point ->
-                                                Pair(
-                                                    (
-                                                        (
-                                                            point.first -
-                                                                pathBounds
-                                                                    .centerX()
-                                                            ) *
-                                                            scale
-                                                        ).roundToInt(),
-                                                    (
-                                                        (
-                                                            pathBounds
-                                                                .centerY() -
-                                                                point.second
-                                                            ) *
-                                                            scale
-                                                        ).roundToInt()
-                                                )
-                                            }
-                                            .fold(
-                                                mutableListOf<
-                                                    Pair<Int, Int>
-                                                >()
-                                            ) {
-                                                acc,
-                                                point ->
-                                                if (
-                                                    acc.lastOrNull() !=
-                                                        point
-                                                ) {
-                                                    acc +=
-                                                        point
-                                                }
-
-                                                acc
-                                            },
-                                    closed =
-                                        contour.closed
-                                )
-                            }
-                            .filter {
-                                it.points.size >=
-                                    2
-                            }
+                        guideContours
 
                     require(
                         wholeTextContours
@@ -347,6 +350,26 @@ object ImportedFontMatrixGenerator {
                     )
                 }.toMutableList()
 
+            val centeredGuide =
+                buildGuidePoints(
+                    guideContours
+                )
+                    .map {
+                            point ->
+                        point.copy(
+                            xUnits =
+                                (
+                                    point.xUnits -
+                                        centerX
+                                    ).roundToInt(),
+                            yUnits =
+                                (
+                                    point.yUnits -
+                                        centerY
+                                    ).roundToInt()
+                        )
+                    }
+
             val endPoint =
                 centered
                     .lastOrNull()
@@ -429,6 +452,8 @@ object ImportedFontMatrixGenerator {
                         true,
                     sourceBytes =
                         ByteArray(0),
+                    guidePoints =
+                        centeredGuide,
                     threadColors =
                         listOf(
                             options.color
@@ -4275,6 +4300,77 @@ object ImportedFontMatrixGenerator {
             List<Pair<Float, Float>>,
         val closed: Boolean
     )
+
+    private fun buildGuidePoints(
+        contours:
+            List<SampledContour>
+    ): List<EmbroideryPoint> {
+        val result =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        contours.forEach {
+                contour ->
+            val first =
+                contour.points
+                    .firstOrNull()
+                    ?: return@forEach
+
+            if (
+                result.isNotEmpty()
+            ) {
+                val last =
+                    result.last()
+
+                result +=
+                    EmbroideryPoint(
+                        last.xUnits,
+                        last.yUnits,
+                        StitchCommand.TRIM,
+                        0
+                    )
+            }
+
+            result +=
+                EmbroideryPoint(
+                    first.first,
+                    first.second,
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            contour.points
+                .drop(1)
+                .forEach {
+                        point ->
+                    result +=
+                        EmbroideryPoint(
+                            point.first,
+                            point.second,
+                            StitchCommand.STITCH,
+                            0
+                        )
+                }
+
+            if (
+                contour.closed &&
+                contour.points
+                    .lastOrNull() !=
+                    first
+            ) {
+                result +=
+                    EmbroideryPoint(
+                        first.first,
+                        first.second,
+                        StitchCommand.STITCH,
+                        0
+                    )
+            }
+        }
+
+        return result
+    }
 
     private fun samplePath(
         path: Path
