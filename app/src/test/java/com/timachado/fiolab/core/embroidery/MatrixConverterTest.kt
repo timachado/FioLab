@@ -155,56 +155,70 @@ class MatrixConverterTest {
                 targetStitches.size
             )
 
-            sourceStitches
-                .zipWithNext()
-                .zip(
-                    targetStitches
-                        .zipWithNext()
+            val sourceOrientation =
+                signedVisualArea(
+                    design = source,
+                    points = sourceStitches
+                ).compareTo(
+                    0L
                 )
-                .forEachIndexed {
-                        index,
-                        (sourcePair, targetPair) ->
-                    val (
-                        sourceStart,
-                        sourceEnd
-                    ) =
-                        sourcePair
 
-                    val (
-                        targetStart,
-                        targetEnd
-                    ) =
-                        targetPair
+            val targetOrientation =
+                signedVisualArea(
+                    design = target,
+                    points = targetStitches
+                ).compareTo(
+                    0L
+                )
 
-                    assertEquals(
-                        "Direção horizontal mudou no segmento $index em $format",
-                        sourceEnd.xUnits -
-                            sourceStart.xUnits,
-                        targetEnd.xUnits -
-                            targetStart.xUnits
-                    )
+            assertTrue(
+                "A geometria de teste precisa ter orientação definida.",
+                sourceOrientation != 0
+            )
 
-                    assertEquals(
-                        "Orientação vertical mudou no segmento $index em $format",
-                        visualY(
-                            source,
-                            sourceEnd.yUnits
-                        ) -
-                            visualY(
-                                source,
-                                sourceStart.yUnits
-                            ),
-                        visualY(
-                            target,
-                            targetEnd.yUnits
-                        ) -
-                            visualY(
-                                target,
-                                targetStart.yUnits
-                            )
-                    )
-                }
+            assertEquals(
+                "A matriz foi refletida/espelhada ao gerar $format",
+                sourceOrientation,
+                targetOrientation
+            )
         }
+    }
+
+    private fun signedVisualArea(
+        design: EmbroideryDesign,
+        points: List<EmbroideryPoint>
+    ): Long {
+        if (points.size < 3) {
+            return 0L
+        }
+
+        var twiceArea = 0L
+
+        points.indices.forEach {
+                index ->
+            val current =
+                points[index]
+
+            val next =
+                points[
+                    (index + 1) %
+                        points.size
+                ]
+
+            twiceArea +=
+                current.xUnits.toLong() *
+                    visualY(
+                        design,
+                        next.yUnits
+                    ).toLong() -
+                    next.xUnits.toLong() *
+                        visualY(
+                            design,
+                            current.yUnits
+                        ).toLong()
+        }
+
+        return twiceArea
     }
 
     private fun visualY(
