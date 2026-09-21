@@ -288,8 +288,8 @@ object TextMatrixGenerator {
                 "Digite um nome."
             }
 
-            require(options.heightMm in 4f..40f) {
-                "A altura deve ficar entre 4 e 40 mm."
+            require(options.heightMm in 4f..60f) {
+                "A altura deve ficar entre 4 e 60 mm."
             }
 
             require(options.spacingMm in 0f..8f) {

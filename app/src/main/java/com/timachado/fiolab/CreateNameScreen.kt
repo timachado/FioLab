@@ -29,6 +29,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,6 +51,7 @@ import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.SpecialStitchMode
 import com.timachado.fiolab.core.embroidery.TextGlyphProvider
+import com.timachado.fiolab.core.embroidery.TextHoopAutoFit
 import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
 import com.timachado.fiolab.core.embroidery.TextLayoutMode
 import com.timachado.fiolab.core.embroidery.TextLayoutOptions
@@ -64,6 +66,8 @@ import com.timachado.fiolab.ui.theme.FioSurfaceAlt
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val namePalette =
     listOf(
@@ -124,6 +128,10 @@ fun CreateNameScreen(
 
     var heightMm by remember {
         mutableFloatStateOf(18f)
+    }
+
+    var autoFitToHoop by remember {
+        mutableStateOf(true)
     }
 
     var spacingMm by remember {
@@ -253,47 +261,121 @@ fun CreateNameScreen(
                 )
             }
 
-    val result =
-        TextLayoutGenerator.generate(
-            TextLayoutOptions(
-                textOptions =
-                    TextMatrixOptions(
-                        text = text,
-                        heightMm = heightMm,
-                        spacingMm = spacingMm,
-                        stitchLengthMm =
-                            stitchLengthMm,
-                        style =
-                            stitchStyle,
-                        satinWidthMm =
-                            satinWidthMm,
-                        satinDensityMm =
-                            satinDensityMm,
-                        satinPullCompensationMm =
-                            satinPullCompensationMm,
-                        satinShortStitches =
-                            satinShortStitches,
-                        satinUnderlayMode =
-                            satinUnderlayMode,
-                        specialStitchMode =
-                            specialStitchMode,
-                        color = color,
-                        font = font,
-                        outputFormat =
-                            outputFormat,
-                        hoopProfile =
-                            hoopProfile,
-                        fabricProfile =
-                            fabricProfile
-                    ),
-                layoutMode =
-                    layoutMode,
-                arcHeightMm =
-                    arcHeightMm,
-                glyphProvider =
-                    glyphProvider
-            )
+    fun layoutOptionsFor(
+        targetHeightMm: Float
+    ): TextLayoutOptions =
+        TextLayoutOptions(
+            textOptions =
+                TextMatrixOptions(
+                    text = text,
+                    heightMm =
+                        targetHeightMm,
+                    spacingMm =
+                        spacingMm,
+                    stitchLengthMm =
+                        stitchLengthMm,
+                    style =
+                        stitchStyle,
+                    satinWidthMm =
+                        satinWidthMm,
+                    satinDensityMm =
+                        satinDensityMm,
+                    satinPullCompensationMm =
+                        satinPullCompensationMm,
+                    satinShortStitches =
+                        satinShortStitches,
+                    satinUnderlayMode =
+                        satinUnderlayMode,
+                    specialStitchMode =
+                        specialStitchMode,
+                    color =
+                        color,
+                    font =
+                        font,
+                    outputFormat =
+                        outputFormat,
+                    hoopProfile =
+                        hoopProfile,
+                    fabricProfile =
+                        fabricProfile
+                ),
+            layoutMode =
+                layoutMode,
+            arcHeightMm =
+                arcHeightMm,
+            glyphProvider =
+                glyphProvider
         )
+
+    LaunchedEffect(
+        autoFitToHoop,
+        text,
+        spacingMm,
+        stitchLengthMm,
+        stitchStyle,
+        satinWidthMm,
+        satinDensityMm,
+        satinPullCompensationMm,
+        satinShortStitches,
+        satinUnderlayMode,
+        specialStitchMode,
+        font,
+        importedFontId,
+        hoopProfile,
+        fabricProfile,
+        layoutMode,
+        arcHeightMm
+    ) {
+        if (
+            !autoFitToHoop ||
+            text.isBlank()
+        ) {
+            return@LaunchedEffect
+        }
+
+        val fitted =
+            withContext(
+                Dispatchers.Default
+            ) {
+                TextHoopAutoFit
+                    .fit(
+                        hoop =
+                            hoopProfile
+                    ) {
+                            candidateHeight ->
+                        TextLayoutGenerator
+                            .generate(
+                                layoutOptionsFor(
+                                    candidateHeight
+                                )
+                            )
+                    }
+            }
+                .getOrNull()
+
+        fitted
+            ?.let {
+                    fit ->
+                if (
+                    kotlin.math.abs(
+                        heightMm -
+                            fit.heightMm
+                    ) >=
+                    0.05f
+                ) {
+                    heightMm =
+                        fit.heightMm
+                }
+            }
+    }
+
+    val result =
+        TextLayoutGenerator
+            .generate(
+                layoutOptionsFor(
+                    heightMm
+                )
+            )
 
     val preview =
         result.getOrNull()
@@ -758,6 +840,84 @@ fun CreateNameScreen(
                         }
 
                         "Tamanho" -> {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth(),
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    Modifier.weight(
+                                        1f
+                                    )
+                                ) {
+                                    Text(
+                                        "Ajustar ao bastidor",
+                                        color =
+                                            FioText,
+                                        fontWeight =
+                                            FontWeight.SemiBold
+                                    )
+
+                                    Text(
+                                        "Calcula automaticamente o maior tamanho que cabe na área segura.",
+                                        color =
+                                            FioTextMuted,
+                                        fontSize =
+                                            10.sp
+                                    )
+                                }
+
+                                Switch(
+                                    checked =
+                                        autoFitToHoop,
+                                    onCheckedChange = {
+                                        autoFitToHoop =
+                                            it
+                                    }
+                                )
+                            }
+
+                            if (
+                                autoFitToHoop
+                            ) {
+                                Text(
+                                    "Automático • " +
+                                        mm(
+                                            heightMm
+                                        ) +
+                                        " mm • área útil " +
+                                        mm(
+                                            hoopProfile
+                                                .usableWidthMm
+                                        ) +
+                                        " × " +
+                                        mm(
+                                            hoopProfile
+                                                .usableHeightMm
+                                        ) +
+                                        " mm",
+                                    modifier =
+                                        Modifier.padding(
+                                            top =
+                                                6.dp
+                                        ),
+                                    color =
+                                        FioGold,
+                                    fontWeight =
+                                        FontWeight.SemiBold,
+                                    fontSize =
+                                        10.sp
+                                )
+                            }
+
+                            Spacer(
+                                Modifier.height(
+                                    8.dp
+                                )
+                            )
+
                             Text(
                                 "Altura " +
                                     mm(
@@ -777,8 +937,13 @@ fun CreateNameScreen(
                                     heightMm =
                                         it
                                 },
+                                enabled =
+                                    !autoFitToHoop,
                                 valueRange =
-                                    4f..60f
+                                    TextHoopAutoFit
+                                        .MIN_HEIGHT_MM..
+                                        TextHoopAutoFit
+                                            .MAX_HEIGHT_MM
                             )
 
                             Text(
@@ -1109,6 +1274,36 @@ fun CreateNameScreen(
                                         )
                                     }
                             }
+
+                            Text(
+                                "Área útil: " +
+                                    mm(
+                                        hoopProfile
+                                            .usableWidthMm
+                                    ) +
+                                    " × " +
+                                    mm(
+                                        hoopProfile
+                                            .usableHeightMm
+                                    ) +
+                                    " mm • margem segura " +
+                                    mm(
+                                        hoopProfile
+                                            .safeMarginMm
+                                    ) +
+                                    " mm" +
+                                    if (
+                                        autoFitToHoop
+                                    ) {
+                                        " • tamanho automático ativo"
+                                    } else {
+                                        ""
+                                    },
+                                color =
+                                    FioTextMuted,
+                                fontSize =
+                                    10.sp
+                            )
 
                             Text(
                                 "Tecido",

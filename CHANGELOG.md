@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.46.5
+
+### Ajuste automático ao bastidor
+- Criar Nome ganha a opção “Ajustar ao bastidor”, ativada por padrão.
+- Ao trocar o bastidor, texto, fonte, espaçamento, composição ou parâmetros que alteram a geometria, o FioLab recalcula automaticamente a maior altura que cabe na área útil.
+- O cálculo usa a área segura real do bastidor, preservando a margem de 5 mm por lado já existente.
+- O ajuste funciona com fontes FioLab e também TTF/OTF importadas.
+- O usuário pode desligar o modo automático e voltar ao controle manual de altura.
+- O limite interno de altura foi alinhado ao controle visual: 4 a 60 mm, mantendo a política de complexidade e segurança do gerador.
+- O redimensionamento acontece antes de criar/exportar a matriz; o fluxo Enviar para máquina continua sem redimensionamento oculto.
+- Adicionados testes para garantir preenchimento da área útil sem overflow e crescimento coerente em bastidores maiores.
+- Mantidas as correções de orientação para máquina, histórico de recentes e responsividade das versões anteriores.
+
 ## 0.46.4
 
 ### Home e acessibilidade
