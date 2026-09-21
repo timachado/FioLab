@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.SimulationTiming
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.ui.theme.FioBackground
@@ -51,6 +52,16 @@ import java.util.Locale
 @Composable
 fun SimulatorScreen(
     design: EmbroideryDesign,
+    displayMode:
+        EmbroideryDisplayMode =
+        EmbroideryDisplayMode.REALISTIC,
+    referenceHoop:
+        HoopProfile =
+        design.hoopProfile
+            ?: HoopProfile.H100X100,
+    showConnections:
+        Boolean =
+        false,
     onBack: () -> Unit
 ) {
     val points =
@@ -333,6 +344,12 @@ fun SimulatorScreen(
                     design,
                 pointLimit =
                     index,
+                displayMode =
+                    displayMode,
+                hoop =
+                    referenceHoop,
+                showConnections =
+                    showConnections,
                 modifier =
                     Modifier.fillMaxSize()
             )

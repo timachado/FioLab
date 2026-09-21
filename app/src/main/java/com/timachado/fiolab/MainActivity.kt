@@ -36,6 +36,7 @@ import com.timachado.fiolab.core.embroidery.ConvertedMatrix
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
 import com.timachado.fiolab.core.project.ActiveDesignStore
@@ -77,11 +78,31 @@ private sealed interface Screen {
     ) : Screen
 
     data class Viewer(
-        val design: EmbroideryDesign
+        val design: EmbroideryDesign,
+        val displayMode:
+            EmbroideryDisplayMode =
+            EmbroideryDisplayMode.REALISTIC,
+        val referenceHoop:
+            HoopProfile =
+            design.hoopProfile
+                ?: HoopProfile.H100X100,
+        val showConnections:
+            Boolean =
+            false
     ) : Screen
 
     data class Simulator(
-        val design: EmbroideryDesign
+        val design: EmbroideryDesign,
+        val displayMode:
+            EmbroideryDisplayMode =
+            EmbroideryDisplayMode.REALISTIC,
+        val referenceHoop:
+            HoopProfile =
+            design.hoopProfile
+                ?: HoopProfile.H100X100,
+        val showConnections:
+            Boolean =
+            false
     ) : Screen
 
     data class Converter(
@@ -207,7 +228,14 @@ private fun FioLabApp() {
 
                 is Screen.Simulator ->
                     Screen.Viewer(
-                        current.design
+                        design =
+                            current.design,
+                        displayMode =
+                            current.displayMode,
+                        referenceHoop =
+                            current.referenceHoop,
+                        showConnections =
+                            current.showConnections
                     )
 
                 is Screen.Converter ->
@@ -1308,6 +1336,36 @@ private fun FioLabApp() {
                     ViewerScreen(
                         design =
                             current.design,
+                        displayMode =
+                            current.displayMode,
+                        onDisplayModeChange = {
+                                mode ->
+                            screen =
+                                current.copy(
+                                    displayMode =
+                                        mode
+                                )
+                        },
+                        referenceHoop =
+                            current.referenceHoop,
+                        onReferenceHoopChange = {
+                                hoop ->
+                            screen =
+                                current.copy(
+                                    referenceHoop =
+                                        hoop
+                                )
+                        },
+                        showConnections =
+                            current.showConnections,
+                        onShowConnectionsChange = {
+                                enabled ->
+                            screen =
+                                current.copy(
+                                    showConnections =
+                                        enabled
+                                )
+                        },
                         onBack = {
                             goBack()
                         },
@@ -1320,8 +1378,14 @@ private fun FioLabApp() {
                             screen =
                                 Screen
                                     .Simulator(
-                                        current
-                                            .design
+                                        design =
+                                            current.design,
+                                        displayMode =
+                                            current.displayMode,
+                                        referenceHoop =
+                                            current.referenceHoop,
+                                        showConnections =
+                                            current.showConnections
                                     )
                         },
                         onEdit = {
@@ -1371,6 +1435,12 @@ private fun FioLabApp() {
                     SimulatorScreen(
                         design =
                             current.design,
+                        displayMode =
+                            current.displayMode,
+                        referenceHoop =
+                            current.referenceHoop,
+                        showConnections =
+                            current.showConnections,
                         onBack = {
                             goBack()
                         }

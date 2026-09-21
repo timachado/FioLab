@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.0
+
+### Exibição preservada na simulação
+- O seletor de Exibição saiu do canto apertado do cabeçalho e ganhou um botão próprio, largo e visível, indicando o modo atual.
+- Sólida, Pontos e Realista passam a ser transportados da visualização para a simulação sem voltar silenciosamente ao padrão.
+- O bastidor de referência e a opção Traços de conexão também seguem para a simulação.
+- Ao voltar da simulação, as configurações de exibição usadas naquela matriz permanecem no fluxo atual.
+- A simulação mantém agulha, progresso, velocidade, pausa, troca de linha e guia vetorial já existentes.
+- O motor de pontos, geração de matrizes, fontes TTF/OTF e demais fluxos da 0.30.0 não foram alterados.
+
 ## 0.30.0
 
 ### Novo motor de texto TTF/OTF
