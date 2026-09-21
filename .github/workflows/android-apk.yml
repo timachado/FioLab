@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/simulation-vector-guide-0270"]
   workflow_dispatch:
 
 permissions:
@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.26.0-debug.apk
-          zip -9 FioLab-0.26.0-debug.zip FioLab-0.26.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.27.0-debug.apk
+          zip -9 FioLab-0.27.0-debug.zip FioLab-0.27.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.26.0-downloads
+          name: FioLab-0.27.0-downloads
           path: |
-            FioLab-0.26.0-debug.apk
-            FioLab-0.26.0-debug.zip
+            FioLab-0.27.0-debug.apk
+            FioLab-0.27.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.26.0 >/dev/null 2>&1; then
-            gh release upload v0.26.0               FioLab-0.26.0-debug.apk               FioLab-0.26.0-debug.zip               --clobber
+          if gh release view v0.27.0 >/dev/null 2>&1; then
+            gh release upload v0.27.0               FioLab-0.27.0-debug.apk               FioLab-0.27.0-debug.zip               --clobber
           else
-            gh release create v0.26.0               FioLab-0.26.0-debug.apk               FioLab-0.26.0-debug.zip               --target main               --title "FioLab 0.26.0"               --notes "FioLab 0.26.0: orienta o Satin de fontes TTF/OTF pela direção local do traço, usando o contorno vetorial para as bordas e um eixo suavizado apenas para calcular o ângulo de cada coluna."
+            gh release create v0.27.0               FioLab-0.27.0-debug.apk               FioLab-0.27.0-debug.zip               --target main               --title "FioLab 0.27.0"               --notes "FioLab 0.27.0: melhora a simulação com uma silhueta vetorial independente da fonte original ao fundo, permitindo comparar o Satin costurado diretamente com o desenho TTF/OTF."
           fi
