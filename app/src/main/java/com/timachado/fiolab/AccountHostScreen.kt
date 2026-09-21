@@ -15,10 +15,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.timachado.fiolab.core.account.AccountErrorMessage
 import com.timachado.fiolab.core.account.AccountSnapshot
 import com.timachado.fiolab.core.account.DeviceIdentity
 import com.timachado.fiolab.core.account.FioLabAccountService
 import com.timachado.fiolab.core.account.SignUpOutcome
+import com.timachado.fiolab.core.network.NetworkStatus
 import com.timachado.fiolab.ui.theme.FioGold
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +50,38 @@ fun AccountHostScreen(
 
     var loading by remember {
         mutableStateOf(true)
+    }
+
+    var offline by remember {
+        mutableStateOf(
+            !NetworkStatus
+                .isOnline(
+                    context
+                )
+        )
+    }
+
+    fun checkOnline(): Boolean {
+        val online =
+            NetworkStatus
+                .isOnline(
+                    context
+                )
+
+        offline =
+            !online
+
+        if (
+            !online
+        ) {
+            scope.launch {
+                snackbar.showSnackbar(
+                    "Sem conexão com a internet. Sua sessão não foi encerrada."
+                )
+            }
+        }
+
+        return online
     }
 
     suspend fun withDevices(
@@ -88,6 +122,28 @@ fun AccountHostScreen(
     LaunchedEffect(
         refreshRequest
     ) {
+        val online =
+            NetworkStatus
+                .isOnline(
+                    context
+                )
+
+        offline =
+            !online
+
+        if (
+            !online
+        ) {
+            loading =
+                false
+
+            snackbar.showSnackbar(
+                "Sem conexão com a internet. Sua sessão permanece no aparelho e será carregada quando a rede voltar."
+            )
+
+            return@LaunchedEffect
+        }
+
         val result =
             withContext(
                 Dispatchers.IO
@@ -108,15 +164,32 @@ fun AccountHostScreen(
                     )
             },
             onFailure = {
+                    error ->
+                offline =
+                    !NetworkStatus
+                        .isOnline(
+                            context
+                        )
+
                 snackbar
                     .showSnackbar(
-                        "Não foi possível atualizar sua conta."
+                        AccountErrorMessage
+                            .forUser(
+                                error,
+                                "Não foi possível atualizar sua conta."
+                            )
                     )
             }
         )
     }
 
     fun refreshAccount() {
+        if (
+            !checkOnline()
+        ) {
+            return
+        }
+
         scope.launch {
             loading =
                 true
@@ -135,6 +208,9 @@ fun AccountHostScreen(
             result.fold(
                 onSuccess = {
                         current ->
+                    offline =
+                        false
+
                     account =
                         withDevices(
                             current
@@ -146,9 +222,20 @@ fun AccountHostScreen(
                         )
                 },
                 onFailure = {
+                        error ->
+                    offline =
+                        !NetworkStatus
+                            .isOnline(
+                                context
+                            )
+
                     snackbar
                         .showSnackbar(
-                            "Não foi possível atualizar sua assinatura."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível atualizar sua assinatura."
+                                )
                         )
                 }
             )
@@ -156,6 +243,12 @@ fun AccountHostScreen(
     }
 
     fun signInWithGoogle() {
+        if (
+            !checkOnline()
+        ) {
+            return
+        }
+
         scope.launch {
             loading =
                 true
@@ -176,10 +269,19 @@ fun AccountHostScreen(
                 },
                 onFailure = {
                         error ->
+                    offline =
+                        !NetworkStatus
+                            .isOnline(
+                                context
+                            )
+
                     snackbar
                         .showSnackbar(
-                            error.message
-                                ?: "Não foi possível abrir o login do Google."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível abrir o login do Google."
+                                )
                         )
                 }
             )
@@ -190,6 +292,12 @@ fun AccountHostScreen(
         email: String,
         password: String
     ) {
+        if (
+            !checkOnline()
+        ) {
+            return
+        }
+
         scope.launch {
             loading =
                 true
@@ -211,6 +319,9 @@ fun AccountHostScreen(
             result.fold(
                 onSuccess = {
                         signedIn ->
+                    offline =
+                        false
+
                     account =
                         withDevices(
                             signedIn
@@ -223,10 +334,19 @@ fun AccountHostScreen(
                 },
                 onFailure = {
                         error ->
+                    offline =
+                        !NetworkStatus
+                            .isOnline(
+                                context
+                            )
+
                     snackbar
                         .showSnackbar(
-                            error.message
-                                ?: "Não foi possível entrar."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível entrar."
+                                )
                         )
                 }
             )
@@ -238,6 +358,12 @@ fun AccountHostScreen(
         email: String,
         password: String
     ) {
+        if (
+            !checkOnline()
+        ) {
+            return
+        }
+
         scope.launch {
             loading =
                 true
@@ -292,10 +418,19 @@ fun AccountHostScreen(
                 },
                 onFailure = {
                         error ->
+                    offline =
+                        !NetworkStatus
+                            .isOnline(
+                                context
+                            )
+
                     snackbar
                         .showSnackbar(
-                            error.message
-                                ?: "Não foi possível criar a conta."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível criar a conta."
+                                )
                         )
                 }
             )
@@ -305,6 +440,12 @@ fun AccountHostScreen(
     fun saveName(
         displayName: String
     ) {
+        if (
+            !checkOnline()
+        ) {
+            return
+        }
+
         scope.launch {
             loading =
                 true
@@ -337,10 +478,19 @@ fun AccountHostScreen(
                 },
                 onFailure = {
                         error ->
+                    offline =
+                        !NetworkStatus
+                            .isOnline(
+                                context
+                            )
+
                     snackbar
                         .showSnackbar(
-                            error.message
-                                ?: "Não foi possível atualizar o nome."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível atualizar o nome."
+                                )
                         )
                 }
             )
@@ -365,6 +515,9 @@ fun AccountHostScreen(
 
             result.fold(
                 onSuccess = {
+                    offline =
+                        false
+
                     account =
                         null
 
@@ -374,9 +527,14 @@ fun AccountHostScreen(
                         )
                 },
                 onFailure = {
+                        error ->
                     snackbar
                         .showSnackbar(
-                            "Não foi possível sair da conta."
+                            AccountErrorMessage
+                                .forUser(
+                                    error,
+                                    "Não foi possível sair da conta."
+                                )
                         )
                 }
             )
@@ -389,6 +547,8 @@ fun AccountHostScreen(
         AccountScreen(
             account =
                 account,
+            offline =
+                offline,
             onBack =
                 onBack,
             onGoogleSignIn = {
