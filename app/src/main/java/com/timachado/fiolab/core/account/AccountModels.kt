@@ -120,12 +120,15 @@ data class AccountSnapshot(
     val planCode: String,
     val subscriptionStatus: String,
     val currentPeriodEnd: String?,
-    val purchasedAt: String?,
-    val purchasePriceCents: Int?,
-    val currency: String,
-    val provider: String?,
-    val availablePlans: List<AccountPlanOption>,
-    val subscriptionHistory: List<AccountSubscriptionEvent>
+    val purchasedAt: String? = null,
+    val purchasePriceCents: Int? = null,
+    val currency: String = "BRL",
+    val provider: String? = null,
+    val availablePlans: List<AccountPlanOption> =
+        emptyList(),
+    val subscriptionHistory:
+        List<AccountSubscriptionEvent> =
+        emptyList()
 ) {
     val currentPlan: AccountPlanOption?
         get() =
