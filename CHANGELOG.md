@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.32.0
+
+### Exibição sem reduzir a área da matriz
+- O botão Exibição volta para o cabeçalho do visualizador, como no Editor, removendo a faixa larga que reduzia a prévia.
+- Criar Nome ganha controles de Exibição dentro da aba Mais: Sólida, Pontos e Realista.
+- A aba Mais também permite mostrar ou ocultar o bastidor somente na prévia de Criar Nome.
+- A escolha de Exibição feita em Criar Nome é mantida ao abrir a matriz criada ou iniciar a simulação.
+- O motor de geração de matrizes, fontes TTF/OTF, Satin e demais ajustes da 0.31.0 foram preservados.
+
 ## 0.31.0
 
 ### Exibição preservada na simulação
