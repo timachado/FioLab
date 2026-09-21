@@ -1,5 +1,7 @@
 package com.timachado.fiolab.core.embroidery
 
+import com.timachado.fiolab.core.project.ProjectCodec
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -125,6 +127,169 @@ class MatrixStressTest {
     }
 
     @Test
+    fun largeMultiColorMatrixConvertsToAllReleasedFormats() {
+        val source =
+            syntheticDesign(
+                stitchCount =
+                    20_000,
+                colorBlocks =
+                    32
+            )
+
+        MatrixConverter
+            .supportedFormats
+            .forEach {
+                    format ->
+                val converted =
+                    MatrixConverter
+                        .convert(
+                            source,
+                            format,
+                            "stress-grande"
+                        )
+                        .getOrThrow()
+
+                assertTrue(
+                    converted.bytes
+                        .isNotEmpty()
+                )
+
+                val parsed =
+                    when (
+                        format
+                    ) {
+                        "DST" ->
+                            DstParser
+                                .parse(
+                                    converted.fileName,
+                                    converted.bytes
+                                )
+
+                        "PES",
+                        "JEF" ->
+                            EmbroideryIoParser
+                                .parse(
+                                    converted.fileName,
+                                    converted.bytes
+                                )
+
+                        else ->
+                            error(
+                                "Formato inesperado."
+                            )
+                    }
+
+                assertTrue(
+                    parsed is
+                        EmbroideryLoadResult.Success
+                )
+
+                val reopened =
+                    (
+                        parsed as
+                            EmbroideryLoadResult.Success
+                        ).design
+
+                assertTrue(
+                    reopened.stitchCount >
+                        15_000
+                )
+
+                assertTrue(
+                    reopened.colorCount >=
+                        2
+                )
+            }
+    }
+
+    @Test
+    fun editSaveReopenConvertAndSimulateStressCycle() {
+        val source =
+            syntheticDesign(
+                stitchCount =
+                    8_000,
+                colorBlocks =
+                    12
+            )
+
+        val edited =
+            MatrixEditor
+                .apply(
+                    source,
+                    EditTransform(
+                        scale =
+                            1.08f,
+                        rotationDegrees =
+                            17f,
+                        offsetXUnits =
+                            25,
+                        offsetYUnits =
+                            -18
+                    )
+                )
+
+        val reopenedProject =
+            ProjectCodec
+                .decode(
+                    ProjectCodec
+                        .encode(
+                            edited
+                        )
+                )
+
+        assertEquals(
+            edited.stitchCount,
+            reopenedProject
+                .stitchCount
+        )
+
+        val converted =
+            MatrixConverter
+                .convert(
+                    reopenedProject,
+                    "PES",
+                    "stress-ciclo"
+                )
+                .getOrThrow()
+
+        val reparsed =
+            EmbroideryIoParser
+                .parse(
+                    converted.fileName,
+                    converted.bytes
+                )
+
+        assertTrue(
+            reparsed is
+                EmbroideryLoadResult.Success
+        )
+
+        val finalDesign =
+            (
+                reparsed as
+                    EmbroideryLoadResult.Success
+                ).design
+
+        assertTrue(
+            finalDesign.stitchCount >
+                0
+        )
+
+        assertTrue(
+            SimulationTiming
+                .estimatedSeconds(
+                    stitches =
+                        finalDesign
+                            .stitchCount,
+                    speedMultiplier =
+                        1f
+                ) >
+                0
+        )
+    }
+
+
+    @Test
     fun pathologicalMoveIsRejectedBeforeHugeExpansion() {
         val source =
             EmbroideryDesign(
@@ -186,6 +351,182 @@ class MatrixStressTest {
                     "DST"
                 )
                 .isFailure
+        )
+    }
+
+
+    private fun syntheticDesign(
+        stitchCount: Int,
+        colorBlocks: Int
+    ): EmbroideryDesign {
+        require(
+            stitchCount >
+                0
+        )
+
+        require(
+            colorBlocks >
+                0
+        )
+
+        val points =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        var colorIndex =
+            0
+
+        val blockSize =
+            (
+                stitchCount /
+                    colorBlocks
+                ).coerceAtLeast(
+                1
+            )
+
+        var minX =
+            Int.MAX_VALUE
+
+        var maxX =
+            Int.MIN_VALUE
+
+        var minY =
+            Int.MAX_VALUE
+
+        var maxY =
+            Int.MIN_VALUE
+
+        repeat(
+            stitchCount
+        ) {
+                index ->
+            if (
+                index >
+                    0 &&
+                index %
+                    blockSize ==
+                    0 &&
+                colorIndex <
+                    colorBlocks -
+                        1
+            ) {
+                colorIndex++
+
+                val previous =
+                    points.last()
+
+                points +=
+                    EmbroideryPoint(
+                        previous.xUnits,
+                        previous.yUnits,
+                        StitchCommand.COLOR_CHANGE,
+                        colorIndex
+                    )
+            }
+
+            val x =
+                (
+                    index %
+                        200
+                    ) *
+                    8
+
+            val row =
+                index /
+                    200
+
+            val y =
+                (
+                    row %
+                        100
+                    ) *
+                    8
+
+            points +=
+                EmbroideryPoint(
+                    x,
+                    y,
+                    StitchCommand.STITCH,
+                    colorIndex
+                )
+
+            minX =
+                minOf(
+                    minX,
+                    x
+                )
+
+            maxX =
+                maxOf(
+                    maxX,
+                    x
+                )
+
+            minY =
+                minOf(
+                    minY,
+                    y
+                )
+
+            maxY =
+                maxOf(
+                    maxY,
+                    y
+                )
+        }
+
+        val end =
+            points.last()
+
+        points +=
+            EmbroideryPoint(
+                end.xUnits,
+                end.yUnits,
+                StitchCommand.END,
+                colorIndex
+            )
+
+        return EmbroideryDesign(
+            fileName =
+                "stress.dst",
+            format =
+                "DST",
+            label =
+                "Stress",
+            points =
+                points,
+            bounds =
+                EmbroideryBounds(
+                    minX,
+                    maxX,
+                    minY,
+                    maxY
+                ),
+            stitchCount =
+                stitchCount,
+            jumpCount =
+                0,
+            colorChanges =
+                colorIndex,
+            endFound =
+                true,
+            sourceBytes =
+                ByteArray(0),
+            threadColors =
+                List(
+                    colorIndex +
+                        1
+                ) {
+                        index ->
+                    0x101010 *
+                        (
+                            index +
+                                1
+                            )
+                },
+            isModified =
+                true
         )
     }
 }
