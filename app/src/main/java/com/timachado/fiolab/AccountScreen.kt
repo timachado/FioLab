@@ -49,6 +49,7 @@ import com.timachado.fiolab.core.account.AccountPlanOption
 import com.timachado.fiolab.core.account.AccountPresentation
 import com.timachado.fiolab.core.account.AccountSnapshot
 import com.timachado.fiolab.core.account.AccountSubscriptionEvent
+import com.timachado.fiolab.core.network.SafeRemoteImage
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -56,7 +57,6 @@ import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -1441,18 +1441,21 @@ private fun AccountAvatar(
                     withContext(
                         Dispatchers.IO
                     ) {
-                        runCatching {
-                            URL(
+                        SafeRemoteImage
+                            .load(
                                 url
-                            ).openStream()
-                                .use {
-                                    BitmapFactory
-                                        .decodeStream(
-                                            it
-                                        )
-                                        ?.asImageBitmap()
-                                }
-                        }.getOrNull()
+                            )
+                            .getOrNull()
+                            ?.let {
+                                bytes ->
+                                BitmapFactory
+                                    .decodeByteArray(
+                                        bytes,
+                                        0,
+                                        bytes.size
+                                    )
+                                    ?.asImageBitmap()
+                            }
                     }
                 }
     }
