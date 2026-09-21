@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.29.0
+
+### Espessura fiel em fontes importadas
+- Corrigido o Ponto Corrido de TTF/OTF, que antes costurava as duas bordas do contorno e fazia fontes finas parecerem muito mais grossas.
+- Ponto Corrido passa a usar um único eixo central suavizado do traço.
+- Ponto Feijão, Ponto Corrido Triplo e Ponto de Motivo também passam a usar esse mesmo eixo central como base.
+- O contorno vetorial original continua preservado separadamente como guia da fonte.
+- A prévia de Criar Nome passa a usar o modo Sólida, sem sombra ou volume artificial.
+- O modo Sólida foi afinado para leitura mais próxima do desenho real da fonte.
+- Satin continua usando a largura real da forma vetorial, pois nesse modo a espessura faz parte da própria técnica de bordado.
+- O objetivo é aproximar a visualização e a sequência de pontos do comportamento observado em softwares de bordado como PE-Design, sem duplicar as bordas da TTF.
+
 ## 0.28.0
 
 ### Pontos especiais
