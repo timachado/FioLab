@@ -821,7 +821,7 @@ private fun DrawScope.drawStitches(
                         if (ghost) {
                             color.copy(
                                 alpha =
-                                    0.38f
+                                    0.52f
                             )
                         } else {
                             color
@@ -864,7 +864,7 @@ private fun DrawScope.drawStitches(
                             baseColor
                                 .copy(
                                     alpha =
-                                        0.34f
+                                        0.52f
                                 )
                         } else {
                             baseColor
@@ -897,7 +897,7 @@ private fun DrawScope.drawStitches(
                             end =
                                 end,
                             strokeWidth =
-                                .62.dp
+                                .58.dp
                                     .toPx(),
                             cap =
                                 StrokeCap.Round
