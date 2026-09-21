@@ -114,10 +114,10 @@ fun FontLibraryScreen(
                                 alreadySaved
                             ) {
                                 font.displayName +
-                                    " já estava salva na biblioteca."
+                                    " já estava salva neste aparelho."
                             } else {
                                 font.displayName +
-                                    " importada e salva na biblioteca."
+                                    " importada e salva neste aparelho."
                             }
                     },
                     onFailure = {
@@ -167,7 +167,7 @@ fun FontLibraryScreen(
                 )
 
                 Text(
-                    "Fontes FioLab + TTF/OTF importadas",
+                    "Fontes FioLab + TTF/OTF deste aparelho",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -211,7 +211,7 @@ fun FontLibraryScreen(
         }
 
         Text(
-            "A fonte importada fica salva na Biblioteca de Fontes e disponível em Criar Nome até você excluir. Limite: 12 MB por fonte.",
+            "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta FioLab. Limite: 12 MB por fonte.",
             modifier =
                 Modifier.padding(
                     top = 6.dp,
@@ -248,19 +248,19 @@ fun FontLibraryScreen(
                     12.dp
                 )
         ) {
+            item {
+                Text(
+                    "Minhas fontes neste aparelho",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
             if (
                 importedFonts
                     .isNotEmpty()
             ) {
-                item {
-                    Text(
-                        "Minhas fontes salvas",
-                        color = FioText,
-                        fontWeight =
-                            FontWeight.Bold
-                    )
-                }
-
                 items(
                     items =
                         importedFonts,
@@ -305,21 +305,29 @@ fun FontLibraryScreen(
                         }
                     )
                 }
-
+            } else {
                 item {
-                    Spacer(
-                        Modifier.height(
-                            2.dp
-                        )
-                    )
-
                     Text(
-                        "Fontes nativas do FioLab",
-                        color = FioText,
-                        fontWeight =
-                            FontWeight.Bold
+                        "Nenhuma fonte TTF/OTF importada neste aparelho.",
+                        color = FioTextMuted,
+                        fontSize = 10.sp
                     )
                 }
+            }
+
+            item {
+                Spacer(
+                    Modifier.height(
+                        2.dp
+                    )
+                )
+
+                Text(
+                    "Fontes nativas do FioLab",
+                    color = FioText,
+                    fontWeight =
+                        FontWeight.Bold
+                )
             }
 
             items(
@@ -578,7 +586,7 @@ private fun ImportedFontCard(
             )
 
             Text(
-                "Disponível em Criar Nome.",
+                "Disponível em Criar Nome neste aparelho.",
                 color =
                     FioTextMuted,
                 fontSize =

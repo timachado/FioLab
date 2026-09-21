@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.1
+
+### Clareza sobre armazenamento de fontes
+- Biblioteca de Fontes deixa explícito que TTF/OTF importadas ficam salvas somente no aparelho atual.
+- A interface informa que fontes importadas não são enviadas nem sincronizadas com a conta FioLab.
+- “Minhas fontes salvas” passa a “Minhas fontes neste aparelho”; o cabeçalho também aparece quando ainda não há fonte importada.
+- Mensagens após importação e os cards das fontes passam a reforçar o escopo local.
+- Smoke test instrumentado passa a validar essa comunicação no Android.
+- Nenhuma lógica de armazenamento, conta, assinatura ou motor de bordado foi alterada.
+
 ## 0.46.0
 
 ### Smoke test de runtime Android antes da RC

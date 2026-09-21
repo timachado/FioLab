@@ -59,4 +59,38 @@ class AppSmokeTest {
             )
             .assertDoesNotExist()
     }
+    @Test
+    fun fontLibraryMakesLocalStorageScopeExplicit() {
+        composeRule
+            .onNodeWithText(
+                "Fontes"
+            )
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule
+            .onNodeWithText(
+                "Biblioteca de Fontes"
+            )
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithText(
+                "Fontes FioLab + TTF/OTF deste aparelho"
+            )
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithText(
+                "Minhas fontes neste aparelho"
+            )
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithText(
+                "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta FioLab. Limite: 12 MB por fonte."
+            )
+            .assertIsDisplayed()
+    }
+
 }

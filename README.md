@@ -1,4 +1,4 @@
-# FioLab 0.46.0
+# FioLab 0.46.1
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
