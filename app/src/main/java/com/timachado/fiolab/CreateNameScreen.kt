@@ -695,7 +695,7 @@ fun CreateNameScreen(
                             )
 
                             Text(
-                                "Fontes importadas",
+                                "Fontes salvas",
                                 color =
                                     FioText,
                                 fontWeight =
@@ -707,7 +707,7 @@ fun CreateNameScreen(
                                     .isEmpty()
                             ) {
                                 Text(
-                                    "Nenhuma TTF/OTF importada. Use a aba Fontes na barra inferior para adicionar.",
+                                    "Nenhuma TTF/OTF salva. Use Biblioteca de fontes na Home para importar e salvar.",
                                     color =
                                         FioTextMuted,
                                     fontSize =

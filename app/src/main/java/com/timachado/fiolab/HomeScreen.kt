@@ -208,9 +208,9 @@ fun HomeScreen(
                 iconRes =
                     R.drawable
                         .ic_ms_font_download_rounded,
-                title = "Fontes",
+                title = "Biblioteca de fontes",
                 subtitle =
-                    "Nativas, TTF e OTF",
+                    "Salve e gerencie TTF/OTF",
                 enabled = true,
                 onClick =
                     onFonts
@@ -568,7 +568,7 @@ fun HomeScreen(
             }
         ) {
             Text(
-                "FioLab 0.22.1 • Material 3 Expressive",
+                "FioLab 0.33.0 • Material 3 Expressive",
                 modifier =
                     Modifier
                         .fillMaxWidth()
