@@ -63,7 +63,39 @@ data class FioLabSubscriptionRow(
     val currency: String = "BRL",
     val provider: String? = null,
     @SerialName("external_reference")
-    val externalReference: String? = null
+    val externalReference: String? = null,
+    @SerialName("manage_url")
+    val manageUrl: String? = null
+)
+
+@Serializable
+data class FioLabDeviceRow(
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("device_id")
+    val deviceId: String,
+    @SerialName("device_name")
+    val deviceName: String,
+    val platform: String,
+    @SerialName("app_version")
+    val appVersion: String,
+    @SerialName("last_seen_at")
+    val lastSeenAt: String
+)
+
+@Serializable
+data class FioLabDeviceUpsert(
+    @SerialName("user_id")
+    val userId: String,
+    @SerialName("device_id")
+    val deviceId: String,
+    @SerialName("device_name")
+    val deviceName: String,
+    val platform: String,
+    @SerialName("app_version")
+    val appVersion: String,
+    @SerialName("last_seen_at")
+    val lastSeenAt: String
 )
 
 @Serializable
@@ -102,6 +134,20 @@ data class AccountPlanOption(
     val displayOrder: Int
 )
 
+data class AccountDevice(
+    val deviceId: String,
+    val deviceName: String,
+    val platform: String,
+    val appVersion: String,
+    val lastSeenAt: String,
+    val isCurrent: Boolean
+)
+
+enum class FioLabFeature {
+    CORE,
+    PRO_ONLY
+}
+
 data class AccountSubscriptionEvent(
     val planCode: String,
     val eventType: String,
@@ -124,6 +170,10 @@ data class AccountSnapshot(
     val purchasePriceCents: Int? = null,
     val currency: String = "BRL",
     val provider: String? = null,
+    val manageUrl: String? = null,
+    val devices: List<AccountDevice> =
+        emptyList(),
+    val currentDeviceId: String? = null,
     val availablePlans: List<AccountPlanOption> =
         emptyList(),
     val subscriptionHistory:
@@ -181,6 +231,24 @@ data class AccountSnapshot(
                     "trialing"
                 )
 }
+
+    val hasProAccess: Boolean
+        get() =
+            isPaid &&
+                isSubscriptionUsable
+
+    fun canUse(
+        feature: FioLabFeature
+    ): Boolean =
+        when (
+            feature
+        ) {
+            FioLabFeature.CORE ->
+                true
+
+            FioLabFeature.PRO_ONLY ->
+                hasProAccess
+        }
 
 sealed interface SignUpOutcome {
     data class SignedIn(
