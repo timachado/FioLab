@@ -41,6 +41,12 @@ import java.util.Locale
 @Composable
 fun ViewerScreen(
     design: EmbroideryDesign,
+    displayMode: EmbroideryDisplayMode,
+    onDisplayModeChange: (EmbroideryDisplayMode) -> Unit,
+    referenceHoop: HoopProfile,
+    onReferenceHoopChange: (HoopProfile) -> Unit,
+    showConnections: Boolean,
+    onShowConnectionsChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onOpen: () -> Unit,
     onSimulate: () -> Unit,
@@ -51,32 +57,6 @@ fun ViewerScreen(
     onSaveCopy: () -> Unit,
     onShare: () -> Unit
 ) {
-    var displayMode by remember(
-        design.fileName
-    ) {
-        mutableStateOf(
-            EmbroideryDisplayMode
-                .REALISTIC
-        )
-    }
-
-    var referenceHoop by remember(
-        design.fileName
-    ) {
-        mutableStateOf(
-            design.hoopProfile
-                ?: HoopProfile.H100X100
-        )
-    }
-
-    var showConnections by remember(
-        design.fileName
-    ) {
-        mutableStateOf(
-            false
-        )
-    }
-
     var showDisplaySettings by remember {
         mutableStateOf(
             false
@@ -89,22 +69,16 @@ fun ViewerScreen(
         DisplaySettingsSheet(
             displayMode =
                 displayMode,
-            onDisplayModeChange = {
-                displayMode =
-                    it
-            },
+            onDisplayModeChange =
+                onDisplayModeChange,
             hoop =
                 referenceHoop,
-            onHoopChange = {
-                referenceHoop =
-                    it
-            },
+            onHoopChange =
+                onReferenceHoopChange,
             showConnections =
                 showConnections,
-            onShowConnectionsChange = {
-                showConnections =
-                    it
-            },
+            onShowConnectionsChange =
+                onShowConnectionsChange,
             onDismiss = {
                 showDisplaySettings =
                     false
@@ -170,18 +144,6 @@ fun ViewerScreen(
             }
 
             TextButton(
-                onClick = {
-                    showDisplaySettings =
-                        true
-                }
-            ) {
-                Text(
-                    "Exibição",
-                    color = FioGold
-                )
-            }
-
-            TextButton(
                 onClick = onOpen
             ) {
                 Text(
@@ -189,6 +151,35 @@ fun ViewerScreen(
                     color = FioGold
                 )
             }
+        }
+
+        OutlinedButton(
+            onClick = {
+                showDisplaySettings =
+                    true
+            },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal =
+                            16.dp,
+                        bottom =
+                            6.dp
+                    ),
+            colors =
+                ButtonDefaults
+                    .outlinedButtonColors(
+                        contentColor =
+                            FioGold
+                    )
+        ) {
+            Text(
+                "⚙ Exibição: " +
+                    displayMode.displayName,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
         }
 
         EmbroideryCanvas(
