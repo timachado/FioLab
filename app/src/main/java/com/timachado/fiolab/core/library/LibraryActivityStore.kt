@@ -210,6 +210,53 @@ object LibraryActivityStore {
         )
     }
 
+    fun removeSent(
+        context: Context,
+        recordId: String
+    ) {
+        val current =
+            read(
+                context
+            )
+
+        write(
+            context,
+            current.copy(
+                sentMatrices =
+                    current
+                        .sentMatrices
+                        .filterNot {
+                            it.id ==
+                                recordId
+                        }
+            )
+        )
+    }
+
+    fun clearSent(
+        context: Context
+    ) {
+        val current =
+            read(
+                context
+            )
+
+        if (
+            current.sentMatrices
+                .isEmpty()
+        ) {
+            return
+        }
+
+        write(
+            context,
+            current.copy(
+                sentMatrices =
+                    emptyList()
+            )
+        )
+    }
+
     fun removeProjectMetadata(
         context: Context,
         projectId: String

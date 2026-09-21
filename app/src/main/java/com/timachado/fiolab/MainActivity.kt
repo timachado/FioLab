@@ -280,6 +280,41 @@ private fun FioLabApp(
         refreshLibraryActivity()
     }
 
+    fun removeSentRecord(
+        record: SentMatrixRecord
+    ) {
+        LibraryActivityStore
+            .removeSent(
+                context =
+                    context,
+                recordId =
+                    record.id
+            )
+
+        refreshLibraryActivity()
+
+        scope.launch {
+            snackbar.showSnackbar(
+                "Registro removido dos envios recentes."
+            )
+        }
+    }
+
+    fun clearSentHistory() {
+        LibraryActivityStore
+            .clearSent(
+                context
+            )
+
+        refreshLibraryActivity()
+
+        scope.launch {
+            snackbar.showSnackbar(
+                "Histórico de envios recentes limpo."
+            )
+        }
+    }
+
     fun activateDesign(
         design: EmbroideryDesign
     ) {
@@ -1539,6 +1574,15 @@ private fun FioLabApp(
                             deleteProject(
                                 project
                             )
+                        },
+                        onDeleteSent = {
+                                record ->
+                            removeSentRecord(
+                                record
+                            )
+                        },
+                        onClearSent = {
+                            clearSentHistory()
                         },
                         onBackup = {
                             createLibraryBackup()

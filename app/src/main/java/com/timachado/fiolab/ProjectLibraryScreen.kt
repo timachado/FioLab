@@ -72,6 +72,8 @@ fun ProjectLibraryScreen(
     onToggleFavorite:
         (SavedProjectSummary) -> Unit,
     onDelete: (SavedProjectSummary) -> Unit,
+    onDeleteSent: (SentMatrixRecord) -> Unit,
+    onClearSent: () -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
     onFonts: () -> Unit
@@ -304,7 +306,16 @@ fun ProjectLibraryScreen(
         ) {
             SentMatricesList(
                 sentMatrices =
-                    sentMatrices
+                    sentMatrices,
+                onDelete = {
+                        record ->
+                    onDeleteSent(
+                        record
+                    )
+                },
+                onClear = {
+                    onClearSent()
+                }
             )
 
             return
@@ -555,7 +566,11 @@ private fun ProjectLibraryCard(
 @Composable
 private fun SentMatricesList(
     sentMatrices:
-        List<SentMatrixRecord>
+        List<SentMatrixRecord>,
+    onDelete:
+        (SentMatrixRecord) -> Unit,
+    onClear:
+        () -> Unit
 ) {
     if (
         sentMatrices
@@ -594,6 +609,58 @@ private fun SentMatricesList(
         }
 
         return
+    }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top =
+                        6.dp
+                ),
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+        Column(
+            modifier =
+                Modifier.weight(
+                    1f
+                )
+        ) {
+            Text(
+                "Envios recentes",
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.SemiBold,
+                fontSize =
+                    12.sp
+            )
+
+            Text(
+                "Remover daqui não apaga a matriz nem o arquivo do pendrive.",
+                color =
+                    FioTextMuted,
+                fontSize =
+                    9.sp
+            )
+        }
+
+        TextButton(
+            onClick =
+                onClear
+        ) {
+            Text(
+                "Limpar recentes",
+                color =
+                    Color(
+                        0xFFFF9F9A
+                    ),
+                fontSize =
+                    10.sp
+            )
+        }
     }
 
     LazyColumn(
@@ -635,15 +702,47 @@ private fun SentMatricesList(
                         14.dp
                     )
                 ) {
-                    Text(
-                        record.fileName,
-                        color =
-                            FioText,
-                        fontWeight =
-                            FontWeight.SemiBold,
-                        fontSize =
-                            13.sp
-                    )
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(),
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+                        Text(
+                            record.fileName,
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                ),
+                            color =
+                                FioText,
+                            fontWeight =
+                                FontWeight.SemiBold,
+                            fontSize =
+                                13.sp
+                        )
+
+                        TextButton(
+                            onClick = {
+                                onDelete(
+                                    record
+                                )
+                            }
+                        ) {
+                            Text(
+                                "✕",
+                                color =
+                                    Color(
+                                        0xFFFF9F9A
+                                    ),
+                                fontWeight =
+                                    FontWeight.Bold,
+                                fontSize =
+                                    16.sp
+                            )
+                        }
+                    }
 
                     Text(
                         record.format +

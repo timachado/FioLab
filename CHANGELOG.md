@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.46.3
+
+### Histórico de envios
+- Adicionado botão ✕ em cada item da aba Enviados para remover somente aquele registro do histórico.
+- Adicionada ação “Limpar recentes” para apagar de uma vez o histórico de envios exibido no FioLab.
+- A interface informa explicitamente que remover o histórico não apaga a matriz salva nem o arquivo já gravado no pendrive.
+- Nenhum arquivo do armazenamento USB, bordadeira ou Biblioteca é excluído por essas ações.
+- Correção de orientação da 0.46.2 permanece preservada.
+
 ## 0.46.2
 
 ### Correção crítica de orientação na máquina
