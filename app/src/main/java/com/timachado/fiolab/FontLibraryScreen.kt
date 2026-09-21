@@ -99,13 +99,26 @@ fun FontLibraryScreen(
                 result.fold(
                     onSuccess = {
                             font ->
+                        val alreadySaved =
+                            importedFonts.any {
+                                it.id ==
+                                    font.id
+                            }
+
                         importedFonts =
                             ImportedFontStore
                                 .list(context)
 
                         statusMessage =
-                            font.displayName +
-                                " adicionada à biblioteca."
+                            if (
+                                alreadySaved
+                            ) {
+                                font.displayName +
+                                    " já estava salva na biblioteca."
+                            } else {
+                                font.displayName +
+                                    " importada e salva na biblioteca."
+                            }
                     },
                     onFailure = {
                             error ->
@@ -191,14 +204,14 @@ fun FontLibraryScreen(
                     )
         ) {
             Text(
-                "+ Adicionar fonte TTF/OTF",
+                "+ Importar e salvar fonte TTF/OTF",
                 fontWeight =
                     FontWeight.Bold
             )
         }
 
         Text(
-            "O arquivo é validado e copiado para o armazenamento privado do FioLab. Limite: 12 MB por fonte.",
+            "A fonte importada fica salva na Biblioteca de Fontes e disponível em Criar Nome até você excluir. Limite: 12 MB por fonte.",
             modifier =
                 Modifier.padding(
                     top = 6.dp,
@@ -241,7 +254,7 @@ fun FontLibraryScreen(
             ) {
                 item {
                     Text(
-                        "Minhas fontes importadas",
+                        "Minhas fontes salvas",
                         color = FioText,
                         fontWeight =
                             FontWeight.Bold
