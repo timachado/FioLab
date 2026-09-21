@@ -213,6 +213,22 @@ fun AccountScreen(
                         fontSize =
                             10.sp
                     )
+
+                    OutlinedButton(
+                        onClick =
+                            onRefresh,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    top =
+                                        8.dp
+                                )
+                    ) {
+                        Text(
+                            "Tentar novamente"
+                        )
+                    }
                 }
             }
         }
