@@ -81,14 +81,16 @@ object FioLabAccountService {
             Throwable
         ) -> Unit
     ) {
-        client.handleDeeplinks(
-            intent =
-                intent,
-            onSessionSuccess = {
-                onSuccess()
-            },
-            onError =
-                onError
+        runCatching {
+            client.handleDeeplinks(
+                intent =
+                    intent,
+                onSessionSuccess = {
+                    onSuccess()
+                }
+            )
+        }.onFailure(
+            onError
         )
     }
 
