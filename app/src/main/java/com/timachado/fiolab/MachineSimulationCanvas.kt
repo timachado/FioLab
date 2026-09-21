@@ -10,7 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -74,15 +76,28 @@ fun MachineSimulationCanvas(
                     design.hoopProfile
             )
 
-            drawStitches(
-                design =
-                    design,
-                transform =
-                    transform,
-                pointLimit =
-                    design.points.size,
-                ghost = true
-            )
+            if (
+                design.guidePoints
+                    .isNotEmpty()
+            ) {
+                drawReferenceGuide(
+                    design =
+                        design,
+                    transform =
+                        transform
+                )
+            } else {
+                drawStitches(
+                    design =
+                        design,
+                    transform =
+                        transform,
+                    pointLimit =
+                        design.points.size,
+                    ghost =
+                        true
+                )
+            }
 
             drawStitches(
                 design =
@@ -532,6 +547,120 @@ private fun DrawScope.drawHoop(
                                 7.dp.toPx()
                             )
                         )
+            )
+    )
+}
+
+private fun DrawScope.drawReferenceGuide(
+    design: EmbroideryDesign,
+    transform:
+        SimulationTransform
+) {
+    val path =
+        Path().apply {
+            fillType =
+                PathFillType.EvenOdd
+        }
+
+    var contourOpen =
+        false
+
+    design.guidePoints
+        .forEach {
+                point ->
+            val position =
+                transform.point(
+                    point
+                )
+
+            when (
+                point.command
+            ) {
+                StitchCommand.JUMP -> {
+                    if (
+                        contourOpen
+                    ) {
+                        path.close()
+                    }
+
+                    path.moveTo(
+                        position.x,
+                        position.y
+                    )
+
+                    contourOpen =
+                        true
+                }
+
+                StitchCommand.STITCH -> {
+                    if (
+                        !contourOpen
+                    ) {
+                        path.moveTo(
+                            position.x,
+                            position.y
+                        )
+
+                        contourOpen =
+                            true
+                    } else {
+                        path.lineTo(
+                            position.x,
+                            position.y
+                        )
+                    }
+                }
+
+                StitchCommand.TRIM,
+                StitchCommand.STOP,
+                StitchCommand.COLOR_CHANGE,
+                StitchCommand.SEQUIN,
+                StitchCommand.END -> {
+                    if (
+                        contourOpen
+                    ) {
+                        path.close()
+
+                        contourOpen =
+                            false
+                    }
+                }
+            }
+        }
+
+    if (
+        contourOpen
+    ) {
+        path.close()
+    }
+
+    val guideColor =
+        Color(
+            0xFFD96B79
+        )
+
+    drawPath(
+        path =
+            path,
+        color =
+            guideColor.copy(
+                alpha =
+                    0.12f
+            )
+    )
+
+    drawPath(
+        path =
+            path,
+        color =
+            guideColor.copy(
+                alpha =
+                    0.34f
+            ),
+        style =
+            Stroke(
+                width =
+                    1.15.dp.toPx()
             )
     )
 }
