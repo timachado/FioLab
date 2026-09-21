@@ -8,8 +8,15 @@ if grep -RInE   --include='*.kt'   --include='*.kts'   '(service[_-]?role|SUPABA
   exit 1
 fi
 
-if grep -RInE   --include='*.kt'   --include='*.kts'   '"http://'   app/src/main app/build.gradle.kts; then
-  echo "Cleartext HTTP literal found in production Kotlin/Gradle source."
+HTTP_MATCHES="$(
+  grep -RInE --include='*.kt' --include='*.kts' '"http://' app/src/main app/build.gradle.kts \
+    | grep -vE 'http://apache\.org/xml/|http://xml\.org/sax/' \
+    || true
+)"
+
+if [ -n "$HTTP_MATCHES" ]; then
+  echo "$HTTP_MATCHES"
+  echo "Cleartext HTTP endpoint found in production Kotlin/Gradle source."
   exit 1
 fi
 
