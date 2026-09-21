@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -81,8 +82,12 @@ private val namePalette =
 @Composable
 fun CreateNameScreen(
     onBack: () -> Unit,
-    onCreate: (EmbroideryDesign) -> Unit,
-    onSimulate: (EmbroideryDesign) -> Unit
+    onCreate:
+        (EmbroideryDesign, EmbroideryDisplayMode) ->
+            Unit,
+    onSimulate:
+        (EmbroideryDesign, EmbroideryDisplayMode) ->
+            Unit
 ) {
     val context =
         LocalContext.current
@@ -95,6 +100,16 @@ fun CreateNameScreen(
 
     var selectedTab by remember {
         mutableStateOf("Texto")
+    }
+
+    var displayMode by remember {
+        mutableStateOf(
+            EmbroideryDisplayMode.SOLID
+        )
+    }
+
+    var showHoopPreview by remember {
+        mutableStateOf(true)
     }
 
     var importedFontId by remember {
@@ -372,9 +387,15 @@ fun CreateNameScreen(
                     design =
                         preview,
                     hoop =
-                        hoopProfile,
+                        if (
+                            showHoopPreview
+                        ) {
+                            hoopProfile
+                        } else {
+                            null
+                        },
                     displayMode =
-                        EmbroideryDisplayMode.SOLID,
+                        displayMode,
                     modifier =
                         Modifier.fillMaxSize()
                 )
@@ -963,6 +984,91 @@ fun CreateNameScreen(
 
                         else -> {
                             Text(
+                                "Exibição",
+                                color =
+                                    FioText,
+                                fontWeight =
+                                    FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(
+                                            rememberScrollState()
+                                        )
+                                        .padding(
+                                            vertical =
+                                                6.dp
+                                        ),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        7.dp
+                                    )
+                            ) {
+                                EmbroideryDisplayMode
+                                    .entries
+                                    .forEach {
+                                            mode ->
+                                        ChoiceButton(
+                                            text =
+                                                mode.displayName,
+                                            selected =
+                                                displayMode ==
+                                                    mode,
+                                            onClick = {
+                                                displayMode =
+                                                    mode
+                                            }
+                                        )
+                                    }
+                            }
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            bottom =
+                                                8.dp
+                                        ),
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    Modifier.weight(
+                                        1f
+                                    )
+                                ) {
+                                    Text(
+                                        "Mostrar bastidor",
+                                        color =
+                                            FioText,
+                                        fontWeight =
+                                            FontWeight.SemiBold
+                                    )
+
+                                    Text(
+                                        "Oculta apenas o bastidor da prévia.",
+                                        color =
+                                            FioTextMuted,
+                                        fontSize =
+                                            10.sp
+                                    )
+                                }
+
+                                Switch(
+                                    checked =
+                                        showHoopPreview,
+                                    onCheckedChange = {
+                                        showHoopPreview =
+                                            it
+                                    }
+                                )
+                            }
+
+                            Text(
                                 "Bastidor",
                                 color =
                                     FioText,
@@ -1247,9 +1353,12 @@ fun CreateNameScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            preview?.let(
-                                onSimulate
-                            )
+                            preview?.let {
+                                onSimulate(
+                                    it,
+                                    displayMode
+                                )
+                            }
                         },
                         enabled =
                             preview !=
@@ -1267,9 +1376,12 @@ fun CreateNameScreen(
 
                     Button(
                         onClick = {
-                            preview?.let(
-                                onCreate
-                            )
+                            preview?.let {
+                                onCreate(
+                                    it,
+                                    displayMode
+                                )
+                            }
                         },
                         enabled =
                             preview !=
