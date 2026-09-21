@@ -144,6 +144,18 @@ fun ViewerScreen(
             }
 
             TextButton(
+                onClick = {
+                    showDisplaySettings =
+                        true
+                }
+            ) {
+                Text(
+                    "Exibição",
+                    color = FioGold
+                )
+            }
+
+            TextButton(
                 onClick = onOpen
             ) {
                 Text(
@@ -151,37 +163,6 @@ fun ViewerScreen(
                     color = FioGold
                 )
             }
-        }
-
-        OutlinedButton(
-            onClick = {
-                showDisplaySettings =
-                    true
-            },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start =
-                            16.dp,
-                        end =
-                            16.dp,
-                        bottom =
-                            6.dp
-                    ),
-            colors =
-                ButtonDefaults
-                    .outlinedButtonColors(
-                        contentColor =
-                            FioGold
-                    )
-        ) {
-            Text(
-                "⚙ Exibição: " +
-                    displayMode.displayName,
-                fontWeight =
-                    FontWeight.SemiBold
-            )
         }
 
         EmbroideryCanvas(
