@@ -232,7 +232,6 @@ data class AccountSnapshot(
                     "active",
                     "trialing"
                 )
-}
 
     val hasProAccess: Boolean
         get() =
@@ -251,6 +250,7 @@ data class AccountSnapshot(
             FioLabFeature.PRO_ONLY ->
                 hasProAccess
         }
+}
 
 sealed interface SignUpOutcome {
     data class SignedIn(
