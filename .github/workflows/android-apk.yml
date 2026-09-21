@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/reference-text-engine-0300"]
   workflow_dispatch:
 
 permissions:
@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.29.0-debug.apk
-          zip -9 FioLab-0.29.0-debug.zip FioLab-0.29.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.30.0-debug.apk
+          zip -9 FioLab-0.30.0-debug.zip FioLab-0.30.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.29.0-downloads
+          name: FioLab-0.30.0-downloads
           path: |
-            FioLab-0.29.0-debug.apk
-            FioLab-0.29.0-debug.zip
+            FioLab-0.30.0-debug.apk
+            FioLab-0.30.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.29.0 >/dev/null 2>&1; then
-            gh release upload v0.29.0               FioLab-0.29.0-debug.apk               FioLab-0.29.0-debug.zip               --clobber
+          if gh release view v0.30.0 >/dev/null 2>&1; then
+            gh release upload v0.30.0               FioLab-0.30.0-debug.apk               FioLab-0.30.0-debug.zip               --clobber
           else
-            gh release create v0.29.0               FioLab-0.29.0-debug.apk               FioLab-0.29.0-debug.zip               --target main               --title "FioLab 0.29.0"               --notes "FioLab 0.29.0: corrige a espessura visual e estrutural de fontes TTF/OTF em Ponto Corrido, Feijão, Corrido Triplo e Motivo usando um único eixo central do traço, além de uma prévia neutra sem volume artificial."
+            gh release create v0.30.0               FioLab-0.30.0-debug.apk               FioLab-0.30.0-debug.zip               --target main               --title "FioLab 0.30.0"               --notes "FioLab 0.30.0: substitui o Satin experimental de TTF/OTF por um novo pipeline de contorno de glifo, scan spans em dois eixos, colunas Satin, divisão de colunas largas, underlay central, locks e travel segmentado, reimplementado a partir do comportamento do app de referência."
           fi
