@@ -245,14 +245,6 @@ private data class SimulationTransform(
                 1f
             )
 
-    private val designScale =
-        minOf(
-            availableWidth /
-                widthUnits,
-            availableHeight /
-                heightUnits
-        )
-
     private val hoopWidthUnits =
         hoop
             ?.widthMm
@@ -267,29 +259,20 @@ private data class SimulationTransform(
                 10f
             )
 
-    private val hoopScale =
-        if (
-            hoopWidthUnits !=
-                null &&
-            hoopHeightUnits !=
-                null
-        ) {
-            minOf(
-                availableWidth /
-                    hoopWidthUnits,
-                availableHeight /
-                    hoopHeightUnits
-            )
-        } else {
-            null
-        }
-
     val scale: Float =
-        (
-            hoopScale
-                ?: designScale
-            ).coerceAtLeast(
-            0.01f
+        simulationScale(
+            availableWidth =
+                availableWidth,
+            availableHeight =
+                availableHeight,
+            designWidthUnits =
+                widthUnits.toFloat(),
+            designHeightUnits =
+                heightUnits.toFloat(),
+            hoopWidthUnits =
+                hoopWidthUnits,
+            hoopHeightUnits =
+                hoopHeightUnits
         )
 
     val hoopFrameWidthPx: Float =
@@ -368,6 +351,71 @@ private data class SimulationTransform(
     ): Float =
         units *
             scale
+}
+
+internal fun simulationScale(
+    availableWidth: Float,
+    availableHeight: Float,
+    designWidthUnits: Float,
+    designHeightUnits: Float,
+    hoopWidthUnits: Float?,
+    hoopHeightUnits: Float?
+): Float {
+    val safeWidth =
+        availableWidth
+            .coerceAtLeast(
+                1f
+            )
+
+    val safeHeight =
+        availableHeight
+            .coerceAtLeast(
+                1f
+            )
+
+    val designScale =
+        minOf(
+            safeWidth /
+                designWidthUnits
+                    .coerceAtLeast(
+                        1f
+                    ),
+            safeHeight /
+                designHeightUnits
+                    .coerceAtLeast(
+                        1f
+                    )
+        )
+
+    val hoopScale =
+        if (
+            hoopWidthUnits !=
+                null &&
+            hoopHeightUnits !=
+                null
+        ) {
+            minOf(
+                safeWidth /
+                    hoopWidthUnits
+                        .coerceAtLeast(
+                            1f
+                        ),
+                safeHeight /
+                    hoopHeightUnits
+                        .coerceAtLeast(
+                            1f
+                        )
+            )
+        } else {
+            null
+        }
+
+    return (
+        hoopScale
+            ?: designScale
+        ).coerceAtLeast(
+        0.01f
+    )
 }
 
 private fun DrawScope.drawFabricGrid(
