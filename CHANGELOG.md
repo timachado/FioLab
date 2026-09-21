@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.9
+
+### Início correto da letra
+- Corrigido o ponto inicial observado no vídeo: a simulação não usa mais o primeiro ponto arbitrário do contorno interno da TTF/OTF.
+- Cada glifo calcula um início visual determinístico pela borda mais à esquerda; em empate, prefere a parte inferior, adequada para entradas de fontes cursivas.
+- A primeira região Satin da letra é obrigatoriamente a região mais à esquerda, mesmo que outra coluna esteja geometricamente mais próxima do ponto interno fornecido pela fonte.
+- Depois da primeira região, a otimização por proximidade/orientação da 0.46.8 continua ativa para evitar deslocamentos desnecessários.
+- Underlay edge-run, Satin alternado, conectores escondidos e JUMP sobre áreas vazias da 0.46.8 permanecem preservados.
+- Adicionado teste de regressão com uma dica inicial propositalmente errada à direita; o primeiro JUMP precisa cair na região esquerda da letra.
+
 ## 0.46.8
 
 ### Sequência Satin refeita com referência no comportamento do Mão Design

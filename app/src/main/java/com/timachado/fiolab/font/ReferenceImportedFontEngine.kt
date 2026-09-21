@@ -362,10 +362,9 @@ internal object ReferenceImportedFontEngine {
                         polygons =
                             polygons,
                         startHint =
-                            polygons
-                                .firstOrNull()
-                                ?.points
-                                ?.firstOrNull(),
+                            glyphVisualStartPoint(
+                                polygons
+                            ),
                         includeUnderlay =
                             options
                                 .satinUnderlayMode !=
@@ -857,6 +856,51 @@ internal object ReferenceImportedFontEngine {
 
         return polygons
     }
+
+    private fun glyphVisualStartPoint(
+        polygons: List<Polygon>
+    ): FPoint? {
+        val points =
+            polygons.flatMap {
+                it.points
+            }
+
+        if (
+            points.isEmpty()
+        ) {
+            return null
+        }
+
+        /*
+         * Path/contour order from TTF/OTF is an implementation detail and
+         * does not describe the visual beginning of a letter. For machine
+         * embroidery we anchor the first Satin region at the left edge of
+         * the glyph; for equal X, prefer the lower point in the Cartesian
+         * coordinate system so script/cursive entry strokes start at the
+         * natural lower-left side.
+         */
+        return points.minWithOrNull(
+            compareBy<FPoint> {
+                it.x
+            }.thenBy {
+                it.y
+            }
+        )
+    }
+
+    private fun columnLeftEdgeX(
+        column: SatinColumn
+    ): Float =
+        column.rows
+            .flatMap {
+                    row ->
+                listOf(
+                    row.a.x,
+                    row.b.x
+                )
+            }
+            .minOrNull()
+            ?: Float.MAX_VALUE
 
     private fun sampleColumns(
         polygons: List<Polygon>,
@@ -1514,19 +1558,41 @@ internal object ReferenceImportedFontEngine {
                     }
 
                 val choice =
-                    remaining
-                        .map {
-                                column ->
-                            closestOrientation(
-                                column =
-                                    column,
-                                anchor =
-                                    anchor
-                            )
-                        }
-                        .minBy {
-                            it.entryDistance
-                        }
+                    if (
+                        firstColumn
+                    ) {
+                        val leftmostColumn =
+                            remaining.minBy {
+                                columnLeftEdgeX(
+                                    it
+                                )
+                            }
+
+                        closestOrientation(
+                            column =
+                                leftmostColumn,
+                            anchor =
+                                startHint
+                                    ?: leftmostColumn
+                                        .rows
+                                        .first()
+                                        .a
+                        )
+                    } else {
+                        remaining
+                            .map {
+                                    column ->
+                                closestOrientation(
+                                    column =
+                                        column,
+                                    anchor =
+                                        anchor
+                                )
+                            }
+                            .minBy {
+                                it.entryDistance
+                            }
+                    }
 
                 val column =
                     choice.oriented
@@ -2281,6 +2347,113 @@ internal object ReferenceImportedFontEngine {
             current =
                 point
         }
+    }
+
+    internal fun debugVisualStartPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val left =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            0f
+                        ),
+                        FPoint(
+                            20f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            10f
+                        ),
+                        FPoint(
+                            20f,
+                            10f
+                        )
+                    )
+                )
+            )
+
+        val right =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            70f,
+                            0f
+                        ),
+                        FPoint(
+                            85f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            70f,
+                            10f
+                        ),
+                        FPoint(
+                            85f,
+                            10f
+                        )
+                    )
+                )
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    right,
+                    left
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                0f,
+                                -5f
+                            ),
+                            FPoint(
+                                90f,
+                                -5f
+                            ),
+                            FPoint(
+                                90f,
+                                15f
+                            ),
+                            FPoint(
+                                0f,
+                                15f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    90f,
+                    10f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f
+        )
+
+        return output
     }
 
     internal fun debugReferencePath(

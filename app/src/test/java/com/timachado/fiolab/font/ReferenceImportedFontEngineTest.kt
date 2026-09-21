@@ -58,6 +58,31 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun firstSatinRegionStartsAtLeftEdgeEvenWhenHintIsMisleading() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugVisualStartPath()
+
+        assertTrue(
+            points.isNotEmpty()
+        )
+
+        val first =
+            points.first()
+
+        assertEquals(
+            StitchCommand.JUMP,
+            first.command
+        )
+
+        assertTrue(
+            "O primeiro ponto deve começar na região esquerda da letra.",
+            first.xUnits <=
+                20
+        )
+    }
+
+    @Test
     fun connectedColumnsUseHiddenRunningConnector() {
         val points =
             ReferenceImportedFontEngine
