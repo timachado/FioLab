@@ -1230,11 +1230,11 @@ private fun FioLabApp(
                                             .ic_ms_folder_open_rounded
                                     ),
                                 contentDescription =
-                                    "Matrizes"
+                                    "Biblioteca"
                             )
                         },
                         label = {
-                            Text("Matrizes")
+                            Text("Biblioteca")
                         },
                         colors =
                             navigationColors
