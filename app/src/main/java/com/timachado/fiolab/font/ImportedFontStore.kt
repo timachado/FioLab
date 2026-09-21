@@ -200,11 +200,7 @@ object ImportedFontStore {
                             }
                     }
 
-                    check(
-                        temp.delete()
-                    ) {
-                        "Não foi possível limpar o arquivo temporário da fonte."
-                    }
+                    temp.delete()
                 }
 
                 toImportedFont(destination)
