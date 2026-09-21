@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 
 data class DurablePendingDocument(
     val fileName: String,
@@ -23,11 +25,174 @@ object PendingDocumentCodec {
         1
 
     private const val MAX_BYTES =
-        64 * 1024 * 1024
+        128 * 1024 * 1024
 
     fun encode(
         document: DurablePendingDocument
     ): ByteArray {
+        val buffer =
+            ByteArrayOutputStream()
+
+        write(
+            document =
+                document,
+            output =
+                buffer
+        )
+
+        return buffer
+            .toByteArray()
+    }
+
+    fun write(
+        document: DurablePendingDocument,
+        output: OutputStream
+    ) {
+        validate(
+            document
+        )
+
+        val data =
+            DataOutputStream(
+                output
+            )
+
+        data.writeUTF(
+            MAGIC
+        )
+
+        data.writeInt(
+            VERSION
+        )
+
+        data.writeUTF(
+            document.fileName
+                .take(
+                    200
+                )
+        )
+
+        data.writeUTF(
+            document.successMessage
+                .take(
+                    500
+                )
+        )
+
+        writeNullableString(
+            data,
+            document.machineMethod
+        )
+
+        writeNullableString(
+            data,
+            document.machineFormat
+        )
+
+        data.writeInt(
+            document.bytes
+                .size
+        )
+
+        data.write(
+            document.bytes
+        )
+
+        data.flush()
+    }
+
+    fun decode(
+        bytes: ByteArray
+    ): DurablePendingDocument =
+        ByteArrayInputStream(
+            bytes
+        ).use {
+            decode(
+                it
+            )
+        }
+
+    fun decode(
+        input: InputStream
+    ): DurablePendingDocument {
+        val data =
+            DataInputStream(
+                input
+            )
+
+        require(
+            data.readUTF() ==
+                MAGIC
+        ) {
+            "Documento pendente inválido."
+        }
+
+        require(
+            data.readInt() ==
+                VERSION
+        ) {
+            "Versão de documento pendente não suportada."
+        }
+
+        val fileName =
+            data.readUTF()
+
+        val successMessage =
+            data.readUTF()
+
+        val machineMethod =
+            readNullableString(
+                data
+            )
+
+        val machineFormat =
+            readNullableString(
+                data
+            )
+
+        val size =
+            data.readInt()
+
+        require(
+            size in
+                1..MAX_BYTES
+        ) {
+            "Tamanho do documento pendente inválido."
+        }
+
+        val payload =
+            ByteArray(
+                size
+            )
+
+        data.readFully(
+            payload
+        )
+
+        require(
+            data.read() ==
+                -1
+        ) {
+            "Documento pendente contém dados extras."
+        }
+
+        return DurablePendingDocument(
+            fileName =
+                fileName,
+            bytes =
+                payload,
+            successMessage =
+                successMessage,
+            machineMethod =
+                machineMethod,
+            machineFormat =
+                machineFormat
+        )
+    }
+
+    private fun validate(
+        document: DurablePendingDocument
+    ) {
         require(
             document.fileName
                 .isNotBlank()
@@ -49,138 +214,7 @@ object PendingDocumentCodec {
         ) {
             "Arquivo pendente grande demais."
         }
-
-        val buffer =
-            ByteArrayOutputStream()
-
-        DataOutputStream(
-            buffer
-        ).use {
-                output ->
-            output.writeUTF(
-                MAGIC
-            )
-
-            output.writeInt(
-                VERSION
-            )
-
-            output.writeUTF(
-                document.fileName
-                    .take(
-                        200
-                    )
-            )
-
-            output.writeUTF(
-                document.successMessage
-                    .take(
-                        500
-                    )
-            )
-
-            writeNullableString(
-                output,
-                document.machineMethod
-            )
-
-            writeNullableString(
-                output,
-                document.machineFormat
-            )
-
-            output.writeInt(
-                document.bytes
-                    .size
-            )
-
-            output.write(
-                document.bytes
-            )
-        }
-
-        return buffer
-            .toByteArray()
     }
-
-    fun decode(
-        bytes: ByteArray
-    ): DurablePendingDocument =
-        DataInputStream(
-            ByteArrayInputStream(
-                bytes
-            )
-        ).use {
-                input ->
-            require(
-                input.readUTF() ==
-                    MAGIC
-            ) {
-                "Documento pendente inválido."
-            }
-
-            require(
-                input.readInt() ==
-                    VERSION
-            ) {
-                "Versão de documento pendente não suportada."
-            }
-
-            val fileName =
-                input.readUTF()
-
-            val successMessage =
-                input.readUTF()
-
-            val machineMethod =
-                readNullableString(
-                    input
-                )
-
-            val machineFormat =
-                readNullableString(
-                    input
-                )
-
-            val size =
-                input.readInt()
-
-            require(
-                size in
-                    1..MAX_BYTES
-            ) {
-                "Tamanho do documento pendente inválido."
-            }
-
-            val payload =
-                ByteArray(
-                    size
-                )
-
-            input.readFully(
-                payload
-            )
-
-            require(
-                input.read() ==
-                    -1
-            ) {
-                "Documento pendente contém dados extras."
-            }
-
-            DurablePendingDocument(
-                fileName =
-                    fileName,
-                bytes =
-                    payload,
-                successMessage =
-                    successMessage,
-                machineMethod =
-                    machineMethod,
-                machineFormat =
-                    machineFormat
-            )
-        }
 
     private fun writeNullableString(
         output: DataOutputStream,
@@ -228,13 +262,17 @@ object PendingDocumentStore {
                 target =
                     file(
                         context
-                    ),
-                bytes =
-                    PendingDocumentCodec
-                        .encode(
-                            document
-                        )
-            )
+                    )
+            ) {
+                    output ->
+                PendingDocumentCodec
+                    .write(
+                        document =
+                            document,
+                        output =
+                            output
+                    )
+            }
         }
 
     fun load(
@@ -251,10 +289,13 @@ object PendingDocumentStore {
             ) {
                 null
             } else {
-                PendingDocumentCodec
-                    .decode(
-                        file.readBytes()
-                    )
+                file.inputStream()
+                    .use {
+                        PendingDocumentCodec
+                            .decode(
+                                it
+                            )
+                    }
             }
         }
 
