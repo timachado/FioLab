@@ -489,8 +489,11 @@ fun CreateNameScreen(
             false
     }
 
+    val currentPreview =
+        preview
+
     val hoopFit =
-        preview?.let {
+        currentPreview?.let {
             HoopValidator.validate(
                 it,
                 hoopProfile
@@ -571,12 +574,12 @@ fun CreateNameScreen(
                     )
         ) {
             if (
-                preview !=
+                currentPreview !=
                     null
             ) {
                 EmbroideryCanvas(
                     design =
-                        preview,
+                        currentPreview,
                     hoop =
                         if (
                             showHoopPreview
@@ -1663,7 +1666,7 @@ fun CreateNameScreen(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            preview?.let {
+                            currentPreview?.let {
                                 onSimulate(
                                     it,
                                     displayMode
@@ -1671,7 +1674,7 @@ fun CreateNameScreen(
                             }
                         },
                         enabled =
-                            preview !=
+                            currentPreview !=
                                 null &&
                                 fitsHoop &&
                                 !previewLoading,
@@ -1687,7 +1690,7 @@ fun CreateNameScreen(
 
                     Button(
                         onClick = {
-                            preview?.let {
+                            currentPreview?.let {
                                 onCreate(
                                     it,
                                     displayMode
@@ -1695,7 +1698,7 @@ fun CreateNameScreen(
                             }
                         },
                         enabled =
-                            preview !=
+                            currentPreview !=
                                 null &&
                                 fitsHoop &&
                                 !previewLoading,
@@ -1727,21 +1730,21 @@ fun CreateNameScreen(
                 )
 
                 if (
-                    preview !=
+                    currentPreview !=
                         null
                 ) {
                     Text(
                         mm(
-                            preview.bounds
+                            currentPreview.bounds
                                 .widthMm
                         ) +
                             " × " +
                             mm(
-                                preview.bounds
+                                currentPreview.bounds
                                     .heightMm
                             ) +
                             " mm • " +
-                            preview.stitchCount +
+                            currentPreview.stitchCount +
                             " pontos" +
                             if (
                                 fitsHoop
