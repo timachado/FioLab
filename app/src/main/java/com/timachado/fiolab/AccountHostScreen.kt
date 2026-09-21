@@ -136,7 +136,9 @@ fun AccountHostScreen(
                 onSuccess = {
                         current ->
                     account =
-                        current
+                        withDevices(
+                            current
+                        )
 
                     snackbar
                         .showSnackbar(
