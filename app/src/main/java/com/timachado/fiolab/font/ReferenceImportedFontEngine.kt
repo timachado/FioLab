@@ -353,21 +353,17 @@ internal object ReferenceImportedFontEngine {
                                 pullMm
                         )
 
-                    columns
-                        .forEach {
-                                column ->
-                            emitter.emitColumn(
-                                column =
-                                    column,
-                                includeUnderlay =
-                                    options
-                                        .satinUnderlayMode !=
-                                        SatinUnderlayMode
-                                            .NONE,
-                                densityMm =
-                                    densityMm
-                            )
-                        }
+                    emitter.emitGlyph(
+                        columns =
+                            columns,
+                        includeUnderlay =
+                            options
+                                .satinUnderlayMode !=
+                                SatinUnderlayMode
+                                    .NONE,
+                        densityMm =
+                            densityMm
+                    )
                 }
 
             require(
@@ -1341,15 +1337,29 @@ internal object ReferenceImportedFontEngine {
             }
             .sortedWith(
                 compareBy<SatinColumn> {
-                    it.rows
-                        .first()
-                        .a
-                        .x
+                    column ->
+                    column.rows
+                        .flatMap {
+                                row ->
+                            listOf(
+                                row.a.x,
+                                row.b.x
+                            )
+                        }
+                        .minOrNull()
+                        ?: Float.MAX_VALUE
                 }.thenBy {
-                    it.rows
-                        .first()
-                        .a
-                        .y
+                        column ->
+                    column.rows
+                        .flatMap {
+                                row ->
+                            listOf(
+                                row.a.y,
+                                row.b.y
+                            )
+                        }
+                        .minOrNull()
+                        ?: Float.MAX_VALUE
                 }
             )
     }
@@ -1430,25 +1440,6 @@ internal object ReferenceImportedFontEngine {
             }
     }
 
-    private fun travelCommandForDistance(
-        distanceUnits: Float
-    ): StitchCommand =
-        if (
-            distanceUnits <=
-                TRIM_TRAVEL_UNITS
-        ) {
-            StitchCommand.STITCH
-        } else {
-            StitchCommand.JUMP
-        }
-
-    internal fun debugTravelCommandForDistance(
-        distanceUnits: Float
-    ): StitchCommand =
-        travelCommandForDistance(
-            distanceUnits
-        )
-
     private class SatinEmitter(
         private val output:
             MutableList<EmbroideryPoint>
@@ -1457,64 +1448,96 @@ internal object ReferenceImportedFontEngine {
             FPoint? =
             null
 
-        fun emitColumn(
-            column: SatinColumn,
+        fun emitGlyph(
+            columns: List<SatinColumn>,
             includeUnderlay: Boolean,
             densityMm: Float
         ) {
+            val usableColumns =
+                columns.filter {
+                    it.rows
+                        .isNotEmpty()
+                }
+
             if (
-                column.rows
+                usableColumns
                     .isEmpty()
             ) {
                 return
             }
 
-            val first =
-                column.rows
+            val firstColumn =
+                usableColumns.first()
+
+            val firstRow =
+                firstColumn.rows
                     .first()
 
             travelTo(
-                first.a
+                target =
+                    firstRow.a,
+                continuous =
+                    false
             )
 
             if (
-                includeUnderlay &&
-                column.rows
-                    .size >=
-                    4
+                includeUnderlay
             ) {
-                emitCenterRunUnderlay(
-                    column =
-                        column,
+                emitGlyphCenterRunUnderlay(
+                    columns =
+                        usableColumns,
                     densityMm =
                         densityMm
                 )
             }
 
             emitLock(
-                first
+                firstRow
             )
 
-            column.rows
-                .forEach {
-                        row ->
-                    stitchTo(
-                        row.a
-                    )
+            usableColumns
+                .forEachIndexed {
+                        columnIndex,
+                        column ->
+                    val first =
+                        column.rows
+                            .first()
 
-                    stitchTo(
-                        row.b
-                    )
+                    if (
+                        columnIndex >
+                            0
+                    ) {
+                        travelTo(
+                            target =
+                                first.a,
+                            continuous =
+                                true
+                        )
+                    }
+
+                    column.rows
+                        .forEach {
+                                row ->
+                            stitchTo(
+                                row.a
+                            )
+
+                            stitchTo(
+                                row.b
+                            )
+                        }
                 }
 
             emitLock(
-                column.rows
+                usableColumns
+                    .last()
+                    .rows
                     .last()
             )
         }
 
-        private fun emitCenterRunUnderlay(
-            column: SatinColumn,
+        private fun emitGlyphCenterRunUnderlay(
+            columns: List<SatinColumn>,
             densityMm: Float
         ) {
             val pitchUnits =
@@ -1535,41 +1558,62 @@ internal object ReferenceImportedFontEngine {
                     FPoint
                 >()
 
-            var index =
-                0
+            columns.forEach {
+                    column ->
+                var index =
+                    0
 
-            while (
-                index <
-                    column.rows
-                        .size
-            ) {
-                centers +=
+                while (
+                    index <
+                        column.rows
+                            .size
+                ) {
+                    val point =
+                        center(
+                            column.rows[
+                                index
+                            ]
+                        )
+
+                    if (
+                        centers.isEmpty() ||
+                        distance(
+                            centers.last(),
+                            point
+                        ) >
+                            0.01f
+                    ) {
+                        centers +=
+                            point
+                    }
+
+                    index +=
+                        step
+                }
+
+                val lastCenter =
                     center(
-                        column.rows[
-                            index
-                        ]
+                        column.rows
+                            .last()
                     )
 
-                index +=
-                    step
+                if (
+                    centers.isEmpty() ||
+                    distance(
+                        centers.last(),
+                        lastCenter
+                    ) >
+                        0.01f
+                ) {
+                    centers +=
+                        lastCenter
+                }
             }
 
-            val lastCenter =
-                center(
-                    column.rows
-                        .last()
-                )
-
             if (
-                centers.isEmpty() ||
-                distance(
-                    centers.last(),
-                    lastCenter
-                ) >
-                    0.01f
+                centers.isEmpty()
             ) {
-                centers +=
-                    lastCenter
+                return
             }
 
             centers.forEach {
@@ -1632,7 +1676,8 @@ internal object ReferenceImportedFontEngine {
         }
 
         private fun travelTo(
-            target: FPoint
+            target: FPoint,
+            continuous: Boolean
         ) {
             val before =
                 current
@@ -1649,14 +1694,14 @@ internal object ReferenceImportedFontEngine {
                 return
             }
 
-            val distance =
+            val travelDistance =
                 distance(
                     before,
                     target
                 )
 
             if (
-                distance <
+                travelDistance <
                     0.5f
             ) {
                 current =
@@ -1666,10 +1711,7 @@ internal object ReferenceImportedFontEngine {
             }
 
             if (
-                travelCommandForDistance(
-                    distance
-                ) ==
-                StitchCommand.STITCH
+                continuous
             ) {
                 emitSegmented(
                     from =
@@ -1685,10 +1727,15 @@ internal object ReferenceImportedFontEngine {
                 return
             }
 
-            emit(
-                before,
-                StitchCommand.TRIM
-            )
+            if (
+                travelDistance >
+                    TRIM_TRAVEL_UNITS
+            ) {
+                emit(
+                    before,
+                    StitchCommand.TRIM
+                )
+            }
 
             emitSegmented(
                 from =
@@ -1820,6 +1867,81 @@ internal object ReferenceImportedFontEngine {
 
             current =
                 point
+        }
+    }
+
+    internal fun debugContinuousGlyphCommands():
+        List<StitchCommand> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    SatinColumn(
+                        mutableListOf(
+                            SatinRow(
+                                FPoint(
+                                    0f,
+                                    0f
+                                ),
+                                FPoint(
+                                    12f,
+                                    0f
+                                )
+                            ),
+                            SatinRow(
+                                FPoint(
+                                    0f,
+                                    8f
+                                ),
+                                FPoint(
+                                    12f,
+                                    8f
+                                )
+                            )
+                        )
+                    ),
+                    SatinColumn(
+                        mutableListOf(
+                            SatinRow(
+                                FPoint(
+                                    90f,
+                                    10f
+                                ),
+                                FPoint(
+                                    104f,
+                                    10f
+                                )
+                            ),
+                            SatinRow(
+                                FPoint(
+                                    90f,
+                                    18f
+                                ),
+                                FPoint(
+                                    104f,
+                                    18f
+                                )
+                            )
+                        )
+                    )
+                ),
+            includeUnderlay =
+                true,
+            densityMm =
+                0.4f
+        )
+
+        return output.map {
+            it.command
         }
     }
 

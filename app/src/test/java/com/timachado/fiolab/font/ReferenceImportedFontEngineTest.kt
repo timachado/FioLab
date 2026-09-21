@@ -56,28 +56,38 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
-    fun shortTravelUsesContinuousStitches() {
-        assertTrue(
+    fun oneGlyphHasOnlyInitialPositioningJump() {
+        val commands =
             ReferenceImportedFontEngine
-                .debugTravelCommandForDistance(
-                    30f
-                ) ==
-                com.timachado.fiolab
-                    .core.embroidery
-                    .StitchCommand.STITCH
-        )
-    }
+                .debugContinuousGlyphCommands()
 
-    @Test
-    fun separatedTravelKeepsJump() {
         assertTrue(
-            ReferenceImportedFontEngine
-                .debugTravelCommandForDistance(
-                    80f
-                ) ==
+            commands
+                .isNotEmpty()
+        )
+
+        assertTrue(
+            commands.first() ==
                 com.timachado.fiolab
                     .core.embroidery
                     .StitchCommand.JUMP
+        )
+
+        assertTrue(
+            commands
+                .drop(
+                    1
+                )
+                .none {
+                    it ==
+                        com.timachado.fiolab
+                            .core.embroidery
+                            .StitchCommand.JUMP ||
+                        it ==
+                        com.timachado.fiolab
+                            .core.embroidery
+                            .StitchCommand.TRIM
+                }
         )
     }
 

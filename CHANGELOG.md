@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.7
+
+### Preenchimento contínuo por letra
+- Cada letra TTF/OTF Satin passa a ser tratada como um único percurso contínuo.
+- Dentro da mesma letra não são mais emitidos JUMP nem TRIM entre colunas, independentemente da distância entre elas.
+- O primeiro posicionamento até o início da letra permanece como JUMP; a partir do primeiro ponto, a letra segue somente com STITCH até terminar.
+- As colunas são ordenadas pelo limite mais à esquerda e depois pelo topo, fazendo a costura começar pelo início visual da letra.
+- O underlay central deixa de reiniciar em cada coluna: agora percorre a letra inteira uma vez para frente e uma vez de volta.
+- Tie-in e tie-off continuam com somente uma ida e uma volta, conforme ajustado na 0.46.6.
+- Entre letras diferentes o motor ainda pode reposicionar com JUMP/TRIM para não criar linha costurada atravessando o espaço entre caracteres.
+- Adicionado teste que exige exatamente um JUMP de posicionamento no começo do glifo e nenhum JUMP/TRIM depois que a costura da letra começou.
+
 ## 0.46.6
 
 ### Sequência de costura mais contínua
