@@ -208,16 +208,10 @@ internal object ReferenceImportedFontEngine {
                 )
 
             val spacingUnits =
-                if (
-                    options.spacingMm >
-                        0.001f
-                ) {
+                targetHeightUnits *
+                    LETTER_SPACING_FACTOR +
                     options.spacingMm *
                         10f
-                } else {
-                    targetHeightUnits *
-                        LETTER_SPACING_FACTOR
-                }
 
             val glyphPaths =
                 extractGlyphPaths(
