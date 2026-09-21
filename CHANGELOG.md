@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.27.0
+
+### Guia vetorial da fonte na simulação
+- O nome de fundo deixa de ser apenas uma cópia transparente da sequência de pontos.
+- Fontes TTF/OTF passam a carregar junto da matriz um guia vetorial derivado diretamente do contorno original da fonte.
+- O simulador desenha esse guia como silhueta translúcida rosé com contorno mais definido.
+- A linha realmente costurada continua por cima, permitindo comparar visualmente cobertura, direção e desvios do Satin.
+- O guia usa preenchimento EvenOdd para preservar contraformas e furos internos das letras.
+- Projetos FioLab passam ao formato interno v2 para persistir o guia vetorial; projetos v1 continuam sendo aceitos normalmente.
+- Matrizes importadas sem guia vetorial continuam usando a prévia fantasma anterior como fallback.
+
 ## 0.26.0
 
 ### Satin orientado pelo traço
