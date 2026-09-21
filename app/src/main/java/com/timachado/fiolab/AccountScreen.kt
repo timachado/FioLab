@@ -1622,19 +1622,6 @@ private fun AboutFioLabCard() {
                     12.sp
             )
 
-            Text(
-                "Crédito de desenvolvimento exibido de forma discreta dentro do aplicativo.",
-                modifier =
-                    Modifier.padding(
-                        top =
-                            3.dp
-                    ),
-                color =
-                    FioTextMuted,
-                fontSize =
-                    9.sp
-            )
-
             Spacer(
                 Modifier.height(
                     12.dp

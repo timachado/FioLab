@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.45.1
+
+### Ajuste visual pontual em Minha Conta
+- Removida somente a frase “Crédito de desenvolvimento exibido de forma discreta dentro do aplicativo.”.
+- Mantidos “Desenvolvido por T.I. Machado — Soluções em Tecnologia” e o botão “Conhecer T.I. Machado”.
+- Nenhum outro elemento da tela, fluxo, motor de bordado, biblioteca, conta, atualização ou assinatura foi alterado.
+
 ## 0.45.0
 
 ### Atualização segura e integridade de distribuição
