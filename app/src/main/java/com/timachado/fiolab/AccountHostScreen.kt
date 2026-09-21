@@ -29,7 +29,9 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AccountHostScreen(
     onBack: () -> Unit,
-    refreshRequest: Int = 0
+    refreshRequest: Int = 0,
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit
 ) {
     val context =
         LocalContext.current
@@ -563,6 +565,10 @@ fun AccountHostScreen(
                 offline,
             onBack =
                 onBack,
+            textScale =
+                textScale,
+            onTextScaleChange =
+                onTextScaleChange,
             onGoogleSignIn = {
                 signInWithGoogle()
             },

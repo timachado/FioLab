@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.3-debug.apk
-          zip -9 FioLab-0.46.3-debug.zip FioLab-0.46.3-debug.apk
-          sha256sum FioLab-0.46.3-debug.apk FioLab-0.46.3-debug.zip > FioLab-0.46.3-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.4-debug.apk
+          zip -9 FioLab-0.46.4-debug.zip FioLab-0.46.4-debug.apk
+          sha256sum FioLab-0.46.4-debug.apk FioLab-0.46.4-debug.zip > FioLab-0.46.4-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.46.3-downloads
+          name: FioLab-0.46.4-downloads
           path: |
-            FioLab-0.46.3-debug.apk
-            FioLab-0.46.3-debug.zip
-            FioLab-0.46.3-SHA256.txt
+            FioLab-0.46.4-debug.apk
+            FioLab-0.46.4-debug.zip
+            FioLab-0.46.4-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.46.3 >/dev/null 2>&1; then
-            gh release upload v0.46.3               FioLab-0.46.3-debug.apk               FioLab-0.46.3-debug.zip               FioLab-0.46.3-SHA256.txt               --clobber
+          if gh release view v0.46.4 >/dev/null 2>&1; then
+            gh release upload v0.46.4               FioLab-0.46.4-debug.apk               FioLab-0.46.4-debug.zip               FioLab-0.46.4-SHA256.txt               --clobber
           else
-            gh release create v0.46.3               FioLab-0.46.3-debug.apk               FioLab-0.46.3-debug.zip               FioLab-0.46.3-SHA256.txt               --target main               --title "FioLab 0.46.3"               --notes "FioLab 0.46.3: adiciona exclusão individual e limpeza do histórico de envios recentes, preservando matrizes e arquivos já gravados."
+            gh release create v0.46.4               FioLab-0.46.4-debug.apk               FioLab-0.46.4-debug.zip               FioLab-0.46.4-SHA256.txt               --target main               --title "FioLab 0.46.4"               --notes "FioLab 0.46.4: adiciona limpeza do Recente na Home, layout responsivo e tamanho de texto ajustável por aparelho."
           fi

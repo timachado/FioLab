@@ -50,6 +50,7 @@ import com.timachado.fiolab.core.account.AccountPresentation
 import com.timachado.fiolab.core.account.AccountSnapshot
 import com.timachado.fiolab.core.account.AccountSubscriptionEvent
 import com.timachado.fiolab.core.network.SafeRemoteImage
+import com.timachado.fiolab.core.settings.UiPreferencesStore
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -76,6 +77,8 @@ fun AccountScreen(
     account: AccountSnapshot?,
     offline: Boolean = false,
     onBack: () -> Unit,
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit,
     onGoogleSignIn: () -> Unit,
     onSignIn: (
         email: String,
@@ -233,6 +236,19 @@ fun AccountScreen(
             }
         }
 
+        TextScalePreferenceCard(
+            textScale =
+                textScale,
+            onTextScaleChange =
+                onTextScaleChange
+        )
+
+        Spacer(
+            Modifier.height(
+                10.dp
+            )
+        )
+
         if (
             account ==
                 null
@@ -255,6 +271,139 @@ fun AccountScreen(
                     onRefresh,
                 onSignOut =
                     onSignOut
+            )
+        }
+    }
+}
+
+@Composable
+private fun TextScalePreferenceCard(
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth(),
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurface
+                ),
+        shape =
+            RoundedCornerShape(
+                20.dp
+            )
+    ) {
+        Column(
+            Modifier.padding(
+                14.dp
+            )
+        ) {
+            Text(
+                "Tamanho do texto",
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize =
+                    14.sp
+            )
+
+            Text(
+                "Ajuste a leitura do FioLab neste aparelho. A escala do Android continua respeitada.",
+                modifier =
+                    Modifier.padding(
+                        top =
+                            3.dp,
+                        bottom =
+                            9.dp
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    9.sp
+            )
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        6.dp
+                    )
+            ) {
+                UiPreferencesStore
+                    .textScaleOptions
+                    .forEach {
+                            option ->
+                        val selected =
+                            UiPreferencesStore
+                                .normalizeTextScale(
+                                    textScale
+                                ) ==
+                                option
+
+                        OutlinedButton(
+                            onClick = {
+                                onTextScaleChange(
+                                    option
+                                )
+                            },
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+                            Text(
+                                (
+                                    if (
+                                        selected
+                                    ) {
+                                        "● "
+                                    } else {
+                                        ""
+                                    }
+                                    ) +
+                                    (
+                                        option *
+                                            100
+                                        ).toInt() +
+                                    "%",
+                                color =
+                                    if (
+                                        selected
+                                    ) {
+                                        FioGold
+                                    } else {
+                                        FioText
+                                    },
+                                fontSize =
+                                    9.sp
+                            )
+                        }
+                    }
+            }
+
+            Text(
+                "Atual: " +
+                    UiPreferencesStore
+                        .textScaleLabel(
+                            textScale
+                        ),
+                modifier =
+                    Modifier.padding(
+                        top =
+                            6.dp
+                    ),
+                color =
+                    FioGold,
+                fontWeight =
+                    FontWeight.SemiBold,
+                fontSize =
+                    9.sp
             )
         }
     }

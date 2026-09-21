@@ -48,6 +48,7 @@ import com.timachado.fiolab.core.project.SavedProjectSummary
 import com.timachado.fiolab.core.storage.DurablePendingDocument
 import com.timachado.fiolab.core.storage.PendingDocumentStore
 import com.timachado.fiolab.core.storage.SafeInputReader
+import com.timachado.fiolab.core.settings.UiPreferencesStore
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioLabTheme
@@ -76,10 +77,33 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            FioLabTheme {
+            var textScale by remember {
+                mutableStateOf(
+                    UiPreferencesStore
+                        .textScale(
+                            this@MainActivity
+                        )
+                )
+            }
+
+            FioLabTheme(
+                textScaleMultiplier =
+                    textScale
+            ) {
                 FioLabApp(
                     openAccountRequest =
-                        accountOpenRequest
+                        accountOpenRequest,
+                    textScale =
+                        textScale,
+                    onTextScaleChange = {
+                            requested ->
+                        textScale =
+                            UiPreferencesStore
+                                .setTextScale(
+                                    this@MainActivity,
+                                    requested
+                                )
+                    }
                 )
             }
         }
@@ -158,7 +182,9 @@ private sealed interface Screen {
 
 @Composable
 private fun FioLabApp(
-    openAccountRequest: Int = 0
+    openAccountRequest: Int = 0,
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit
 ) {
     val context =
         LocalContext.current
@@ -311,6 +337,36 @@ private fun FioLabApp(
         scope.launch {
             snackbar.showSnackbar(
                 "Histórico de envios recentes limpo."
+            )
+        }
+    }
+
+    fun clearRecentDesign() {
+        scope.launch {
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ActiveDesignStore
+                        .clear(
+                            context
+                        )
+                }
+
+            result.fold(
+                onSuccess = {
+                    recent =
+                        null
+
+                    snackbar.showSnackbar(
+                        "Removido de Recente. Matrizes salvas na Biblioteca não foram apagadas."
+                    )
+                },
+                onFailure = {
+                    snackbar.showSnackbar(
+                        "Não foi possível limpar o item recente."
+                    )
+                }
             )
         }
     }
@@ -1512,6 +1568,9 @@ private fun FioLabApp(
                                         )
                             }
                         },
+                        onClearRecent = {
+                            clearRecentDesign()
+                        },
                         onUnavailable = {
                                 message ->
                             scope.launch {
@@ -1530,7 +1589,11 @@ private fun FioLabApp(
                             goBack()
                         },
                         refreshRequest =
-                            openAccountRequest
+                            openAccountRequest,
+                        textScale =
+                            textScale,
+                        onTextScaleChange =
+                            onTextScaleChange
                     )
                 }
 

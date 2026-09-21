@@ -6,7 +6,10 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,11 +88,35 @@ private val typography = Typography(
 )
 
 @Composable
-fun FioLabTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = colors,
-        typography = typography,
-        shapes = shapes,
-        content = content
-    )
+fun FioLabTheme(
+    textScaleMultiplier: Float = 1f,
+    content: @Composable () -> Unit
+) {
+    val currentDensity =
+        LocalDensity.current
+
+    val safeMultiplier =
+        textScaleMultiplier
+            .coerceIn(
+                0.90f,
+                1.30f
+            )
+
+    CompositionLocalProvider(
+        LocalDensity provides
+            Density(
+                density =
+                    currentDensity.density,
+                fontScale =
+                    currentDensity.fontScale *
+                        safeMultiplier
+            )
+    ) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = typography,
+            shapes = shapes,
+            content = content
+        )
+    }
 }

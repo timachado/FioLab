@@ -37,6 +37,18 @@ class AppSmokeTest {
 
         composeRule
             .onNodeWithText(
+                "Tamanho do texto"
+            )
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithText(
+                "● 100%"
+            )
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithText(
                 "Sobre o FioLab"
             )
             .assertIsDisplayed()

@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,10 +57,11 @@ fun HomeScreen(
     onSimulate: () -> Unit,
     onEdit: () -> Unit,
     onConvert: () -> Unit,
+    onClearRecent: () -> Unit,
     onUnavailable: (String) -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(minSize = 150.dp),
         modifier =
             Modifier
                 .fillMaxSize()
@@ -358,18 +360,51 @@ fun HomeScreen(
                 GridItemSpan(maxLineSpan)
             }
         ) {
-            Text(
-                "Recente",
-                color = FioText,
-                style =
-                    MaterialTheme.typography
-                        .titleLarge,
+            Row(
                 modifier =
-                    Modifier.padding(
-                        top = 6.dp,
-                        bottom = 2.dp
-                    )
-            )
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 6.dp,
+                            bottom = 2.dp
+                        ),
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+                Text(
+                    "Recente",
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
+                    color = FioText,
+                    style =
+                        MaterialTheme.typography
+                            .titleLarge
+                )
+
+                if (
+                    recent !=
+                        null
+                ) {
+                    TextButton(
+                        onClick =
+                            onClearRecent
+                    ) {
+                        Text(
+                            "Limpar recentes",
+                            color =
+                                Color(
+                                    0xFFFF9F9A
+                                ),
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .labelMedium
+                        )
+                    }
+                }
+            }
         }
 
         item(
@@ -555,6 +590,23 @@ fun HomeScreen(
                                     MaterialTheme
                                         .typography
                                         .labelMedium
+                            )
+                        }
+
+                        TextButton(
+                            onClick =
+                                onClearRecent
+                        ) {
+                            Text(
+                                "✕",
+                                color =
+                                    Color(
+                                        0xFFFF9F9A
+                                    ),
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .titleMedium
                             )
                         }
                     }

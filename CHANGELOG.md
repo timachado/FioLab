@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.4
+
+### Home e acessibilidade
+- O card Recente da Home ganha botão ✕ para remover o trabalho da área Recente sem apagar matrizes salvas na Biblioteca.
+- A seção Recente ganha ação “Limpar recentes”; ao limpar, o autossalvamento ativo correspondente também é removido para não reaparecer ao reiniciar o app.
+- A grade de Ferramentas passa de duas colunas fixas para colunas adaptativas conforme a largura disponível, permitindo uma coluna em telas estreitas e mais espaço em aparelhos maiores.
+- Minha Conta ganha preferência local de tamanho do texto: 90%, 100%, 115% e 130%.
+- O ajuste de texto é aplicado globalmente via densidade tipográfica, inclusive em telas que usam tamanhos `sp` explícitos, e é combinado com a escala de fonte configurada no Android.
+- A preferência fica salva somente neste aparelho.
+- Mantidas a correção de orientação para máquina da 0.46.2 e as ações de histórico de envios da 0.46.3.
+
 ## 0.46.3
 
 ### Histórico de envios
