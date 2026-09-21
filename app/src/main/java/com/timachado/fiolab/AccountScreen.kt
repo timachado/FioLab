@@ -524,6 +524,9 @@ private fun SignedInAccount(
     onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    val context =
+        LocalContext.current
+
     var displayName by remember(
         account.userId,
         account.displayName
@@ -568,32 +571,10 @@ private fun SignedInAccount(
                 horizontalAlignment =
                     Alignment.CenterHorizontally
             ) {
-                Box(
-                    Modifier
-                        .size(
-                            72.dp
-                        )
-                        .background(
-                            FioGold,
-                            CircleShape
-                        ),
-                    contentAlignment =
-                        Alignment.Center
-                ) {
-                    Text(
-                        account.displayName
-                            .trim()
-                            .firstOrNull()
-                            ?.uppercase()
-                            ?: "F",
-                        color =
-                            FioBackground,
-                        fontWeight =
-                            FontWeight.Black,
-                        fontSize =
-                            30.sp
-                    )
-                }
+                AccountAvatar(
+                    account =
+                        account
+                )
 
                 Spacer(
                     Modifier.height(
@@ -772,6 +753,22 @@ private fun SignedInAccount(
                             )
                 )
 
+                if (
+                    account.isPaid &&
+                    !account.purchasedAt
+                        .isNullOrBlank()
+                ) {
+                    AccountLine(
+                        label =
+                            "Início",
+                        value =
+                            formattedDate(
+                                account
+                                    .purchasedAt
+                            )
+                    )
+                }
+
                 when {
                     account.isLifetime -> {
                         AccountLine(
@@ -781,20 +778,7 @@ private fun SignedInAccount(
                                 "Permanente"
                         )
 
-                        if (
-                            !account.purchasedAt
-                                .isNullOrBlank()
-                        ) {
-                            AccountLine(
-                                label =
-                                    "Comprado em",
-                                value =
-                                    formattedDate(
-                                        account
-                                            .purchasedAt
-                                    )
-                            )
-                        }
+                        Unit
                     }
 
                     account.isPaid -> {
@@ -910,12 +894,112 @@ private fun SignedInAccount(
                             .fillMaxWidth()
                 ) {
                     Text(
-                        "↻ Atualizar assinatura",
+                        "↻ Restaurar / atualizar assinatura",
                         color =
                             FioGold,
                         fontWeight =
                             FontWeight.SemiBold
                     )
+                }
+
+                if (
+                    account.isPaid &&
+                    !account.isLifetime
+                ) {
+                    Spacer(
+                        Modifier.height(
+                            8.dp
+                        )
+                    )
+
+                    val manageUrl =
+                        account.manageUrl
+                            ?.takeIf {
+                                it.startsWith(
+                                    "https://"
+                                )
+                            }
+
+                    Row(
+                        Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp
+                            )
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                manageUrl
+                                    ?.let {
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(
+                                                    it
+                                                )
+                                            )
+                                        )
+                                    }
+                            },
+                            enabled =
+                                manageUrl !=
+                                    null,
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+                            Text(
+                                "Renovar / gerenciar"
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                manageUrl
+                                    ?.let {
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(
+                                                    it
+                                                )
+                                            )
+                                        )
+                                    }
+                            },
+                            enabled =
+                                manageUrl !=
+                                    null,
+                            modifier =
+                                Modifier.weight(
+                                    1f
+                                )
+                        ) {
+                            Text(
+                                "Cancelar"
+                            )
+                        }
+                    }
+
+                    if (
+                        manageUrl ==
+                            null
+                    ) {
+                        Text(
+                            "Os botões de renovação/cancelamento serão liberados automaticamente quando a compra WooCommerce estiver vinculada à conta.",
+                            modifier =
+                                Modifier.padding(
+                                    top =
+                                        6.dp
+                                ),
+                            color =
+                                FioTextMuted,
+                            fontSize =
+                                9.sp
+                        )
+                    }
                 }
             }
         }
@@ -1022,6 +1106,139 @@ private fun SignedInAccount(
                 )
             )
         }
+
+        Card(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            colors =
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+            shape =
+                RoundedCornerShape(
+                    24.dp
+                )
+        ) {
+            Column(
+                Modifier.padding(
+                    18.dp
+                )
+            ) {
+                Text(
+                    "Dispositivos conectados",
+                    color =
+                        FioText,
+                    fontWeight =
+                        FontWeight.Bold,
+                    fontSize =
+                        18.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                if (
+                    account.devices
+                        .isEmpty()
+                ) {
+                    Text(
+                        "Este aparelho será listado assim que a sincronização da conta concluir.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                } else {
+                    account.devices
+                        .take(
+                            8
+                        )
+                        .forEachIndexed {
+                                index,
+                                device ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        vertical =
+                                            5.dp
+                                    ),
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    Modifier.weight(
+                                        1f
+                                    )
+                                ) {
+                                    Text(
+                                        device.deviceName +
+                                            if (
+                                                device.isCurrent
+                                            ) {
+                                                " • Este aparelho"
+                                            } else {
+                                                ""
+                                            },
+                                        color =
+                                            if (
+                                                device.isCurrent
+                                            ) {
+                                                FioGold
+                                            } else {
+                                                FioText
+                                            },
+                                        fontWeight =
+                                            FontWeight.SemiBold,
+                                        fontSize =
+                                            11.sp
+                                    )
+
+                                    Text(
+                                        "FioLab " +
+                                            device.appVersion +
+                                            " • último acesso " +
+                                            formattedDate(
+                                                device.lastSeenAt
+                                            ),
+                                        color =
+                                            FioTextMuted,
+                                        fontSize =
+                                            9.sp
+                                    )
+                                }
+                            }
+
+                            if (
+                                index <
+                                    account.devices
+                                        .take(
+                                            8
+                                        )
+                                        .lastIndex
+                            ) {
+                                Spacer(
+                                    Modifier.height(
+                                        4.dp
+                                    )
+                                )
+                            }
+                        }
+                }
+            }
+        }
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
 
         Card(
             modifier =
