@@ -1542,6 +1542,12 @@ internal object ReferenceImportedFontEngine {
             val entryDistance: Float
         )
 
+        private data class RoutedChoice(
+            val index: Int,
+            val oriented: SatinColumn,
+            val entryDistance: Float
+        )
+
         fun emitGlyph(
             columns: List<SatinColumn>,
             polygons: List<Polygon>,
@@ -1549,23 +1555,29 @@ internal object ReferenceImportedFontEngine {
             includeUnderlay: Boolean,
             densityMm: Float
         ) {
-            val ordered =
+            val remaining =
                 standardSewingOrder(
                     columns
-                )
+                ).toMutableList()
 
             if (
-                ordered.isEmpty()
+                remaining.isEmpty()
             ) {
                 return
             }
 
-            ordered.forEachIndexed {
-                    index,
-                    original ->
+            var regionIndex =
+                0
+
+            while (
+                remaining.isNotEmpty()
+            ) {
                 val firstColumn =
-                    index ==
+                    regionIndex ==
                         0
+
+                val firstStandard =
+                    remaining.first()
 
                 val anchor =
                     if (
@@ -1573,31 +1585,73 @@ internal object ReferenceImportedFontEngine {
                     ) {
                         startHint
                             ?: current
-                            ?: original
+                            ?: firstStandard
                                 .rows
                                 .first()
                                 .a
                     } else {
                         current
-                            ?: original
+                            ?: firstStandard
                                 .rows
                                 .first()
                                 .a
                     }
 
                 /*
-                 * Ordem padrão primeiro; proximidade serve apenas para
-                 * escolher a melhor ponta de entrada da próxima região.
-                 * Assim a costura não pula para outro trecho da letra só
-                 * porque ele está momentaneamente mais perto.
+                 * Comportamento PE-DESIGN-like por continuidade:
+                 * - a primeira região continua sendo o início visual
+                 *   determinístico da letra;
+                 * - depois dela, uma região só pode furar a ordem padrão
+                 *   quando existe um caminho direto totalmente escondido
+                 *   dentro/na borda do próprio glifo;
+                 * - entre as continuações válidas, usamos a entrada mais
+                 *   curta; se nenhuma for válida, voltamos à ordem padrão
+                 *   e o travelTo emite JUMP sobre o vazio.
+                 *
+                 * Isso reduz saltos sem costurar diagonais atravessando
+                 * buracos ou áreas vazias da letra.
                  */
+                val connected =
+                    if (
+                        !firstColumn &&
+                        current !=
+                            null
+                    ) {
+                        closestConnectedChoice(
+                            columns =
+                                remaining,
+                            anchor =
+                                current!!,
+                            polygons =
+                                polygons
+                        )
+                    } else {
+                        null
+                    }
+
                 val column =
-                    closestOrientation(
-                        column =
-                            original,
-                        anchor =
-                            anchor
-                    ).oriented
+                    if (
+                        connected !=
+                            null
+                    ) {
+                        remaining.removeAt(
+                            connected.index
+                        )
+
+                        connected.oriented
+                    } else {
+                        val original =
+                            remaining.removeAt(
+                                0
+                            )
+
+                        closestOrientation(
+                            column =
+                                original,
+                            anchor =
+                                anchor
+                        ).oriented
+                    }
 
                 val entry =
                     column.rows
@@ -1627,13 +1681,91 @@ internal object ReferenceImportedFontEngine {
                 emitSatinColumn(
                     column
                 )
+
+                regionIndex +=
+                    1
             }
         }
 
-        private fun closestOrientation(
-            column: SatinColumn,
-            anchor: FPoint
-        ): OrientedChoice {
+        private fun closestConnectedChoice(
+            columns: List<SatinColumn>,
+            anchor: FPoint,
+            polygons: List<Polygon>
+        ): RoutedChoice? {
+            var best:
+                RoutedChoice? =
+                null
+
+            columns.forEachIndexed {
+                    index,
+                    column ->
+                orientationCandidates(
+                    column
+                ).forEach {
+                        candidate ->
+                    val entry =
+                        candidate.rows
+                            .firstOrNull()
+                            ?.a
+                            ?: return@forEach
+
+                    if (
+                        !segmentInsideGlyph(
+                            from =
+                                anchor,
+                            to =
+                                entry,
+                            polygons =
+                                polygons
+                        )
+                    ) {
+                        return@forEach
+                    }
+
+                    val choice =
+                        RoutedChoice(
+                            index =
+                                index,
+                            oriented =
+                                candidate,
+                            entryDistance =
+                                distance(
+                                    anchor,
+                                    entry
+                                )
+                        )
+
+                    val previous =
+                        best
+
+                    if (
+                        previous ==
+                            null ||
+                        choice.entryDistance <
+                            previous.entryDistance -
+                                0.001f ||
+                        (
+                            kotlin.math.abs(
+                                choice.entryDistance -
+                                    previous.entryDistance
+                            ) <=
+                                0.001f &&
+                            choice.index <
+                                previous.index
+                            )
+                    ) {
+                        best =
+                            choice
+                    }
+                }
+            }
+
+            return best
+        }
+
+        private fun orientationCandidates(
+            column: SatinColumn
+        ): List<SatinColumn> {
             val normal =
                 column.rows
                     .toList()
@@ -1642,28 +1774,37 @@ internal object ReferenceImportedFontEngine {
                 column.rows
                     .asReversed()
 
+            return listOf(
+                orientRows(
+                    normal,
+                    swap =
+                        false
+                ),
+                orientRows(
+                    normal,
+                    swap =
+                        true
+                ),
+                orientRows(
+                    reversed,
+                    swap =
+                        false
+                ),
+                orientRows(
+                    reversed,
+                    swap =
+                        true
+                )
+            )
+        }
+
+        private fun closestOrientation(
+            column: SatinColumn,
+            anchor: FPoint
+        ): OrientedChoice {
             val candidates =
-                listOf(
-                    orientRows(
-                        normal,
-                        swap =
-                            false
-                    ),
-                    orientRows(
-                        normal,
-                        swap =
-                            true
-                    ),
-                    orientRows(
-                        reversed,
-                        swap =
-                            false
-                    ),
-                    orientRows(
-                        reversed,
-                        swap =
-                            true
-                    )
+                orientationCandidates(
+                    column
                 )
 
             val best =
@@ -2491,6 +2632,148 @@ internal object ReferenceImportedFontEngine {
                 FPoint(
                     5f,
                     0f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f
+        )
+
+        return output
+    }
+
+    internal fun debugConnectivityAwareSewingPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        fun column(
+            left: Float,
+            bottom: Float
+        ) =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            left,
+                            bottom
+                        ),
+                        FPoint(
+                            left +
+                                15f,
+                            bottom
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            left,
+                            bottom +
+                                10f
+                        ),
+                        FPoint(
+                            left +
+                                15f,
+                            bottom +
+                                10f
+                        )
+                    )
+                )
+            )
+
+        val left =
+            column(
+                left =
+                    5f,
+                bottom =
+                    5f
+            )
+
+        /*
+         * Pela ordem X, esta região viria em segundo. Porém ela está
+         * fisicamente desconectada da faixa inferior.
+         */
+        val disconnectedMiddle =
+            column(
+                left =
+                    30f,
+                bottom =
+                    100f
+            )
+
+        /*
+         * Esta região vem depois no eixo X, mas está conectada ao primeiro
+         * objeto pela mesma área bordável e deve ser concluída antes do
+         * único salto necessário para a região superior.
+         */
+        val connectedRight =
+            column(
+                left =
+                    50f,
+                bottom =
+                    5f
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    disconnectedMiddle,
+                    connectedRight,
+                    left
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                0f,
+                                0f
+                            ),
+                            FPoint(
+                                70f,
+                                0f
+                            ),
+                            FPoint(
+                                70f,
+                                20f
+                            ),
+                            FPoint(
+                                0f,
+                                20f
+                            )
+                        )
+                    ),
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                25f,
+                                95f
+                            ),
+                            FPoint(
+                                50f,
+                                95f
+                            ),
+                            FPoint(
+                                50f,
+                                115f
+                            ),
+                            FPoint(
+                                25f,
+                                115f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    5f,
+                    5f
                 ),
             includeUnderlay =
                 false,

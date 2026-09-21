@@ -108,6 +108,86 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun connectedContinuationIsSewnBeforeDisconnectedRegion() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugConnectivityAwareSewingPath()
+
+        val jumpTargets =
+            points
+                .mapIndexedNotNull {
+                        index,
+                        point ->
+                    if (
+                        point.command !=
+                            StitchCommand.JUMP
+                    ) {
+                        return@mapIndexedNotNull null
+                    }
+
+                    val next =
+                        points.getOrNull(
+                            index +
+                                1
+                        )
+
+                    if (
+                        next?.command ==
+                            StitchCommand.JUMP
+                    ) {
+                        null
+                    } else {
+                        point
+                    }
+                }
+
+        assertEquals(
+            "Deve existir apenas o posicionamento inicial e um reposicionamento para a região desconectada.",
+            2,
+            jumpTargets.size
+        )
+
+        assertTrue(
+            "A primeira região deve continuar começando na esquerda.",
+            jumpTargets.first()
+                .xUnits <=
+                20
+        )
+
+        val firstDisconnectedJumpIndex =
+            points.indexOfFirst {
+                    point ->
+                point.command ==
+                    StitchCommand.JUMP &&
+                    point.yUnits >=
+                        30
+            }
+
+        assertTrue(
+            "A região conectada à direita deve ser bordada antes do salto para a região superior.",
+            firstDisconnectedJumpIndex >
+                0 &&
+                points
+                    .take(
+                        firstDisconnectedJumpIndex
+                    )
+                    .any {
+                        it.command ==
+                            StitchCommand.STITCH &&
+                        it.xUnits >=
+                            45
+                    }
+        )
+
+        assertTrue(
+            "O segundo destino deve ser a região realmente desconectada.",
+            jumpTargets.last()
+                .yUnits >=
+                95
+        )
+    }
+
+    @Test
     fun firstSatinRegionStartsAtLeftEdgeEvenWhenHintIsMisleading() {
         val points =
             ReferenceImportedFontEngine

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.11
+
+### Roteamento Satin por continuidade — referência de comportamento PE-DESIGN
+- Mantido o início determinístico no começo visual da letra, sem voltar ao primeiro ponto arbitrário do contorno TTF/OTF.
+- Depois da primeira região, o motor procura primeiro uma continuação cuja ligação inteira permaneça dentro ou encostada na própria área bordável do glifo.
+- Quando há mais de uma continuação válida, é escolhida a entrada de menor distância; a ordem padrão continua como critério determinístico de desempate.
+- Se nenhuma continuação puder ser escondida dentro da letra, o motor volta à ordem padrão e reposiciona com JUMP, evitando diagonais aparentes atravessando buracos ou áreas vazias.
+- O Satin principal continua alternando um lado por linha amostrada; o edge-run underlay continua fazendo uma ida, cruza no final e volta uma única vez.
+- Autoajuste ao bastidor, orientação de máquina, formatos PES/DST/JEF, interface, biblioteca, conta e demais fluxos da 0.46.10 foram preservados.
+- Adicionado teste de regressão em que uma região conectada à direita deve ser concluída antes de uma região intermediária no eixo X, porém fisicamente desconectada.
+- Implementação própria por comportamento observável e princípios públicos de otimização; nenhum código proprietário do PE-DESIGN foi incorporado.
+
 ## 0.46.10
 
 ### Sequência de texto em padrão profissional
