@@ -286,14 +286,23 @@ private fun FioLabApp(
         recent =
             design
 
-        scope.launch(
-            Dispatchers.IO
-        ) {
-            ActiveDesignStore
-                .save(
-                    context,
-                    design
+        scope.launch {
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    ActiveDesignStore
+                        .save(
+                            context,
+                            design
+                        )
+                }
+
+            result.onFailure {
+                snackbar.showSnackbar(
+                    "Não foi possível atualizar a cópia automática do trabalho. Verifique o espaço disponível no aparelho."
                 )
+            }
         }
     }
 
@@ -676,8 +685,10 @@ private fun FioLabApp(
                         )
                     },
                     onFailure = {
+                            error ->
                         snackbar.showSnackbar(
-                            "Não foi possível restaurar este backup."
+                            error.message
+                                ?: "Não foi possível restaurar este backup."
                         )
                     }
                 )
