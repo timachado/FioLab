@@ -50,6 +50,9 @@ internal object ReferenceImportedFontEngine {
     private const val TRIM_TRAVEL_UNITS =
         50f
 
+    private const val CONTINUOUS_CONNECTOR_STITCH_UNITS =
+        15f
+
     private const val LOCK_UNITS =
         6f
 
@@ -1427,6 +1430,25 @@ internal object ReferenceImportedFontEngine {
             }
     }
 
+    private fun travelCommandForDistance(
+        distanceUnits: Float
+    ): StitchCommand =
+        if (
+            distanceUnits <=
+                TRIM_TRAVEL_UNITS
+        ) {
+            StitchCommand.STITCH
+        } else {
+            StitchCommand.JUMP
+        }
+
+    internal fun debugTravelCommandForDistance(
+        distanceUnits: Float
+    ): StitchCommand =
+        travelCommandForDistance(
+            distanceUnits
+        )
+
     private class SatinEmitter(
         private val output:
             MutableList<EmbroideryPoint>
@@ -1644,14 +1666,29 @@ internal object ReferenceImportedFontEngine {
             }
 
             if (
-                distance >
-                    TRIM_TRAVEL_UNITS
+                travelCommandForDistance(
+                    distance
+                ) ==
+                StitchCommand.STITCH
             ) {
-                emit(
-                    before,
-                    StitchCommand.TRIM
+                emitSegmented(
+                    from =
+                        before,
+                    to =
+                        target,
+                    command =
+                        StitchCommand.STITCH,
+                    maxSegmentUnits =
+                        CONTINUOUS_CONNECTOR_STITCH_UNITS
                 )
+
+                return
             }
+
+            emit(
+                before,
+                StitchCommand.TRIM
+            )
 
             emitSegmented(
                 from =
@@ -1707,7 +1744,9 @@ internal object ReferenceImportedFontEngine {
         private fun emitSegmented(
             from: FPoint,
             to: FPoint,
-            command: StitchCommand
+            command: StitchCommand,
+            maxSegmentUnits: Float =
+                MAX_STITCH_UNITS
         ) {
             val total =
                 distance(
@@ -1720,7 +1759,10 @@ internal object ReferenceImportedFontEngine {
                     1,
                     ceil(
                         total /
-                            MAX_STITCH_UNITS
+                            maxSegmentUnits
+                                .coerceAtLeast(
+                                    1f
+                                )
                     ).toInt()
                 )
 

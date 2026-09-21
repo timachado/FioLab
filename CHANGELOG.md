@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.6
+
+### Sequência de costura mais contínua
+- Fontes TTF/OTF Satin deixam de usar JUMP para deslocamentos curtos de até 5 mm entre colunas próximas; esses trechos passam a ser costurados com pontos de ligação curtos e contínuos.
+- Trechos realmente separados acima de 5 mm continuam recebendo TRIM + JUMP para evitar linha atravessando áreas vazias.
+- O primeiro posicionamento da máquina continua sendo JUMP, pois ainda não existe costura anterior para conectar.
+- Tie-in e tie-off do acabamento passam a fazer somente uma ida e uma volta, removendo a repetição dupla anterior.
+- O underlay central já fazia uma ida e uma volta e permanece assim, sem repetição adicional.
+- Mantidos autoajuste ao bastidor, orientação corrigida e demais proteções das versões anteriores.
+- Adicionados testes para distinguir conexão curta contínua de salto longo e para garantir somente quatro pontos extras de arremate em um bloco simples (dois no início e dois no fim).
+
 ## 0.46.5
 
 ### Ajuste automático ao bastidor

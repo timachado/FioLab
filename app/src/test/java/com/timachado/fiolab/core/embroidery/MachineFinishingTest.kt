@@ -120,6 +120,13 @@ class MachineFinishingTest {
             result.report
                 .tieOffCount
         )
+
+        assertEquals(
+            source.stitchCount +
+                4,
+            result.design
+                .stitchCount
+        )
     }
 
     @Test

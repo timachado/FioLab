@@ -56,6 +56,32 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun shortTravelUsesContinuousStitches() {
+        assertTrue(
+            ReferenceImportedFontEngine
+                .debugTravelCommandForDistance(
+                    30f
+                ) ==
+                com.timachado.fiolab
+                    .core.embroidery
+                    .StitchCommand.STITCH
+        )
+    }
+
+    @Test
+    fun separatedTravelKeepsJump() {
+        assertTrue(
+            ReferenceImportedFontEngine
+                .debugTravelCommandForDistance(
+                    80f
+                ) ==
+                com.timachado.fiolab
+                    .core.embroidery
+                    .StitchCommand.JUMP
+        )
+    }
+
+    @Test
     fun disconnectedShapesCreateMoreThanOneColumn() {
         val count =
             ReferenceImportedFontEngine

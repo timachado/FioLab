@@ -170,22 +170,6 @@ object MachineFinishing {
                     last.colorIndex
                 )
 
-            out +=
-                EmbroideryPoint(
-                    lock.first,
-                    lock.second,
-                    StitchCommand.STITCH,
-                    last.colorIndex
-                )
-
-            out +=
-                EmbroideryPoint(
-                    last.xUnits,
-                    last.yUnits,
-                    StitchCommand.STITCH,
-                    last.colorIndex
-                )
-
             tieOffs++
             currentX =
                 last.xUnits
@@ -256,14 +240,6 @@ object MachineFinishing {
                                 EmbroideryPoint(
                                     anchor.xUnits,
                                     anchor.yUnits,
-                                    StitchCommand.STITCH,
-                                    point.colorIndex
-                                )
-
-                            out +=
-                                EmbroideryPoint(
-                                    lock.first,
-                                    lock.second,
                                     StitchCommand.STITCH,
                                     point.colorIndex
                                 )
