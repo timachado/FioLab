@@ -331,33 +331,100 @@ object FioLabAccountService {
                         "Usuário não encontrado."
                     )
 
-            client.from(
-                "fiolab_devices"
-            ).insert(
-                FioLabDeviceUpsert(
-                    userId =
-                        user.id,
-                    deviceId =
-                        localDevice
-                            .deviceId,
-                    deviceName =
-                        localDevice
-                            .deviceName,
-                    platform =
-                        "android",
-                    appVersion =
-                        BuildConfig
-                            .VERSION_NAME,
-                    lastSeenAt =
-                        Instant
-                            .now()
-                            .toString()
-                ),
-                upsert =
-                    true,
-                onConflict =
-                    "user_id,device_id"
-            )
+            val now =
+                Instant
+                    .now()
+                    .toString()
+
+            val existing =
+                client.from(
+                    "fiolab_devices"
+                ).select {
+                    filter {
+                        eq(
+                            "user_id",
+                            user.id
+                        )
+
+                        eq(
+                            "device_id",
+                            localDevice
+                                .deviceId
+                        )
+                    }
+                }
+                    .decodeList<
+                        FioLabDeviceRow
+                    >()
+                    .firstOrNull()
+
+            if (
+                existing ==
+                    null
+            ) {
+                client.from(
+                    "fiolab_devices"
+                ).insert(
+                    FioLabDeviceUpsert(
+                        userId =
+                            user.id,
+                        deviceId =
+                            localDevice
+                                .deviceId,
+                        deviceName =
+                            localDevice
+                                .deviceName,
+                        platform =
+                            "android",
+                        appVersion =
+                            BuildConfig
+                                .VERSION_NAME,
+                        lastSeenAt =
+                            now
+                    )
+                )
+            } else {
+                client.from(
+                    "fiolab_devices"
+                ).update(
+                    {
+                        set(
+                            "device_name",
+                            localDevice
+                                .deviceName
+                        )
+
+                        set(
+                            "platform",
+                            "android"
+                        )
+
+                        set(
+                            "app_version",
+                            BuildConfig
+                                .VERSION_NAME
+                        )
+
+                        set(
+                            "last_seen_at",
+                            now
+                        )
+                    }
+                ) {
+                    filter {
+                        eq(
+                            "user_id",
+                            user.id
+                        )
+
+                        eq(
+                            "device_id",
+                            localDevice
+                                .deviceId
+                        )
+                    }
+                }
+            }
 
             client.from(
                 "fiolab_devices"
