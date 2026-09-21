@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feat/font-library-save-0.33.0"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
