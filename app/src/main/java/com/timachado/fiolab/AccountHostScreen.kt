@@ -14,7 +14,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.timachado.fiolab.core.account.AccountSnapshot
+import com.timachado.fiolab.core.account.DeviceIdentity
 import com.timachado.fiolab.core.account.FioLabAccountService
 import com.timachado.fiolab.core.account.SignUpOutcome
 import com.timachado.fiolab.ui.theme.FioGold
@@ -27,6 +29,9 @@ fun AccountHostScreen(
     onBack: () -> Unit,
     refreshRequest: Int = 0
 ) {
+    val context =
+        LocalContext.current
+
     val scope =
         rememberCoroutineScope()
 
@@ -43,6 +48,41 @@ fun AccountHostScreen(
 
     var loading by remember {
         mutableStateOf(true)
+    }
+
+    suspend fun withDevices(
+        snapshot: AccountSnapshot?
+    ): AccountSnapshot? {
+        if (
+            snapshot ==
+                null
+        ) {
+            return null
+        }
+
+        val localDevice =
+            DeviceIdentity.current(
+                context
+            )
+
+        val devices =
+            withContext(
+                Dispatchers.IO
+            ) {
+                FioLabAccountService
+                    .syncDevices(
+                        localDevice
+                    )
+            }.getOrElse {
+                emptyList()
+            }
+
+        return snapshot.copy(
+            devices =
+                devices,
+            currentDeviceId =
+                localDevice.deviceId
+        )
     }
 
     LaunchedEffect(
@@ -63,7 +103,9 @@ fun AccountHostScreen(
             onSuccess = {
                     current ->
                 account =
-                    current
+                    withDevices(
+                        current
+                    )
             },
             onFailure = {
                 snackbar
@@ -94,7 +136,9 @@ fun AccountHostScreen(
                 onSuccess = {
                         current ->
                     account =
-                        current
+                        withDevices(
+                            current
+                        )
 
                     snackbar
                         .showSnackbar(
@@ -168,7 +212,9 @@ fun AccountHostScreen(
                 onSuccess = {
                         signedIn ->
                     account =
-                        signedIn
+                        withDevices(
+                            signedIn
+                        )
 
                     snackbar
                         .showSnackbar(
@@ -220,7 +266,9 @@ fun AccountHostScreen(
                         is SignUpOutcome
                             .SignedIn -> {
                             account =
-                                outcome.account
+                                withDevices(
+                                    outcome.account
+                                )
 
                             snackbar
                                 .showSnackbar(
@@ -278,7 +326,9 @@ fun AccountHostScreen(
                 onSuccess = {
                         updated ->
                     account =
-                        updated
+                        withDevices(
+                            updated
+                        )
 
                     snackbar
                         .showSnackbar(

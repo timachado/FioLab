@@ -352,3 +352,52 @@ on public.fiolab_profiles from authenticated;
 
 grant select, insert, update
 on public.fiolab_profiles to authenticated;
+
+
+-- FioLab 0.40.0 connected devices and subscription management link.
+alter table public.fiolab_subscriptions
+  add column if not exists manage_url text null;
+
+create table if not exists public.fiolab_devices (
+  user_id uuid not null
+    references auth.users(id) on delete cascade,
+  device_id text not null
+    check (char_length(device_id) between 8 and 128),
+  device_name text not null
+    check (char_length(device_name) between 1 and 120),
+  platform text not null default 'android'
+    check (char_length(platform) between 1 and 32),
+  app_version text not null default '',
+  last_seen_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  primary key (user_id, device_id)
+);
+
+create index if not exists fiolab_devices_user_seen_idx
+on public.fiolab_devices(user_id, last_seen_at desc);
+
+alter table public.fiolab_devices enable row level security;
+
+create policy "fiolab_devices_select_own"
+on public.fiolab_devices for select to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy "fiolab_devices_insert_own"
+on public.fiolab_devices for insert to authenticated
+with check ((select auth.uid()) = user_id);
+
+create policy "fiolab_devices_update_own"
+on public.fiolab_devices for update to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+revoke all on public.fiolab_devices from anon;
+revoke all on public.fiolab_devices from authenticated;
+
+grant select, insert, update
+on public.fiolab_devices to authenticated;
+
+revoke insert, update, delete, truncate, references, trigger
+on public.fiolab_subscriptions from authenticated;
+
+grant select on public.fiolab_subscriptions to authenticated;
