@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.41.0
+
+### Maturidade e QA — integridade de arquivos
+- PES, JEF e DST passam por uma validação central de integridade após a leitura.
+- Contagens derivadas de pontos, saltos, trocas de cor, comando END e limites são recalculadas a partir dos comandos reais, evitando metadados inconsistentes.
+- Arquivos sem pontos de costura, sem coordenadas válidas ou com índices de cor impossíveis são rejeitados antes de chegar ao Viewer/Editor.
+- Matrizes sem comando END continuam aceitas quando estruturalmente válidas, mas são tratadas como caso de atenção no fluxo de envio.
+- Projetos FioLab são validados tanto ao salvar quanto ao reabrir; projeto estruturalmente inválido não é persistido silenciosamente.
+- Dimensões de `EmbroideryBounds` agora usam aritmética segura para evitar overflow com coordenadas extremas.
+- Importações de matriz possuem limite de segurança de 64 MB e leitura controlada, evitando consumo de memória ilimitado por arquivo malformado.
+- Adicionados testes de regressão para normalização de metadados, ausência de pontos, ausência de END e coordenadas extremas.
+- Mantidos os samples reais PES/JEF e os testes DST, conversão, edição, projeto, backup, fontes, conta e transferência.
+- Motor de bordado, Satin, orientação, simulação, biblioteca e assinaturas permanecem funcionalmente inalterados.
+
 ## 0.40.0
 
 ### Consolidação de conta, assinatura, biblioteca e envio

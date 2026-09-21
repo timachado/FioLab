@@ -114,7 +114,7 @@ object EmbroideryIoParser {
 
         val colors = pattern.threadlist.map { it.color }
 
-        return EmbroideryLoadResult.Success(
+        val design =
             EmbroideryDesign(
                 fileName = fileName,
                 format = extension.uppercase(),
@@ -134,6 +134,26 @@ object EmbroideryIoParser {
                 threadColors = colors,
                 sourceYAxisDown = true
             )
-        )
+
+        return EmbroideryIntegrity
+            .normalize(
+                design
+            )
+            .fold(
+                onSuccess = {
+                    EmbroideryLoadResult.Success(
+                        it.design
+                    )
+                },
+                onFailure = {
+                        error ->
+                    EmbroideryLoadResult.Error(
+                        "A matriz " +
+                            extension.uppercase() +
+                            " está corrompida ou inconsistente.",
+                        error.message
+                    )
+                }
+            )
     }
 }

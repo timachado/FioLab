@@ -3,6 +3,7 @@ package com.timachado.fiolab.core.project
 import android.content.Context
 import com.timachado.fiolab.core.embroidery.EmbroideryBounds
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.EmbroideryIntegrity
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
 import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
@@ -44,6 +45,22 @@ object ProjectCodec {
     fun encode(
         design: EmbroideryDesign
     ): ByteArray {
+        EmbroideryIntegrity
+            .normalize(
+                design
+            )
+            .getOrElse {
+                    error ->
+                throw IllegalArgumentException(
+                    "Projeto inválido: " +
+                        (
+                            error.message
+                                ?: "integridade não confirmada"
+                            ),
+                    error
+                )
+            }
+
         val buffer =
             ByteArrayOutputStream()
 
@@ -449,54 +466,69 @@ object ProjectCodec {
                     )
                 }
 
-            EmbroideryDesign(
-                fileName =
-                    fileName,
-                format =
-                    format,
-                label =
-                    label,
-                points =
-                    points,
-                bounds =
-                    bounds,
-                stitchCount =
-                    points.count {
-                        it.command ==
-                            StitchCommand.STITCH
-                    },
-                jumpCount =
-                    points.count {
-                        it.command ==
-                            StitchCommand.JUMP
-                    },
-                colorChanges =
-                    points.count {
-                        it.command ==
-                            StitchCommand.COLOR_CHANGE
-                    },
-                endFound =
-                    points.any {
-                        it.command ==
-                            StitchCommand.END
-                    },
-                sourceBytes =
-                    ByteArray(0),
-                guidePoints =
-                    guidePoints,
-                threadColors =
-                    colors,
-                sourceYAxisDown =
-                    sourceYAxisDown,
-                isModified =
-                    true,
-                hoopProfile =
-                    hoop,
-                fabricProfile =
-                    fabric,
-                machineFinishing =
-                    finishing
-            )
+            EmbroideryIntegrity
+                .normalize(
+                    EmbroideryDesign(
+                        fileName =
+                            fileName,
+                        format =
+                            format,
+                        label =
+                            label,
+                        points =
+                            points,
+                        bounds =
+                            bounds,
+                        stitchCount =
+                            points.count {
+                                it.command ==
+                                    StitchCommand.STITCH
+                            },
+                        jumpCount =
+                            points.count {
+                                it.command ==
+                                    StitchCommand.JUMP
+                            },
+                        colorChanges =
+                            points.count {
+                                it.command ==
+                                    StitchCommand.COLOR_CHANGE
+                            },
+                        endFound =
+                            points.any {
+                                it.command ==
+                                    StitchCommand.END
+                            },
+                        sourceBytes =
+                            ByteArray(0),
+                        guidePoints =
+                            guidePoints,
+                        threadColors =
+                            colors,
+                        sourceYAxisDown =
+                            sourceYAxisDown,
+                        isModified =
+                            true,
+                        hoopProfile =
+                            hoop,
+                        fabricProfile =
+                            fabric,
+                        machineFinishing =
+                            finishing
+                    )
+                )
+                .getOrElse {
+                        error ->
+                    throw IllegalArgumentException(
+                        "Projeto corrompido: " +
+                            (
+                                error.message
+                                    ?: "integridade não confirmada"
+                                ),
+                        error
+                    )
+                }
+                .design
         }
     }
 

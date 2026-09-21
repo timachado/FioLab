@@ -75,13 +75,18 @@ object DstParser {
             )
         }
 
-        return EmbroideryLoadResult.Success(
+        val design =
             EmbroideryDesign(
                 fileName = fileName,
                 format = "DST",
                 label = label,
                 points = points,
-                bounds = EmbroideryBounds(minX, maxX, minY, maxY),
+                bounds = EmbroideryBounds(
+                    minX,
+                    maxX,
+                    minY,
+                    maxY
+                ),
                 stitchCount = stitchCount,
                 jumpCount = jumpCount,
                 colorChanges = colorChanges,
@@ -89,7 +94,25 @@ object DstParser {
                 sourceBytes = bytes.copyOf(),
                 threadColors = emptyList()
             )
-        )
+
+        return EmbroideryIntegrity
+            .normalize(
+                design
+            )
+            .fold(
+                onSuccess = {
+                    EmbroideryLoadResult.Success(
+                        it.design
+                    )
+                },
+                onFailure = {
+                        error ->
+                    EmbroideryLoadResult.Error(
+                        "O arquivo DST está corrompido ou inconsistente.",
+                        error.message
+                    )
+                }
+            )
     }
 
     private fun parseLabel(bytes: ByteArray): String? =

@@ -23,8 +23,21 @@ data class EmbroideryBounds(
     val minYUnits: Int,
     val maxYUnits: Int
 ) {
-    val widthMm: Float get() = (maxXUnits - minXUnits) / 10f
-    val heightMm: Float get() = (maxYUnits - minYUnits) / 10f
+    val widthMm: Float
+        get() =
+            (
+                maxXUnits.toLong() -
+                    minXUnits.toLong()
+                ) /
+                10f
+
+    val heightMm: Float
+        get() =
+            (
+                maxYUnits.toLong() -
+                    minYUnits.toLong()
+                ) /
+                10f
 }
 
 data class MachineFinishingInfo(
