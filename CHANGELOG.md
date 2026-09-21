@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.28.0
+
+### Pontos especiais
+- A área de Underlay exposta em Criar Nome foi substituída por tipos de ponto especiais.
+- Ponto Feijão: repete cada pequeno trecho em ida/volta/ida para engrossar e marcar o traçado sem depender de Satin.
+- Ponto Corrido Triplo: percorre o caminho completo três vezes, frente/volta/frente, aumentando durabilidade e visibilidade.
+- Ponto de Motivo: aplica um padrão decorativo repetido ao longo do traçado, com deslocamentos laterais controlados.
+- Os três modos funcionam tanto com fontes FioLab quanto com TTF/OTF importadas.
+- Ao selecionar um ponto especial, o motor usa automaticamente o traçado corrido como base; ao selecionar Satin ou Ponto corrido na aba Tamanho, o modo especial é limpo.
+- Underlay e short stitches continuam disponíveis internamente para o Satin conforme o perfil de tecido, sem poluir a interface.
+- Mantido o guia vetorial reforçado da simulação para comparar a fonte original com o bordado gerado.
+- Adicionados testes unitários específicos para Feijão, Corrido Triplo e Motivo.
+
 ## 0.27.0
 
 ### Guia vetorial da fonte na simulação
