@@ -46,9 +46,27 @@ object MatrixConverter {
                 "Formato de saída ainda não suportado."
             }
 
+            val normalized =
+                EmbroideryIntegrity
+                    .normalize(
+                        design
+                    )
+                    .getOrElse {
+                            error ->
+                        throw IllegalArgumentException(
+                            "A matriz não passou na validação antes da conversão: " +
+                                (
+                                    error.message
+                                        ?: "integridade inválida"
+                                    ),
+                            error
+                        )
+                    }
+                    .design
+
             val pattern =
                 buildOutputPattern(
-                    design
+                    normalized
                 )
 
             val extension =
@@ -57,7 +75,7 @@ object MatrixConverter {
                 )
 
             val baseName =
-                design.fileName
+                normalized.fileName
                     .substringBeforeLast('.')
                     .ifBlank { "matriz" }
 
@@ -255,25 +273,43 @@ object MatrixConverter {
         command: Int
     ) {
         val dx =
-            toX - fromX
+            toX.toLong() -
+                fromX.toLong()
 
         val dy =
-            toY - fromY
+            toY.toLong() -
+                fromY.toLong()
 
         val greatestDelta =
             max(
-                abs(dx),
-                abs(dy)
+                abs(
+                    dx
+                ),
+                abs(
+                    dy
+                )
             )
 
-        val segments =
+        val segmentsLong =
             max(
-                1,
+                1L,
                 ceil(
                     greatestDelta.toDouble() /
                         SAFE_DELTA_UNITS
-                ).toInt()
+                ).toLong()
             )
+
+        require(
+            segmentsLong <=
+                EmbroideryStressPolicy
+                    .MAX_SEGMENTS_PER_MOVE
+        ) {
+            "A matriz possui um deslocamento extremo que não pode ser convertido com segurança."
+        }
+
+        val segments =
+            segmentsLong
+                .toInt()
 
         for (
             part in
@@ -285,14 +321,16 @@ object MatrixConverter {
 
             val x =
                 (
-                    fromX +
-                        dx * ratio
+                    fromX.toDouble() +
+                        dx.toDouble() *
+                            ratio
                     ).roundToInt()
 
             val y =
                 (
-                    fromY +
-                        dy * ratio
+                    fromY.toDouble() +
+                        dy.toDouble() *
+                            ratio
                     ).roundToInt()
 
             pattern.addStitchAbs(
