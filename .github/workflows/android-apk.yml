@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feat/complete-account-library-transfer-0.40.0"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
