@@ -24,7 +24,8 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun AccountHostScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    refreshRequest: Int = 0
 ) {
     val scope =
         rememberCoroutineScope()
@@ -45,7 +46,7 @@ fun AccountHostScreen(
     }
 
     LaunchedEffect(
-        Unit
+        refreshRequest
     ) {
         val result =
             withContext(
@@ -104,6 +105,41 @@ fun AccountHostScreen(
                     snackbar
                         .showSnackbar(
                             "Não foi possível atualizar sua assinatura."
+                        )
+                }
+            )
+        }
+    }
+
+    fun signInWithGoogle() {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .signInWithGoogle()
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                    snackbar
+                        .showSnackbar(
+                            "Conclua o login na sua conta Google."
+                        )
+                },
+                onFailure = {
+                        error ->
+                    snackbar
+                        .showSnackbar(
+                            error.message
+                                ?: "Não foi possível abrir o login do Google."
                         )
                 }
             )
@@ -309,6 +345,9 @@ fun AccountHostScreen(
                 account,
             onBack =
                 onBack,
+            onGoogleSignIn = {
+                signInWithGoogle()
+            },
             onSignIn = {
                     email,
                     password ->
