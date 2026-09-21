@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/display-orientation-all-modes-0.36.0"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
