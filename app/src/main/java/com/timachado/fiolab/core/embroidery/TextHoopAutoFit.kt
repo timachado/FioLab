@@ -20,8 +20,11 @@ object TextHoopAutoFit {
     private const val TARGET_FILL =
         0.98f
 
-    private const val ITERATIONS =
-        12
+    private const val MAX_SEARCH_PASSES =
+        5
+
+    private const val SEARCH_EPSILON_MM =
+        0.08f
 
     fun fit(
         hoop: HoopProfile,
@@ -60,15 +63,25 @@ object TextHoopAutoFit {
                     )
                     .fits
 
+            fun targetFillRatio(
+                design: EmbroideryDesign
+            ): Float =
+                max(
+                    design.bounds
+                        .widthMm /
+                        targetWidth,
+                    design.bounds
+                        .heightMm /
+                        targetHeight
+                )
+
             fun fitsTarget(
                 design: EmbroideryDesign
             ): Boolean =
-                design.bounds
-                    .widthMm <=
-                    targetWidth &&
-                    design.bounds
-                        .heightMm <=
-                    targetHeight
+                targetFillRatio(
+                    design
+                ) <=
+                    1f
 
             fun result(
                 height: Float,
@@ -115,76 +128,120 @@ object TextHoopAutoFit {
                 )
             }
 
-            val maximum =
-                generator(
-                    maxHeightMm
-                ).getOrNull()
-
-            if (
-                maximum !=
-                    null &&
-                fitsTarget(
-                    maximum
-                )
-            ) {
-                return@runCatching result(
-                    maxHeightMm,
-                    maximum
-                )
-            }
-
-            var low =
+            var lowHeight =
                 minHeightMm
 
-            var high =
-                maxHeightMm
-
-            var bestHeight =
-                minHeightMm
-
-            var bestDesign =
+            var lowDesign =
                 minimum
 
+            var highHeight =
+                maxHeightMm
+
+            var highIsLimit =
+                false
+
             repeat(
-                ITERATIONS
+                MAX_SEARCH_PASSES
             ) {
-                val candidateHeight =
+                if (
+                    highHeight -
+                        lowHeight <=
+                        SEARCH_EPSILON_MM
+                ) {
+                    return@repeat
+                }
+
+                val lowFill =
+                    targetFillRatio(
+                        lowDesign
+                    )
+                        .coerceAtLeast(
+                            0.001f
+                        )
+
+                if (
+                    lowFill >=
+                        0.9985f
+                ) {
+                    return@repeat
+                }
+
+                val estimated =
                     (
-                        low +
-                            high
-                        ) /
-                        2f
+                        lowHeight /
+                            lowFill
+                        ).coerceIn(
+                        lowHeight,
+                        highHeight
+                    )
+
+                val candidateHeight =
+                    if (
+                        highIsLimit
+                    ) {
+                        (
+                            lowHeight +
+                                highHeight
+                            ) /
+                            2f
+                    } else {
+                        estimated
+                            .coerceAtLeast(
+                                lowHeight +
+                                    0.1f
+                            )
+                            .coerceAtMost(
+                                highHeight
+                            )
+                    }
+
+                if (
+                    candidateHeight -
+                        lowHeight <
+                        0.045f
+                ) {
+                    return@repeat
+                }
 
                 val candidate =
                     generator(
                         candidateHeight
-                    ).getOrNull()
+                    )
+                        .getOrNull()
 
                 if (
-                    candidate !=
-                        null &&
-                    fitsTarget(
+                    candidate ==
+                        null ||
+                    !fitsTarget(
                         candidate
                     )
                 ) {
-                    bestHeight =
+                    highHeight =
                         candidateHeight
 
-                    bestDesign =
+                    highIsLimit =
+                        true
+                } else {
+                    lowHeight =
+                        candidateHeight
+
+                    lowDesign =
                         candidate
 
-                    low =
-                        candidateHeight
-                } else {
-                    high =
-                        candidateHeight
+                    if (
+                        candidateHeight >=
+                            maxHeightMm -
+                                SEARCH_EPSILON_MM
+                    ) {
+                        return@repeat
+                    }
                 }
             }
 
             val roundedDown =
                 (
                     floor(
-                        bestHeight *
+                        lowHeight *
                             10f
                     ) /
                         10f
@@ -196,12 +253,13 @@ object TextHoopAutoFit {
             val roundedDesign =
                 if (
                     roundedDown <
-                        bestHeight -
+                        lowHeight -
                             0.001f
                 ) {
                     generator(
                         roundedDown
-                    ).getOrNull()
+                    )
+                        .getOrNull()
                 } else {
                     null
                 }
@@ -219,8 +277,8 @@ object TextHoopAutoFit {
                 )
             } else {
                 result(
-                    bestHeight,
-                    bestDesign
+                    lowHeight,
+                    lowDesign
                 )
             }
         }
