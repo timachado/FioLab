@@ -30,24 +30,68 @@ object ImportedFontMatrixGenerator {
         char: Char,
         options: TextMatrixOptions
     ): Result<EmbroideryDesign> =
-        generateTextInternal(
-            font = font,
-            sourceText = char.toString(),
-            options = options,
-            filePrefix = "fonte"
-        )
+        if (
+            options.style ==
+                TextStitchStyle.SATIN &&
+            options.specialStitchMode ==
+                null
+        ) {
+            ReferenceImportedFontEngine
+                .generate(
+                    font =
+                        font,
+                    sourceText =
+                        char.toString(),
+                    options =
+                        options,
+                    filePrefix =
+                        "fonte"
+                )
+        } else {
+            generateTextInternal(
+                font = font,
+                sourceText =
+                    char.toString(),
+                options =
+                    options,
+                filePrefix =
+                    "fonte"
+            )
+        }
 
     fun generateText(
         font: ImportedFont,
         text: String,
         options: TextMatrixOptions
     ): Result<EmbroideryDesign> =
-        generateTextInternal(
-            font = font,
-            sourceText = text,
-            options = options,
-            filePrefix = "nome"
-        )
+        if (
+            options.style ==
+                TextStitchStyle.SATIN &&
+            options.specialStitchMode ==
+                null
+        ) {
+            ReferenceImportedFontEngine
+                .generate(
+                    font =
+                        font,
+                    sourceText =
+                        text,
+                    options =
+                        options,
+                    filePrefix =
+                        "nome"
+                )
+        } else {
+            generateTextInternal(
+                font = font,
+                sourceText =
+                    text,
+                options =
+                    options,
+                filePrefix =
+                    "nome"
+            )
+        }
 
     private fun generateTextInternal(
         font: ImportedFont,
