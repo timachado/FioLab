@@ -156,6 +156,12 @@ object MatrixConverter {
         var currentY = 0
 
         design.points.forEach { point ->
+            val outputY =
+                writerY(
+                    design = design,
+                    yUnits = point.yUnits
+                )
+
             when (point.command) {
                 StitchCommand.STITCH -> {
                     addSegmentedMove(
@@ -163,7 +169,7 @@ object MatrixConverter {
                         fromX = currentX,
                         fromY = currentY,
                         toX = point.xUnits,
-                        toY = point.yUnits,
+                        toY = outputY,
                         command =
                             EmbConstant.STITCH
                     )
@@ -175,7 +181,7 @@ object MatrixConverter {
                         fromX = currentX,
                         fromY = currentY,
                         toX = point.xUnits,
-                        toY = point.yUnits,
+                        toY = outputY,
                         command =
                             EmbConstant.JUMP
                     )
@@ -184,7 +190,7 @@ object MatrixConverter {
                 StitchCommand.TRIM -> {
                     pattern.addStitchAbs(
                         point.xUnits.toFloat(),
-                        point.yUnits.toFloat(),
+                        outputY.toFloat(),
                         EmbConstant.TRIM
                     )
                 }
@@ -192,7 +198,7 @@ object MatrixConverter {
                 StitchCommand.STOP -> {
                     pattern.addStitchAbs(
                         point.xUnits.toFloat(),
-                        point.yUnits.toFloat(),
+                        outputY.toFloat(),
                         EmbConstant.COLOR_CHANGE
                     )
                 }
@@ -200,7 +206,7 @@ object MatrixConverter {
                 StitchCommand.COLOR_CHANGE -> {
                     pattern.addStitchAbs(
                         point.xUnits.toFloat(),
-                        point.yUnits.toFloat(),
+                        outputY.toFloat(),
                         EmbConstant.COLOR_CHANGE
                     )
                 }
@@ -208,7 +214,7 @@ object MatrixConverter {
                 StitchCommand.SEQUIN -> {
                     pattern.addStitchAbs(
                         point.xUnits.toFloat(),
-                        point.yUnits.toFloat(),
+                        outputY.toFloat(),
                         EmbConstant.STITCH
                     )
                 }
@@ -216,14 +222,14 @@ object MatrixConverter {
                 StitchCommand.END -> {
                     pattern.addStitchAbs(
                         point.xUnits.toFloat(),
-                        point.yUnits.toFloat(),
+                        outputY.toFloat(),
                         EmbConstant.END
                     )
                 }
             }
 
             currentX = point.xUnits
-            currentY = point.yUnits
+            currentY = outputY
         }
 
         if (!design.endFound) {
@@ -233,6 +239,28 @@ object MatrixConverter {
         pattern.fixColorCount()
 
         return pattern
+    }
+
+    private fun writerY(
+        design: EmbroideryDesign,
+        yUnits: Int
+    ): Int {
+        if (design.sourceYAxisDown) {
+            return yUnits
+        }
+
+        val inverted =
+            -yUnits.toLong()
+
+        require(
+            inverted in
+                Int.MIN_VALUE.toLong()..
+                    Int.MAX_VALUE.toLong()
+        ) {
+            "A matriz possui coordenada vertical fora do intervalo seguro para exportação."
+        }
+
+        return inverted.toInt()
     }
 
     private fun addThreads(

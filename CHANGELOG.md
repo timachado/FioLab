@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.2
+
+### Correção crítica de orientação na máquina
+- Corrigida a adaptação do eixo Y entre as coordenadas cartesianas usadas por matrizes criadas no FioLab e o sistema interno do EmbroideryIO.
+- PES, DST e JEF exportados pelo fluxo Enviar para máquina deixam de receber inversão vertical indevida.
+- Matrizes importadas por PES/JEF preservam a convenção de origem e não recebem dupla inversão.
+- Salvamento USB OTG continua apenas gravando os bytes preparados; nenhuma transformação é aplicada pelo pendrive.
+- Adicionados testes assimétricos de round-trip nos três formatos para detectar regressão de espelhamento.
+- Correção tratada como bloqueadora de RC até nova validação em bordadeira real.
+
 ## 0.46.1
 
 ### Clareza sobre armazenamento de fontes

@@ -72,24 +72,202 @@ class MatrixConverterTest {
     }
 
     @Test
-    fun jefAndPesReaderKeepPositiveYConvention() {
-        val source = sampleDesign()
+    fun conversionPreservesVisualOrientationForCartesianFioLabDesigns() {
+        assertVisualOrientationPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = false
+            )
+        )
+    }
 
-        val pes =
-            MatrixConverter.convert(
-                source,
-                "PES"
-            ).getOrThrow()
+    @Test
+    fun conversionPreservesVisualOrientationForImportedScreenCoordinates() {
+        assertVisualOrientationPreserved(
+            asymmetricDesign(
+                sourceYAxisDown = true
+            )
+        )
+    }
 
-        val parsed =
-            EmbroideryIoParser.parse(
-                pes.fileName,
-                pes.bytes
-            ) as
-                EmbroideryLoadResult.Success
+    private fun assertVisualOrientationPreserved(
+        source: EmbroideryDesign
+    ) {
+        val sourceStitches =
+            source.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
 
-        assertTrue(
-            parsed.design.bounds.maxYUnits > 0
+        for (
+            format in
+                MatrixConverter.supportedFormats
+        ) {
+            val converted =
+                MatrixConverter.convert(
+                    source,
+                    format,
+                    outputSuffix =
+                        "orientacao"
+                ).getOrThrow()
+
+            val parsed =
+                when (format) {
+                    "DST" ->
+                        DstParser.parse(
+                            converted.fileName,
+                            converted.bytes
+                        )
+
+                    "PES",
+                    "JEF" ->
+                        EmbroideryIoParser.parse(
+                            converted.fileName,
+                            converted.bytes
+                        )
+
+                    else ->
+                        error(
+                            "Formato inesperado."
+                        )
+                }
+
+            assertTrue(
+                parsed is
+                    EmbroideryLoadResult.Success
+            )
+
+            val target =
+                (parsed as
+                    EmbroideryLoadResult.Success)
+                    .design
+
+            val targetStitches =
+                target.points
+                    .filter {
+                        it.command ==
+                            StitchCommand.STITCH
+                    }
+
+            assertEquals(
+                "Quantidade de pontos mudou em $format",
+                sourceStitches.size,
+                targetStitches.size
+            )
+
+            sourceStitches
+                .zip(targetStitches)
+                .forEachIndexed {
+                        index,
+                        (before, after) ->
+                    assertEquals(
+                        "X mudou no ponto $index em $format",
+                        before.xUnits,
+                        after.xUnits
+                    )
+
+                    assertEquals(
+                        "Orientação vertical mudou no ponto $index em $format",
+                        visualY(
+                            source,
+                            before.yUnits
+                        ),
+                        visualY(
+                            target,
+                            after.yUnits
+                        )
+                    )
+                }
+        }
+    }
+
+    private fun visualY(
+        design: EmbroideryDesign,
+        yUnits: Int
+    ): Int =
+        if (
+            design.sourceYAxisDown
+        ) {
+            yUnits
+        } else {
+            -yUnits
+        }
+
+    private fun asymmetricDesign(
+        sourceYAxisDown: Boolean
+    ): EmbroideryDesign {
+        val points =
+            listOf(
+                EmbroideryPoint(
+                    0,
+                    0,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    30,
+                    90,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    90,
+                    -20,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    20,
+                    40,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    20,
+                    40,
+                    StitchCommand.END,
+                    0
+                )
+            )
+
+        return EmbroideryDesign(
+            fileName =
+                if (
+                    sourceYAxisDown
+                ) {
+                    "importada.pes"
+                } else {
+                    "criada-no-fiolab.dst"
+                },
+            format =
+                if (
+                    sourceYAxisDown
+                ) {
+                    "PES"
+                } else {
+                    "DST"
+                },
+            label = "ORIENTACAO",
+            points = points,
+            bounds =
+                EmbroideryBounds(
+                    minXUnits = 0,
+                    maxXUnits = 90,
+                    minYUnits = -20,
+                    maxYUnits = 90
+                ),
+            stitchCount = 4,
+            jumpCount = 0,
+            colorChanges = 0,
+            endFound = true,
+            sourceBytes =
+                ByteArray(0),
+            threadColors =
+                listOf(
+                    0xE6BE70
+                ),
+            sourceYAxisDown =
+                sourceYAxisDown
         )
     }
 
