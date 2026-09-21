@@ -98,7 +98,7 @@ data class TextMatrixOptions(
     val stitchLengthMm: Float = 2.5f,
     val style: TextStitchStyle = TextStitchStyle.RUNNING,
     val satinWidthMm: Float = 2.4f,
-    val satinDensityMm: Float = 0.45f,
+    val satinDensityMm: Float = 0.4f,
     val satinPullCompensationMm: Float = 0.2f,
     val satinShortStitches: Boolean = true,
     val satinUnderlayMode: SatinUnderlayMode = SatinUnderlayMode.BOTH,
