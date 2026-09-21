@@ -63,25 +63,47 @@ class ReferenceImportedFontEngineTest {
             ReferenceImportedFontEngine
                 .debugStandardSewingOrderPath()
 
-        val jumps =
-            points.filter {
-                it.command ==
-                    StitchCommand.JUMP
-            }
+        val jumpTargets =
+            points
+                .mapIndexedNotNull {
+                        index,
+                        point ->
+                    if (
+                        point.command !=
+                            StitchCommand.JUMP
+                    ) {
+                        return@mapIndexedNotNull null
+                    }
+
+                    val next =
+                        points.getOrNull(
+                            index +
+                                1
+                        )
+
+                    if (
+                        next?.command ==
+                            StitchCommand.JUMP
+                    ) {
+                        null
+                    } else {
+                        point
+                    }
+                }
 
         assertEquals(
             3,
-            jumps.size
+            jumpTargets.size
         )
 
         assertTrue(
-            jumps[0].xUnits <
-                jumps[1].xUnits
+            jumpTargets[0].xUnits <
+                jumpTargets[1].xUnits
         )
 
         assertTrue(
-            jumps[1].xUnits <
-                jumps[2].xUnits
+            jumpTargets[1].xUnits <
+                jumpTargets[2].xUnits
         )
     }
 
