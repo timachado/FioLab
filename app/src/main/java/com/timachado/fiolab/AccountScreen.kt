@@ -49,6 +49,7 @@ import com.timachado.fiolab.core.account.AccountPlanOption
 import com.timachado.fiolab.core.account.AccountPresentation
 import com.timachado.fiolab.core.account.AccountSnapshot
 import com.timachado.fiolab.core.account.AccountSubscriptionEvent
+import com.timachado.fiolab.core.network.SafeRemoteImage
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -56,7 +57,6 @@ import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,6 +74,7 @@ private enum class AccountMode(
 @Composable
 fun AccountScreen(
     account: AccountSnapshot?,
+    offline: Boolean = false,
     onBack: () -> Unit,
     onGoogleSignIn: () -> Unit,
     onSignIn: (
@@ -148,6 +149,87 @@ fun AccountScreen(
                     fontSize =
                         10.sp
                 )
+            }
+        }
+
+        if (
+            offline
+        ) {
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top =
+                                6.dp,
+                            bottom =
+                                8.dp
+                        ),
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                FioGold.copy(
+                                    alpha =
+                                        .10f
+                                )
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        18.dp
+                    )
+            ) {
+                Column(
+                    Modifier.padding(
+                        14.dp
+                    )
+                ) {
+                    Text(
+                        "Sem internet",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            12.sp
+                    )
+
+                    Text(
+                        if (
+                            account ==
+                                null
+                        ) {
+                            "Sua sessão não foi encerrada. Reconecte para carregar os dados da conta."
+                        } else {
+                            "Os dados exibidos permanecem na tela, mas assinatura e dispositivos só atualizam quando a conexão voltar."
+                        },
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    3.dp
+                            ),
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+
+                    OutlinedButton(
+                        onClick =
+                            onRefresh,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    top =
+                                        8.dp
+                                )
+                    ) {
+                        Text(
+                            "Tentar novamente"
+                        )
+                    }
+                }
             }
         }
 
@@ -1375,18 +1457,21 @@ private fun AccountAvatar(
                     withContext(
                         Dispatchers.IO
                     ) {
-                        runCatching {
-                            URL(
+                        SafeRemoteImage
+                            .load(
                                 url
-                            ).openStream()
-                                .use {
-                                    BitmapFactory
-                                        .decodeStream(
-                                            it
-                                        )
-                                        ?.asImageBitmap()
-                                }
-                        }.getOrNull()
+                            )
+                            .getOrNull()
+                            ?.let {
+                                bytes ->
+                                BitmapFactory
+                                    .decodeByteArray(
+                                        bytes,
+                                        0,
+                                        bytes.size
+                                    )
+                                    ?.asImageBitmap()
+                            }
                     }
                 }
     }

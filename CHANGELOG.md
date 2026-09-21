@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.44.0
+
+### Pré-RC — segurança, rede e build de produção
+- Backup automático do Android desabilitado para evitar migração involuntária de sessão/tokens; a Biblioteca continua com backup próprio controlado pelo usuário.
+- Tráfego HTTP em texto claro desabilitado no aplicativo.
+- Adicionada detecção de conexão validada para os fluxos de Minha Conta.
+- Em modo offline, o FioLab informa claramente que a sessão não foi encerrada e preserva os dados já carregados na tela.
+- Login, cadastro, atualização de perfil e assinatura passam a mostrar mensagens seguras para rede indisponível, credenciais inválidas, e-mail não confirmado, sessão expirada e excesso de tentativas.
+- Detalhes crus do backend deixam de aparecer no callback do Google.
+- Avatar remoto exige HTTPS, possui timeout e limite de 4 MB para reduzir risco de travamento/memória excessiva.
+- CI passa a executar Android Lint e também compilar a variante release sem assinatura, além da suíte de testes e do APK debug.
+- Adicionado checklist formal de Release Candidate separando automação de testes físicos, bordadeira real e assinatura de produção.
+- A keystore de produção não é criada nem armazenada no repositório; assinatura definitiva permanece bloqueador explícito antes da RC comercial.
+- Motor de bordado, matrizes, fontes, biblioteca e regras de assinatura permanecem funcionalmente inalterados.
+
 ## 0.43.0
 
 ### Stress de matrizes e fontes
