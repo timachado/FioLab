@@ -115,4 +115,58 @@ class TextHoopAutoFitTest {
                 .fits
         )
     }
+
+    @Test
+    fun automaticFitAvoidsRepeatedExpensiveGeneration() {
+        val hoop =
+            HoopProfile.H100X100
+
+        var calls =
+            0
+
+        val fitted =
+            TextHoopAutoFit
+                .fit(
+                    hoop
+                ) {
+                        height ->
+                    calls++
+
+                    TextLayoutGenerator
+                        .generate(
+                            TextLayoutOptions(
+                                textOptions =
+                                    TextMatrixOptions(
+                                        text =
+                                            "MARIA",
+                                        heightMm =
+                                            height,
+                                        spacingMm =
+                                            0f,
+                                        style =
+                                            TextStitchStyle.RUNNING,
+                                        hoopProfile =
+                                            hoop
+                                    )
+                            )
+                        )
+                }
+                .getOrThrow()
+
+        assertTrue(
+            "O auto-fit deve evitar multiplicar um gerador caro.",
+            calls <=
+                7
+        )
+
+        assertTrue(
+            HoopValidator
+                .validate(
+                    fitted.design,
+                    hoop
+                )
+                .fits
+        )
+    }
+
 }
