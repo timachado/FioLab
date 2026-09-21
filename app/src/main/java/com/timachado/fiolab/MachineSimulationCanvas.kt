@@ -323,12 +323,6 @@ private data class SimulationTransform(
             centerXUnits *
                 scale
 
-    private val originY =
-        canvasHeight /
-            2f +
-            centerYUnits *
-                scale
-
     fun point(
         embroideryPoint:
             EmbroideryPoint
@@ -340,10 +334,21 @@ private data class SimulationTransform(
                         .xUnits *
                     scale,
             y =
-                originY -
-                    embroideryPoint
-                        .yUnits *
-                    scale
+                renderScreenY(
+                    centerScreenY =
+                        canvasHeight /
+                            2f,
+                    centerYUnits =
+                        centerYUnits,
+                    pointYUnits =
+                        embroideryPoint
+                            .yUnits
+                            .toFloat(),
+                    scale =
+                        scale,
+                    sourceYAxisDown =
+                        design.sourceYAxisDown
+                )
         )
 
     fun unitsToPx(

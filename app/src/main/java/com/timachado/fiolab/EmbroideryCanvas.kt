@@ -99,29 +99,23 @@ fun EmbroideryCanvas(
         Canvas(
             Modifier.fillMaxSize()
         ) {
-            val realistic =
-                displayMode ==
-                    EmbroideryDisplayMode.REALISTIC
-
-            if (realistic) {
-                drawRect(
-                    color =
-                        Color(
-                            0xFFF4EDDD
-                        )
-                )
-            }
+            drawRect(
+                color =
+                    Color(
+                        0xFFF4EDDD
+                    )
+            )
 
             drawGrid(
                 realistic =
-                    realistic
+                    true
             )
 
             if (hoop != null) {
                 drawHoopPreview(
                     hoop = hoop,
                     realistic =
-                        realistic
+                        true
                 )
             }
 
@@ -507,13 +501,6 @@ private fun DrawScope.drawDesign(
                 scale +
             userOffset.x
 
-    val originY =
-        size.height /
-            2f +
-            centerYUnits *
-                scale +
-            userOffset.y
-
     var previous: Offset? =
         null
 
@@ -532,9 +519,22 @@ private fun DrawScope.drawDesign(
                     originX +
                         point.xUnits *
                             scale,
-                    originY -
-                        point.yUnits *
-                            scale
+                    renderScreenY(
+                        centerScreenY =
+                            size.height /
+                                2f,
+                        centerYUnits =
+                            centerYUnits,
+                        pointYUnits =
+                            point.yUnits
+                                .toFloat(),
+                        scale =
+                            scale,
+                        sourceYAxisDown =
+                            design.sourceYAxisDown,
+                        userOffsetY =
+                            userOffset.y
+                    )
                 )
 
             when (point.command) {
