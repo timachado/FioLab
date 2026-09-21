@@ -1388,6 +1388,12 @@ private fun FioLabApp(
                     ProjectLibraryScreen(
                         projects =
                             savedProjects,
+                        favoriteProjectIds =
+                            favoriteProjectIds,
+                        recentProjectIds =
+                            recentProjectIds,
+                        sentMatrices =
+                            sentMatrices,
                         onBack = {
                             goBack()
                         },
@@ -1405,6 +1411,12 @@ private fun FioLabApp(
                                 project,
                                 transferDirectly =
                                     true
+                            )
+                        },
+                        onToggleFavorite = {
+                                project ->
+                            toggleFavorite(
+                                project
                             )
                         },
                         onDelete = {
@@ -1425,6 +1437,10 @@ private fun FioLabApp(
                                         "*/*"
                                     )
                                 )
+                        },
+                        onFonts = {
+                            screen =
+                                Screen.FontLibrary
                         }
                     )
                 }
