@@ -33,6 +33,7 @@ Este checklist separa o que pode ser validado automaticamente do que precisa de 
 - [x] CI executa Android Lint.
 - [x] CI compila APK debug para testes.
 - [x] CI compila variante release sem assinatura para detectar regressões de build.
+- [x] CI possui workflow manual de assinatura de produção preparado para usar secrets sem versionar a keystore.
 - [x] CI executa smoke test instrumentado de inicialização e navegação em Android API 35.
 - [ ] Criar keystore de produção fora do repositório.
 - [ ] Guardar keystore/senhas em secrets do CI ou cofre seguro.
