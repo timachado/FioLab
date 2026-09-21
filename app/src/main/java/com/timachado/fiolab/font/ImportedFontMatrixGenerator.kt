@@ -666,7 +666,7 @@ object ImportedFontMatrixGenerator {
                     }
                 ) {
                     TextStitchStyle.RUNNING ->
-                        buildRunningOutline(
+                        buildCenterlineRunning(
                             contours =
                                 contours,
                             stitchLengthUnits =
@@ -712,6 +712,366 @@ object ImportedFontMatrixGenerator {
 
             output +=
                 glyphPoints
+        }
+
+        return output
+    }
+
+    private fun buildCenterlineRunning(
+        contours: List<SampledContour>,
+        stitchLengthUnits: Float
+    ): MutableList<EmbroideryPoint> {
+        val allPoints =
+            contours.flatMap {
+                it.points
+            }
+
+        if (
+            allPoints.isEmpty()
+        ) {
+            return mutableListOf()
+        }
+
+        val minX =
+            allPoints.minOf {
+                it.first
+            }
+
+        val maxX =
+            allPoints.maxOf {
+                it.first
+            }
+
+        val minY =
+            allPoints.minOf {
+                it.second
+            }
+
+        val maxY =
+            allPoints.maxOf {
+                it.second
+            }
+
+        val spanUnits =
+            maxOf(
+                maxX -
+                    minX,
+                maxY -
+                    minY
+            )
+                .coerceAtLeast(
+                    1
+                )
+
+        val unitsPerPixel =
+            maxOf(
+                0.75f,
+                spanUnits /
+                    1500f
+            )
+
+        val padding =
+            6
+
+        val width =
+            (
+                (
+                    maxX -
+                        minX
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        val height =
+            (
+                (
+                    maxY -
+                        minY
+                    ) /
+                    unitsPerPixel
+                ).roundToInt()
+                .coerceAtLeast(
+                    1
+                ) +
+                padding *
+                    2 +
+                1
+
+        val bitmap =
+            Bitmap.createBitmap(
+                width,
+                height,
+                Bitmap.Config.ARGB_8888
+            )
+
+        val canvas =
+            Canvas(
+                bitmap
+            )
+
+        val paint =
+            Paint().apply {
+                isAntiAlias =
+                    true
+
+                style =
+                    Paint.Style.FILL
+
+                color =
+                    android.graphics
+                        .Color.WHITE
+            }
+
+        val rasterPath =
+            Path().apply {
+                fillType =
+                    Path.FillType.EVEN_ODD
+            }
+
+        contours.forEach {
+                contour ->
+            val first =
+                contour.points
+                    .firstOrNull()
+                    ?: return@forEach
+
+            rasterPath.moveTo(
+                (
+                    first.first -
+                        minX
+                    ) /
+                    unitsPerPixel +
+                    padding,
+                (
+                    maxY -
+                        first.second
+                    ) /
+                    unitsPerPixel +
+                    padding
+            )
+
+            contour.points
+                .drop(1)
+                .forEach {
+                        point ->
+                    rasterPath.lineTo(
+                        (
+                            point.first -
+                                minX
+                            ) /
+                                unitsPerPixel +
+                                padding,
+                        (
+                            maxY -
+                                point.second
+                            ) /
+                                unitsPerPixel +
+                                padding
+                    )
+                }
+
+            if (
+                contour.closed
+            ) {
+                rasterPath.close()
+            }
+        }
+
+        canvas.drawPath(
+            rasterPath,
+            paint
+        )
+
+        val pixels =
+            IntArray(
+                width *
+                    height
+            )
+
+        bitmap.getPixels(
+            pixels,
+            0,
+            width,
+            0,
+            0,
+            width,
+            height
+        )
+
+        bitmap.recycle()
+
+        val mask =
+            BooleanArray(
+                pixels.size
+            ) {
+                    index ->
+                (
+                    pixels[index]
+                        ushr
+                        24
+                    ) >=
+                    96
+            }
+
+        val skeleton =
+            thinMask(
+                mask =
+                    mask,
+                width =
+                    width,
+                height =
+                    height
+            )
+
+        val lines =
+            orderSkeletonLinesByProximity(
+                traceSkeleton(
+                    skeleton =
+                        skeleton,
+                    width =
+                        width,
+                    height =
+                        height
+                )
+                    .filter {
+                        it.size >=
+                            3 &&
+                            skeletonLineLength(
+                                it
+                            ) >=
+                                3f
+                    }
+            )
+
+        if (
+            lines.isEmpty()
+        ) {
+            return buildRunningOutline(
+                contours =
+                    contours,
+                stitchLengthUnits =
+                    stitchLengthUnits
+            )
+        }
+
+        val stepPixels =
+            (
+                stitchLengthUnits /
+                    unitsPerPixel
+                ).coerceAtLeast(
+                1.5f
+            )
+
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        lines.forEach {
+                rawLine ->
+            val samples =
+                smoothAndResampleSkeleton(
+                    source =
+                        rawLine,
+                    radius =
+                        3,
+                    passes =
+                        2,
+                    stepPixels =
+                        stepPixels
+                )
+
+            if (
+                samples.size <
+                    2
+            ) {
+                return@forEach
+            }
+
+            if (
+                output.isNotEmpty()
+            ) {
+                val last =
+                    output.last()
+
+                if (
+                    last.command !=
+                        StitchCommand.TRIM
+                ) {
+                    output +=
+                        EmbroideryPoint(
+                            last.xUnits,
+                            last.yUnits,
+                            StitchCommand.TRIM,
+                            0
+                        )
+                }
+            }
+
+            val first =
+                samples.first()
+
+            output +=
+                EmbroideryPoint(
+                    skeletonXToUnits(
+                        first.x,
+                        minX,
+                        padding,
+                        unitsPerPixel
+                    ),
+                    skeletonYToUnits(
+                        first.y,
+                        maxY,
+                        padding,
+                        unitsPerPixel
+                    ),
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            samples.drop(1)
+                .forEach {
+                        sample ->
+                    val x =
+                        skeletonXToUnits(
+                            sample.x,
+                            minX,
+                            padding,
+                            unitsPerPixel
+                        )
+
+                    val y =
+                        skeletonYToUnits(
+                            sample.y,
+                            maxY,
+                            padding,
+                            unitsPerPixel
+                        )
+
+                    val last =
+                        output.last()
+
+                    if (
+                        last.xUnits !=
+                            x ||
+                        last.yUnits !=
+                            y
+                    ) {
+                        output +=
+                            EmbroideryPoint(
+                                x,
+                                y,
+                                StitchCommand.STITCH,
+                                0
+                            )
+                    }
+                }
         }
 
         return output
