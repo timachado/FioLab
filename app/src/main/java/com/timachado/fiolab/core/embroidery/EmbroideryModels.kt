@@ -48,6 +48,7 @@ data class EmbroideryDesign(
     val sourceBytes: ByteArray,
     val guidePoints: List<EmbroideryPoint> = emptyList(),
     val threadColors: List<Int> = emptyList(),
+    val sourceYAxisDown: Boolean = false,
     val isModified: Boolean = false,
     val hoopProfile: HoopProfile? = null,
     val fabricProfile: FabricProfile? = null,
