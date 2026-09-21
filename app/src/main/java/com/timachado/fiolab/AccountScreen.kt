@@ -74,6 +74,7 @@ private enum class AccountMode(
 @Composable
 fun AccountScreen(
     account: AccountSnapshot?,
+    offline: Boolean = false,
     onBack: () -> Unit,
     onGoogleSignIn: () -> Unit,
     onSignIn: (
@@ -148,6 +149,71 @@ fun AccountScreen(
                     fontSize =
                         10.sp
                 )
+            }
+        }
+
+        if (
+            offline
+        ) {
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top =
+                                6.dp,
+                            bottom =
+                                8.dp
+                        ),
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                FioGold.copy(
+                                    alpha =
+                                        .10f
+                                )
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        18.dp
+                    )
+            ) {
+                Column(
+                    Modifier.padding(
+                        14.dp
+                    )
+                ) {
+                    Text(
+                        "Sem internet",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            12.sp
+                    )
+
+                    Text(
+                        if (
+                            account ==
+                                null
+                        ) {
+                            "Sua sessão não foi encerrada. Reconecte para carregar os dados da conta."
+                        } else {
+                            "Os dados exibidos permanecem na tela, mas assinatura e dispositivos só atualizam quando a conexão voltar."
+                        },
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    3.dp
+                            ),
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                }
             }
         }
 
