@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 
@@ -51,18 +52,21 @@ class AppSmokeTest {
             .onNodeWithText(
                 "Sobre o FioLab"
             )
+            .performScrollTo()
             .assertIsDisplayed()
 
         composeRule
             .onNodeWithText(
                 "Desenvolvido por T.I. Machado — Soluções em Tecnologia"
             )
+            .performScrollTo()
             .assertIsDisplayed()
 
         composeRule
             .onNodeWithText(
                 "Conhecer T.I. Machado"
             )
+            .performScrollTo()
             .assertIsDisplayed()
 
         composeRule
