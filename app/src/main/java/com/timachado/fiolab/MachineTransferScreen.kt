@@ -1,5 +1,6 @@
 package com.timachado.fiolab
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -27,12 +30,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.HoopProfile
+import com.timachado.fiolab.core.embroidery.MachineTransferValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
+import com.timachado.fiolab.core.embroidery.TransferIssueLevel
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
 import com.timachado.fiolab.ui.theme.FioText
 import com.timachado.fiolab.ui.theme.FioTextMuted
+import java.util.Locale
 
 @Composable
 fun MachineTransferScreen(
@@ -52,36 +59,62 @@ fun MachineTransferScreen(
             design.format
                 .uppercase()
                 .takeIf {
-                    it in formats
+                    it in
+                        formats
                 }
                 ?: formats.first()
         )
     }
 
+    var hoop by remember(
+        design.fileName
+    ) {
+        mutableStateOf(
+            MachineTransferValidator
+                .recommendedHoop(
+                    design
+                )
+        )
+    }
+
+    val validation =
+        MachineTransferValidator
+            .validate(
+                design =
+                    design,
+                format =
+                    format,
+                hoop =
+                    hoop
+            )
+
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(
+                rememberScrollState()
+            )
             .padding(
                 horizontal =
-                    18.dp
+                    18.dp,
+                vertical =
+                    6.dp
             )
     ) {
         Row(
             Modifier
-                .fillMaxWidth()
-                .padding(
-                    vertical =
-                        6.dp
-                ),
+                .fillMaxWidth(),
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onBack
+                onClick =
+                    onBack
             ) {
                 Text(
                     "‹ Voltar",
-                    color = FioGold
+                    color =
+                        FioGold
                 )
             }
 
@@ -92,7 +125,8 @@ fun MachineTransferScreen(
             ) {
                 Text(
                     "Enviar para a máquina",
-                    color = FioText,
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.Bold,
                     fontSize =
@@ -100,7 +134,7 @@ fun MachineTransferScreen(
                 )
 
                 Text(
-                    "Escolha o formato e o caminho.",
+                    "Valide a matriz antes de escolher o destino.",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -111,7 +145,7 @@ fun MachineTransferScreen(
 
         Spacer(
             Modifier.height(
-                18.dp
+                14.dp
             )
         )
 
@@ -138,7 +172,8 @@ fun MachineTransferScreen(
                 Text(
                     design.label
                         ?: design.fileName,
-                    color = FioText,
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.SemiBold
                 )
@@ -148,7 +183,17 @@ fun MachineTransferScreen(
                         .toString() +
                         " pontos • " +
                         design.colorCount +
-                        " bloco(s)",
+                        " bloco(s) • " +
+                        oneDecimalTransfer(
+                            design.bounds
+                                .widthMm
+                        ) +
+                        " × " +
+                        oneDecimalTransfer(
+                            design.bounds
+                                .heightMm
+                        ) +
+                        " mm",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -157,13 +202,14 @@ fun MachineTransferScreen(
 
                 Spacer(
                     Modifier.height(
-                        18.dp
+                        16.dp
                     )
                 )
 
                 Text(
                     "Formato da máquina",
-                    color = FioText,
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.SemiBold
                 )
@@ -171,9 +217,12 @@ fun MachineTransferScreen(
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
                         .padding(
                             vertical =
-                                10.dp
+                                8.dp
                         ),
                     horizontalArrangement =
                         Arrangement.spacedBy(
@@ -190,11 +239,7 @@ fun MachineTransferScreen(
                             onClick = {
                                 format =
                                     option
-                            },
-                            modifier =
-                                Modifier.weight(
-                                    1f
-                                )
+                            }
                         ) {
                             Text(
                                 if (
@@ -216,12 +261,71 @@ fun MachineTransferScreen(
                         }
                     }
                 }
+
+                Text(
+                    "Bastidor da máquina",
+                    color =
+                        FioText,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(
+                            top =
+                                8.dp
+                        ),
+                    horizontalArrangement =
+                        Arrangement.spacedBy(
+                            8.dp
+                        )
+                ) {
+                    HoopProfile
+                        .entries
+                        .forEach {
+                                option ->
+                            OutlinedButton(
+                                onClick = {
+                                    hoop =
+                                        option
+                                }
+                            ) {
+                                Text(
+                                    if (
+                                        hoop ==
+                                            option
+                                    ) {
+                                        "● " +
+                                            option
+                                                .displayName
+                                    } else {
+                                        option
+                                            .displayName
+                                    },
+                                    color =
+                                        if (
+                                            hoop ==
+                                                option
+                                        ) {
+                                            FioGold
+                                        } else {
+                                            FioText
+                                        }
+                                )
+                            }
+                        }
+                }
             }
         }
 
         Spacer(
             Modifier.height(
-                16.dp
+                14.dp
             )
         )
 
@@ -246,8 +350,127 @@ fun MachineTransferScreen(
                 )
             ) {
                 Text(
-                    "Pendrive OTG",
-                    color = FioText,
+                    if (
+                        validation.ready
+                    ) {
+                        "✓ Pronta para enviar"
+                    } else {
+                        "⚠ Corrija antes de enviar"
+                    },
+                    color =
+                        if (
+                            validation.ready
+                        ) {
+                            FioGold
+                        } else {
+                            FioText
+                        },
+                    fontWeight =
+                        FontWeight.Bold,
+                    fontSize =
+                        16.sp
+                )
+
+                Text(
+                    "Formato $format • bastidor " +
+                        hoop.displayName,
+                    modifier =
+                        Modifier.padding(
+                            top =
+                                3.dp
+                        ),
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
+                if (
+                    validation.issues
+                        .isEmpty()
+                ) {
+                    Text(
+                        "Pontos, dimensões, formato e área útil do bastidor passaram na validação.",
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    9.dp
+                            ),
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                } else {
+                    validation.issues
+                        .forEach {
+                                issue ->
+                            Text(
+                                (
+                                    if (
+                                        issue.level ==
+                                            TransferIssueLevel
+                                                .BLOCKING
+                                    ) {
+                                        "• Erro: "
+                                    } else {
+                                        "• Aviso: "
+                                    }
+                                    ) +
+                                    issue.message,
+                                modifier =
+                                    Modifier.padding(
+                                        top =
+                                            7.dp
+                                    ),
+                                color =
+                                    if (
+                                        issue.level ==
+                                            TransferIssueLevel
+                                                .BLOCKING
+                                    ) {
+                                        FioText
+                                    } else {
+                                        FioTextMuted
+                                    },
+                                fontSize =
+                                    10.sp
+                            )
+                        }
+                }
+            }
+        }
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
+        Card(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            colors =
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+            shape =
+                RoundedCornerShape(
+                    22.dp
+                )
+        ) {
+            Column(
+                Modifier.padding(
+                    18.dp
+                )
+            ) {
+                Text(
+                    "USB OTG / pendrive",
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.Bold,
                     fontSize =
@@ -274,6 +497,8 @@ fun MachineTransferScreen(
                             format
                         )
                     },
+                    enabled =
+                        validation.ready,
                     modifier =
                         Modifier
                             .fillMaxWidth(),
@@ -323,7 +548,8 @@ fun MachineTransferScreen(
             ) {
                 Text(
                     "Wi-Fi / app da máquina",
-                    color = FioText,
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.Bold,
                     fontSize =
@@ -331,7 +557,7 @@ fun MachineTransferScreen(
                 )
 
                 Text(
-                    "Gera o arquivo e abre os apps compatíveis instalados no Android. Se a bordadeira usa um app próprio ou pasta de rede, selecione esse destino.",
+                    "Gera o arquivo validado e abre os apps compatíveis do Android. Quando a bordadeira oferecer protocolo Wi-Fi direto suportado, ele poderá ser conectado aqui sem trocar o fluxo.",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -350,6 +576,8 @@ fun MachineTransferScreen(
                             format
                         )
                     },
+                    enabled =
+                        validation.ready,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -361,18 +589,30 @@ fun MachineTransferScreen(
             }
         }
 
-        Spacer(
-            Modifier.height(
-                14.dp
-            )
-        )
-
         Text(
-            "O FioLab prepara e entrega o arquivo. O envio Wi‑Fi direto depende do protocolo/app suportado pela bordadeira.",
+            "O FioLab não altera silenciosamente o tamanho da matriz para fazê-la caber. Se a validação bloquear o envio, ajuste o desenho ou escolha um bastidor compatível.",
+            modifier =
+                Modifier.padding(
+                    top =
+                        12.dp,
+                    bottom =
+                        24.dp
+                ),
             color =
                 FioTextMuted,
             fontSize =
-                10.sp
+                9.sp
         )
     }
 }
+
+private fun oneDecimalTransfer(
+    value: Float
+): String =
+    String.format(
+        Locale.forLanguageTag(
+            "pt-BR"
+        ),
+        "%.1f",
+        value
+    )
