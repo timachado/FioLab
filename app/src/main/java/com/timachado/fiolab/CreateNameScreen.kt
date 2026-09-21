@@ -373,6 +373,8 @@ fun CreateNameScreen(
                         preview,
                     hoop =
                         hoopProfile,
+                    displayMode =
+                        EmbroideryDisplayMode.SOLID,
                     modifier =
                         Modifier.fillMaxSize()
                 )
