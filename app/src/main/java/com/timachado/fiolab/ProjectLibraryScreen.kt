@@ -1,5 +1,6 @@
 package com.timachado.fiolab
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,12 +22,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.timachado.fiolab.core.library.SentMatrixRecord
 import com.timachado.fiolab.core.project.SavedProjectSummary
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
@@ -36,16 +43,79 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
+private enum class LibrarySection(
+    val label: String
+) {
+    MATRICES(
+        "Matrizes"
+    ),
+    RECENT(
+        "Recentes"
+    ),
+    FAVORITES(
+        "Favoritos"
+    ),
+    SENT(
+        "Enviados"
+    )
+}
+
 @Composable
 fun ProjectLibraryScreen(
     projects: List<SavedProjectSummary>,
+    favoriteProjectIds: Set<String>,
+    recentProjectIds: List<String>,
+    sentMatrices: List<SentMatrixRecord>,
     onBack: () -> Unit,
     onOpen: (SavedProjectSummary) -> Unit,
     onTransfer: (SavedProjectSummary) -> Unit,
+    onToggleFavorite:
+        (SavedProjectSummary) -> Unit,
     onDelete: (SavedProjectSummary) -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    onFonts: () -> Unit
 ) {
+    var section by remember {
+        mutableStateOf(
+            LibrarySection.MATRICES
+        )
+    }
+
+    val recentProjects =
+        recentProjectIds
+            .mapNotNull {
+                    id ->
+                projects
+                    .firstOrNull {
+                        it.id ==
+                            id
+                    }
+            }
+
+    val favoriteProjects =
+        projects.filter {
+            it.id in
+                favoriteProjectIds
+        }
+
+    val visibleProjects =
+        when (
+            section
+        ) {
+            LibrarySection.MATRICES ->
+                projects
+
+            LibrarySection.RECENT ->
+                recentProjects
+
+            LibrarySection.FAVORITES ->
+                favoriteProjects
+
+            LibrarySection.SENT ->
+                emptyList()
+        }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -65,7 +135,8 @@ fun ProjectLibraryScreen(
                 Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onBack
+                onClick =
+                    onBack
             ) {
                 Text(
                     "‹ Voltar",
@@ -80,8 +151,9 @@ fun ProjectLibraryScreen(
                 )
             ) {
                 Text(
-                    "Minhas Matrizes",
-                    color = FioText,
+                    "Biblioteca",
+                    color =
+                        FioText,
                     fontWeight =
                         FontWeight.Bold,
                     fontSize =
@@ -91,7 +163,9 @@ fun ProjectLibraryScreen(
                 Text(
                     projects.size
                         .toString() +
-                        " projeto(s) salvo(s) no celular",
+                        " matriz(es) • " +
+                        favoriteProjects.size +
+                        " favorito(s)",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -103,9 +177,12 @@ fun ProjectLibraryScreen(
         Row(
             Modifier
                 .fillMaxWidth()
+                .horizontalScroll(
+                    rememberScrollState()
+                )
                 .padding(
                     top =
-                        8.dp,
+                        4.dp,
                     bottom =
                         8.dp
                 ),
@@ -114,6 +191,61 @@ fun ProjectLibraryScreen(
                     8.dp
                 )
         ) {
+            LibrarySection
+                .entries
+                .forEach {
+                        option ->
+                    OutlinedButton(
+                        onClick = {
+                            section =
+                                option
+                        }
+                    ) {
+                        Text(
+                            if (
+                                section ==
+                                    option
+                            ) {
+                                "● " +
+                                    option.label
+                            } else {
+                                option.label
+                            },
+                            color =
+                                if (
+                                    section ==
+                                        option
+                                ) {
+                                    FioGold
+                                } else {
+                                    FioText
+                                }
+                        )
+                    }
+                }
+        }
+
+        Row(
+            Modifier
+                .fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    8.dp
+                )
+        ) {
+            OutlinedButton(
+                onClick =
+                    onFonts,
+                modifier =
+                    Modifier.weight(
+                        1f
+                    )
+            ) {
+                Text(
+                    "Fontes salvas"
+                )
+            }
+
             OutlinedButton(
                 onClick =
                     onBackup,
@@ -152,73 +284,40 @@ fun ProjectLibraryScreen(
         }
 
         Text(
-            "O backup pode ser salvo em Downloads ou pendrive OTG e restaurado em outro aparelho.",
+            "Matrizes e fontes permanecem no aparelho. Recentes, favoritos e envios ajudam a reencontrar rapidamente o que você usou.",
             color =
                 FioTextMuted,
             fontSize =
-                10.sp,
+                9.sp,
             modifier =
                 Modifier.padding(
+                    top =
+                        7.dp,
                     bottom =
-                        6.dp
+                        5.dp
                 )
         )
 
         if (
-            projects.isEmpty()
+            section ==
+                LibrarySection.SENT
         ) {
-            Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            top =
-                                24.dp
-                        ),
-                colors =
-                    CardDefaults
-                        .cardColors(
-                            containerColor =
-                                FioSurface
-                        ),
-                shape =
-                    RoundedCornerShape(
-                        22.dp
-                    )
-            ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            24.dp
-                        ),
-                    horizontalAlignment =
-                        Alignment
-                            .CenterHorizontally
-                ) {
-                    Text(
-                        "Nenhuma matriz salva ainda.",
-                        color =
-                            FioText,
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
+            SentMatricesList(
+                sentMatrices =
+                    sentMatrices
+            )
 
-                    Spacer(
-                        Modifier.height(
-                            8.dp
-                        )
-                    )
+            return
+        }
 
-                    Text(
-                        "Abra ou crie uma matriz e toque em “Salvar em Minhas Matrizes”.",
-                        color =
-                            FioTextMuted,
-                        fontSize =
-                            11.sp
-                    )
-                }
-            }
+        if (
+            visibleProjects
+                .isEmpty()
+        ) {
+            EmptyLibrarySection(
+                section =
+                    section
+            )
 
             return
         }
@@ -239,154 +338,389 @@ fun ProjectLibraryScreen(
                 )
         ) {
             items(
-                projects,
+                visibleProjects,
                 key = {
                     it.id
                 }
             ) {
                     project ->
-                Card(
+                ProjectLibraryCard(
+                    project =
+                        project,
+                    favorite =
+                        project.id in
+                            favoriteProjectIds,
+                    onOpen = {
+                        onOpen(
+                            project
+                        )
+                    },
+                    onTransfer = {
+                        onTransfer(
+                            project
+                        )
+                    },
+                    onToggleFavorite = {
+                        onToggleFavorite(
+                            project
+                        )
+                    },
+                    onDelete = {
+                        onDelete(
+                            project
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectLibraryCard(
+    project: SavedProjectSummary,
+    favorite: Boolean,
+    onOpen: () -> Unit,
+    onTransfer: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurface
+                ),
+        shape =
+            RoundedCornerShape(
+                20.dp
+            )
+    ) {
+        Column(
+            Modifier.padding(
+                16.dp
+            )
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth(),
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+                Column(
+                    Modifier.weight(
+                        1f
+                    )
+                ) {
+                    Text(
+                        project.title,
+                        color =
+                            FioText,
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            17.sp
+                    )
+
+                    Text(
+                        project.format +
+                            " • " +
+                            oneDecimalProject(
+                                project.widthMm
+                            ) +
+                            " × " +
+                            oneDecimalProject(
+                                project.heightMm
+                            ) +
+                            " mm",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            11.sp
+                    )
+                }
+
+                TextButton(
+                    onClick =
+                        onToggleFavorite
+                ) {
+                    Text(
+                        if (
+                            favorite
+                        ) {
+                            "★ Favorito"
+                        } else {
+                            "☆ Favoritar"
+                        },
+                        color =
+                            if (
+                                favorite
+                            ) {
+                                FioGold
+                            } else {
+                                FioTextMuted
+                            }
+                    )
+                }
+            }
+
+            Text(
+                project.stitchCount
+                    .toString() +
+                    " pontos • " +
+                    project.colorCount +
+                    " bloco(s) • " +
+                    formattedDate(
+                        project
+                            .updatedAtMillis
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    10.sp
+            )
+
+            Spacer(
+                Modifier.height(
+                    12.dp
+                )
+            )
+
+            Row(
+                horizontalArrangement =
+                    Arrangement
+                        .spacedBy(
+                            8.dp
+                        )
+            ) {
+                Button(
+                    onClick =
+                        onOpen,
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        ),
                     colors =
-                        CardDefaults
-                            .cardColors(
+                        ButtonDefaults
+                            .buttonColors(
                                 containerColor =
-                                    FioSurface
-                            ),
-                    shape =
-                        RoundedCornerShape(
-                            20.dp
+                                    FioGold,
+                                contentColor =
+                                    FioBackground
+                            )
+                ) {
+                    Text(
+                        "Abrir",
+                        fontWeight =
+                            FontWeight.Bold
+                    )
+                }
+
+                OutlinedButton(
+                    onClick =
+                        onTransfer,
+                    modifier =
+                        Modifier.weight(
+                            1f
                         )
                 ) {
-                    Column(
-                        Modifier.padding(
-                            16.dp
+                    Text(
+                        "⇧ Máquina"
+                    )
+                }
+            }
+
+            TextButton(
+                onClick =
+                    onDelete,
+                modifier =
+                    Modifier
+                        .align(
+                            Alignment.End
                         )
-                    ) {
-                        Text(
-                            project.title,
-                            color =
-                                FioText,
-                            fontWeight =
-                                FontWeight.Bold,
-                            fontSize =
-                                17.sp
+            ) {
+                Text(
+                    "Excluir",
+                    color =
+                        Color(
+                            0xFFFF9F9A
                         )
+                )
+            }
+        }
+    }
+}
 
-                        Text(
-                            project.format +
-                                " • " +
-                                oneDecimalProject(
-                                    project.widthMm
-                                ) +
-                                " × " +
-                                oneDecimalProject(
-                                    project.heightMm
-                                ) +
-                                " mm",
-                            color =
-                                FioTextMuted,
-                            fontSize =
-                                11.sp
-                        )
+@Composable
+private fun SentMatricesList(
+    sentMatrices:
+        List<SentMatrixRecord>
+) {
+    if (
+        sentMatrices
+            .isEmpty()
+    ) {
+        Card(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top =
+                            24.dp
+                    ),
+            colors =
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+            shape =
+                RoundedCornerShape(
+                    22.dp
+                )
+        ) {
+            Text(
+                "Nenhum arquivo entregue à máquina ainda.",
+                modifier =
+                    Modifier.padding(
+                        22.dp
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    11.sp
+            )
+        }
 
-                        Text(
-                            project.stitchCount
-                                .toString() +
-                                " pontos • " +
-                                project.colorCount +
-                                " bloco(s) • " +
-                                formattedDate(
-                                    project
-                                        .updatedAtMillis
-                                ),
-                            color =
-                                FioTextMuted,
-                            fontSize =
-                                10.sp
-                        )
+        return
+    }
 
-                        Spacer(
-                            Modifier.height(
-                                12.dp
-                            )
-                        )
+    LazyColumn(
+        modifier =
+            Modifier.fillMaxSize(),
+        contentPadding =
+            PaddingValues(
+                top =
+                    12.dp,
+                bottom =
+                    30.dp
+            ),
+        verticalArrangement =
+            Arrangement.spacedBy(
+                10.dp
+            )
+    ) {
+        items(
+            sentMatrices,
+            key = {
+                it.id
+            }
+        ) {
+                record ->
+            Card(
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        18.dp
+                    )
+            ) {
+                Column(
+                    Modifier.padding(
+                        14.dp
+                    )
+                ) {
+                    Text(
+                        record.fileName,
+                        color =
+                            FioText,
+                        fontWeight =
+                            FontWeight.SemiBold,
+                        fontSize =
+                            13.sp
+                    )
 
-                        Row(
-                            horizontalArrangement =
-                                Arrangement
-                                    .spacedBy(
-                                        8.dp
-                                    )
-                        ) {
-                            Button(
-                                onClick = {
-                                    onOpen(
-                                        project
-                                    )
-                                },
-                                modifier =
-                                    Modifier
-                                        .weight(
-                                            1f
-                                        ),
-                                colors =
-                                    ButtonDefaults
-                                        .buttonColors(
-                                            containerColor =
-                                                FioGold,
-                                            contentColor =
-                                                FioBackground
-                                        )
-                            ) {
-                                Text(
-                                    "Abrir",
-                                    fontWeight =
-                                        FontWeight.Bold
-                                )
-                            }
+                    Text(
+                        record.format +
+                            " • " +
+                            record.method,
+                        color =
+                            FioGold,
+                        fontSize =
+                            10.sp
+                    )
 
-                            OutlinedButton(
-                                onClick = {
-                                    onTransfer(
-                                        project
-                                    )
-                                },
-                                modifier =
-                                    Modifier
-                                        .weight(
-                                            1f
-                                        )
-                            ) {
-                                Text(
-                                    "⇧ Máquina"
-                                )
-                            }
-                        }
-
-                        TextButton(
-                            onClick = {
-                                onDelete(
-                                    project
-                                )
-                            },
-                            modifier =
-                                Modifier
-                                    .align(
-                                        Alignment.End
-                                    )
-                        ) {
-                            Text(
-                                "Excluir",
-                                color =
-                                    Color(
-                                        0xFFFF9F9A
-                                    )
-                            )
-                        }
-                    }
+                    Text(
+                        formattedDate(
+                            record.sentAtMillis
+                        ),
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            9.sp
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyLibrarySection(
+    section: LibrarySection
+) {
+    val message =
+        when (
+            section
+        ) {
+            LibrarySection.MATRICES ->
+                "Nenhuma matriz salva ainda. Abra ou crie uma matriz e toque em “Salvar em Minhas Matrizes”."
+
+            LibrarySection.RECENT ->
+                "Nenhuma matriz salva foi aberta recentemente."
+
+            LibrarySection.FAVORITES ->
+                "Nenhuma matriz favorita ainda. Toque em ☆ Favoritar para guardar as mais usadas."
+
+            LibrarySection.SENT ->
+                "Nenhum arquivo enviado ainda."
+        }
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top =
+                        24.dp
+                ),
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurface
+                ),
+        shape =
+            RoundedCornerShape(
+                22.dp
+            )
+    ) {
+        Text(
+            message,
+            modifier =
+                Modifier.padding(
+                    22.dp
+                ),
+            color =
+                FioTextMuted,
+            fontSize =
+                11.sp
+        )
     }
 }
 
