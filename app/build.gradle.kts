@@ -12,8 +12,8 @@ android {
         applicationId = "com.timachado.fiolab"
         minSdk = 26
         targetSdk = 36
-        versionCode = 39
-        versionName = "0.27.0"
+        versionCode = 40
+        versionName = "0.27.1"
 
         buildConfigField(
             "String",
