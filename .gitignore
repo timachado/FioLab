@@ -8,3 +8,13 @@
 .externalNativeBuild/
 .cxx/
 app/build/
+
+# Production signing material — never commit
+*.jks
+*.keystore
+*.p12
+*.pfx
+*keystore*.base64*
+*keystore*.b64*
+*signing*.base64*
+*signing*.b64*

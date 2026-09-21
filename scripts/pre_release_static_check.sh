@@ -3,6 +3,21 @@ set -euo pipefail
 
 echo "Checking production source for forbidden secrets and cleartext URLs..."
 
+
+echo "Checking repository for tracked signing material..."
+
+TRACKED_SIGNING_MATERIAL="$(
+  git ls-files \
+    | grep -Ei '(\.(jks|keystore|p12|pfx)$|(^|/).*(keystore|signing).*(base64|b64))' \
+    || true
+)"
+
+if [ -n "$TRACKED_SIGNING_MATERIAL" ]; then
+  echo "$TRACKED_SIGNING_MATERIAL"
+  echo "Tracked production signing material found. Remove it from Git history before continuing."
+  exit 1
+fi
+
 if grep -RInE   --include='*.kt'   --include='*.kts'   '(service[_-]?role|SUPABASE_SERVICE_ROLE|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY)'   app/src/main app/build.gradle.kts; then
   echo "Forbidden production secret marker found."
   exit 1
