@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.10
+
+### Sequência de texto em padrão profissional
+- A ordem das regiões Satin deixa de ser reorganizada globalmente pelo ponto mais próximo.
+- Dentro de cada letra, os objetos passam a seguir uma ordem estável da esquerda para a direita; em empate, a região superior vem primeiro.
+- A proximidade continua sendo usada somente para escolher qual ponta da próxima região é a melhor entrada, reduzindo deslocamentos sem trocar a ordem do desenho.
+- O primeiro objeto continua começando no lado visual esquerdo da letra, conforme corrigido na 0.46.9.
+- Underlay edge-run de ida e volta, Satin alternado e conectores escondidos dentro da forma permanecem preservados.
+- Se a ligação atravessar vazio/buraco da letra, continua sendo JUMP em vez de costura aparente.
+- O comportamento segue os princípios públicos do PE-DESIGN para ordem padrão e otimização de pontos de entrada/saída, sem copiar código proprietário.
+- Adicionado teste com três regiões deliberadamente embaralhadas e distâncias enganosas; a saída deve permanecer esquerda → meio → direita.
+
 ## 0.46.9
 
 ### Início correto da letra

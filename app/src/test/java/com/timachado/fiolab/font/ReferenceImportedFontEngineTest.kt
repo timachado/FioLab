@@ -58,6 +58,34 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun satinObjectsFollowStandardLeftToRightOrder() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugStandardSewingOrderPath()
+
+        val jumps =
+            points.filter {
+                it.command ==
+                    StitchCommand.JUMP
+            }
+
+        assertEquals(
+            3,
+            jumps.size
+        )
+
+        assertTrue(
+            jumps[0].xUnits <
+                jumps[1].xUnits
+        )
+
+        assertTrue(
+            jumps[1].xUnits <
+                jumps[2].xUnits
+        )
+    }
+
+    @Test
     fun firstSatinRegionStartsAtLeftEdgeEvenWhenHintIsMisleading() {
         val points =
             ReferenceImportedFontEngine

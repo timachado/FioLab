@@ -902,6 +902,40 @@ internal object ReferenceImportedFontEngine {
             .minOrNull()
             ?: Float.MAX_VALUE
 
+    private fun columnTopY(
+        column: SatinColumn
+    ): Float =
+        column.rows
+            .flatMap {
+                    row ->
+                listOf(
+                    row.a.y,
+                    row.b.y
+                )
+            }
+            .maxOrNull()
+            ?: -Float.MAX_VALUE
+
+    private fun standardSewingOrder(
+        columns: List<SatinColumn>
+    ): List<SatinColumn> =
+        columns
+            .filter {
+                it.rows
+                    .isNotEmpty()
+            }
+            .sortedWith(
+                compareBy<SatinColumn> {
+                    columnLeftEdgeX(
+                        it
+                    )
+                }.thenByDescending {
+                    columnTopY(
+                        it
+                    )
+                }
+            )
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1515,87 +1549,55 @@ internal object ReferenceImportedFontEngine {
             includeUnderlay: Boolean,
             densityMm: Float
         ) {
-            val remaining =
-                columns
-                    .filter {
-                        it.rows
-                            .isNotEmpty()
-                    }
-                    .toMutableList()
+            val ordered =
+                standardSewingOrder(
+                    columns
+                )
 
             if (
-                remaining.isEmpty()
+                ordered.isEmpty()
             ) {
                 return
             }
 
-            var firstColumn =
-                true
+            ordered.forEachIndexed {
+                    index,
+                    original ->
+                val firstColumn =
+                    index ==
+                        0
 
-            while (
-                remaining
-                    .isNotEmpty()
-            ) {
                 val anchor =
                     if (
                         firstColumn
                     ) {
                         startHint
                             ?: current
-                            ?: remaining
-                                .first()
+                            ?: original
                                 .rows
                                 .first()
                                 .a
                     } else {
                         current
-                            ?: startHint
-                            ?: remaining
-                                .first()
+                            ?: original
                                 .rows
                                 .first()
                                 .a
                     }
 
-                val choice =
-                    if (
-                        firstColumn
-                    ) {
-                        val leftmostColumn =
-                            remaining.minBy {
-                                columnLeftEdgeX(
-                                    it
-                                )
-                            }
-
-                        closestOrientation(
-                            column =
-                                leftmostColumn,
-                            anchor =
-                                startHint
-                                    ?: leftmostColumn
-                                        .rows
-                                        .first()
-                                        .a
-                        )
-                    } else {
-                        remaining
-                            .map {
-                                    column ->
-                                closestOrientation(
-                                    column =
-                                        column,
-                                    anchor =
-                                        anchor
-                                )
-                            }
-                            .minBy {
-                                it.entryDistance
-                            }
-                    }
-
+                /*
+                 * Ordem padrão primeiro; proximidade serve apenas para
+                 * escolher a melhor ponta de entrada da próxima região.
+                 * Assim a costura não pula para outro trecho da letra só
+                 * porque ele está momentaneamente mais perto.
+                 */
                 val column =
-                    choice.oriented
+                    closestOrientation(
+                        column =
+                            original,
+                        anchor =
+                            anchor
+                    ).oriented
 
                 val entry =
                     column.rows
@@ -1625,13 +1627,6 @@ internal object ReferenceImportedFontEngine {
                 emitSatinColumn(
                     column
                 )
-
-                remaining.remove(
-                    choice.original
-                )
-
-                firstColumn =
-                    false
             }
         }
 
@@ -2347,6 +2342,163 @@ internal object ReferenceImportedFontEngine {
             current =
                 point
         }
+    }
+
+    internal fun debugStandardSewingOrderPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        fun column(
+            left: Float,
+            bottom: Float
+        ) =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            left,
+                            bottom
+                        ),
+                        FPoint(
+                            left +
+                                12f,
+                            bottom
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            left,
+                            bottom +
+                                10f
+                        ),
+                        FPoint(
+                            left +
+                                12f,
+                            bottom +
+                                10f
+                        )
+                    )
+                )
+            )
+
+        val left =
+            column(
+                left =
+                    5f,
+                bottom =
+                    0f
+            )
+
+        /*
+         * A região do meio está bem longe no eixo Y; a antiga otimização
+         * por proximidade preferia a região direita antes dela.
+         */
+        val middle =
+            column(
+                left =
+                    40f,
+                bottom =
+                    180f
+            )
+
+        val right =
+            column(
+                left =
+                    80f,
+                bottom =
+                    0f
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    right,
+                    middle,
+                    left
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                0f,
+                                -5f
+                            ),
+                            FPoint(
+                                22f,
+                                -5f
+                            ),
+                            FPoint(
+                                22f,
+                                15f
+                            ),
+                            FPoint(
+                                0f,
+                                15f
+                            )
+                        )
+                    ),
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                35f,
+                                175f
+                            ),
+                            FPoint(
+                                57f,
+                                175f
+                            ),
+                            FPoint(
+                                57f,
+                                195f
+                            ),
+                            FPoint(
+                                35f,
+                                195f
+                            )
+                        )
+                    ),
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                75f,
+                                -5f
+                            ),
+                            FPoint(
+                                97f,
+                                -5f
+                            ),
+                            FPoint(
+                                97f,
+                                15f
+                            ),
+                            FPoint(
+                                75f,
+                                15f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    5f,
+                    0f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f
+        )
+
+        return output
     }
 
     internal fun debugVisualStartPath():

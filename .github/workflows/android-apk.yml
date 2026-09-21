@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.9-debug.apk
-          zip -9 FioLab-0.46.9-debug.zip FioLab-0.46.9-debug.apk
-          sha256sum FioLab-0.46.9-debug.apk FioLab-0.46.9-debug.zip > FioLab-0.46.9-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.10-debug.apk
+          zip -9 FioLab-0.46.10-debug.zip FioLab-0.46.10-debug.apk
+          sha256sum FioLab-0.46.10-debug.apk FioLab-0.46.10-debug.zip > FioLab-0.46.10-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.46.9-downloads
+          name: FioLab-0.46.10-downloads
           path: |
-            FioLab-0.46.9-debug.apk
-            FioLab-0.46.9-debug.zip
-            FioLab-0.46.9-SHA256.txt
+            FioLab-0.46.10-debug.apk
+            FioLab-0.46.10-debug.zip
+            FioLab-0.46.10-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.46.9 >/dev/null 2>&1; then
-            gh release upload v0.46.9               FioLab-0.46.9-debug.apk               FioLab-0.46.9-debug.zip               FioLab-0.46.9-SHA256.txt               --clobber
+          if gh release view v0.46.10 >/dev/null 2>&1; then
+            gh release upload v0.46.10               FioLab-0.46.10-debug.apk               FioLab-0.46.10-debug.zip               FioLab-0.46.10-SHA256.txt               --clobber
           else
-            gh release create v0.46.9               FioLab-0.46.9-debug.apk               FioLab-0.46.9-debug.zip               FioLab-0.46.9-SHA256.txt               --target main               --title "FioLab 0.46.9"               --notes "FioLab 0.46.9: fixa o início do Satin no começo visual da letra, priorizando a região mais à esquerda antes da otimização do restante do percurso."
+            gh release create v0.46.10               FioLab-0.46.10-debug.apk               FioLab-0.46.10-debug.zip               FioLab-0.46.10-SHA256.txt               --target main               --title "FioLab 0.46.10"               --notes "FioLab 0.46.10: aplica ordem padrão estável aos objetos Satin, preservando entrada à esquerda e usando proximidade apenas para orientar a próxima região."
           fi
