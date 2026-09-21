@@ -102,6 +102,7 @@ data class TextMatrixOptions(
     val satinPullCompensationMm: Float = 0.2f,
     val satinShortStitches: Boolean = true,
     val satinUnderlayMode: SatinUnderlayMode = SatinUnderlayMode.BOTH,
+    val specialStitchMode: SpecialStitchMode? = null,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
     val outputFormat: String = "DST",
@@ -411,9 +412,19 @@ object TextMatrixGenerator {
                             )
                         }
 
+                    val effectiveStyle =
+                        if (
+                            options.specialStitchMode !=
+                                null
+                        ) {
+                            TextStitchStyle.RUNNING
+                        } else {
+                            options.style
+                        }
+
                     val built =
                         when (
-                            options.style
+                            effectiveStyle
                         ) {
                             TextStitchStyle.RUNNING ->
                                 appendRunningStroke(
@@ -478,12 +489,32 @@ object TextMatrixGenerator {
                 "O texto não gerou pontadas."
             }
 
-            points +=
+            val transformedPoints =
+                SpecialStitchProcessor
+                    .apply(
+                        points =
+                            points,
+                        mode =
+                            options
+                                .specialStitchMode
+                    )
+
+            val lastPoint =
+                transformedPoints
+                    .lastOrNull()
+                    ?: EmbroideryPoint(
+                        currentX,
+                        currentY,
+                        StitchCommand.JUMP,
+                        0
+                    )
+
+            transformedPoints +=
                 EmbroideryPoint(
-                    currentX,
-                    currentY,
+                    lastPoint.xUnits,
+                    lastPoint.yUnits,
                     StitchCommand.END,
-                    0
+                    lastPoint.colorIndex
                 )
 
             val coordinates =
@@ -546,7 +577,7 @@ object TextMatrixGenerator {
                     label =
                         cleanText,
                     points =
-                        points,
+                        transformedPoints,
                     bounds =
                         EmbroideryBounds(
                             minXUnits =
@@ -559,9 +590,15 @@ object TextMatrixGenerator {
                                 maxY
                         ),
                     stitchCount =
-                        stitchCount,
+                        transformedPoints.count {
+                            it.command ==
+                                StitchCommand.STITCH
+                        },
                     jumpCount =
-                        jumpCount,
+                        transformedPoints.count {
+                            it.command ==
+                                StitchCommand.JUMP
+                        },
                     colorChanges = 0,
                     endFound = true,
                     sourceBytes =
