@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.46.0
+
+### Smoke test de runtime Android antes da RC
+- Adicionado teste instrumentado que inicia o aplicativo em Android real/emulado, valida a Home e navega até Minha Conta.
+- O teste protege a presença do crédito “Desenvolvido por T.I. Machado — Soluções em Tecnologia” e do botão “Conhecer T.I. Machado”.
+- O teste também impede regressão da frase removida na 0.45.1.
+- CI passa a executar o smoke test em Android API 35 com emulador acelerado por KVM, além de testes unitários, Lint e builds debug/release.
+- Nenhum fluxo funcional, motor de bordado, formato de matriz, biblioteca, conta ou regra comercial foi alterado.
+
 ## 0.45.1
 
 ### Ajuste visual pontual em Minha Conta

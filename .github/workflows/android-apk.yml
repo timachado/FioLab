@@ -52,6 +52,24 @@ jobs:
       - name: Android lint
         run: gradle :app:lintDebug --stacktrace
 
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Android runtime smoke test
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: gradle :app:connectedDebugAndroidTest --stacktrace
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
@@ -61,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.45.1-debug.apk
-          zip -9 FioLab-0.45.1-debug.zip FioLab-0.45.1-debug.apk
-          sha256sum FioLab-0.45.1-debug.apk FioLab-0.45.1-debug.zip > FioLab-0.45.1-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.0-debug.apk
+          zip -9 FioLab-0.46.0-debug.zip FioLab-0.46.0-debug.apk
+          sha256sum FioLab-0.46.0-debug.apk FioLab-0.46.0-debug.zip > FioLab-0.46.0-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.45.1-downloads
+          name: FioLab-0.46.0-downloads
           path: |
-            FioLab-0.45.1-debug.apk
-            FioLab-0.45.1-debug.zip
-            FioLab-0.45.1-SHA256.txt
+            FioLab-0.46.0-debug.apk
+            FioLab-0.46.0-debug.zip
+            FioLab-0.46.0-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -80,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.45.1 >/dev/null 2>&1; then
-            gh release upload v0.45.1               FioLab-0.45.1-debug.apk               FioLab-0.45.1-debug.zip               FioLab-0.45.1-SHA256.txt               --clobber
+          if gh release view v0.46.0 >/dev/null 2>&1; then
+            gh release upload v0.46.0               FioLab-0.46.0-debug.apk               FioLab-0.46.0-debug.zip               FioLab-0.46.0-SHA256.txt               --clobber
           else
-            gh release create v0.45.1               FioLab-0.45.1-debug.apk               FioLab-0.45.1-debug.zip               FioLab-0.45.1-SHA256.txt               --target main               --title "FioLab 0.45.1"               --notes "FioLab 0.45.1: remove apenas o texto explicativo do crédito de desenvolvimento na tela Minha Conta, preservando o crédito T.I. Machado e o botão de acesso."
+            gh release create v0.46.0               FioLab-0.46.0-debug.apk               FioLab-0.46.0-debug.zip               FioLab-0.46.0-SHA256.txt               --target main               --title "FioLab 0.46.0"               --notes "FioLab 0.46.0: smoke test instrumentado em Android emulado para validar inicialização e navegação crítica antes da RC."
           fi

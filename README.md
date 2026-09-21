@@ -1,4 +1,4 @@
-# FioLab 0.21.4
+# FioLab 0.46.0
 
 Aplicativo Android nativo para criar, visualizar, editar, simular e converter matrizes de bordado diretamente pelo celular.
 
@@ -287,6 +287,8 @@ As fontes atuais são de trajetória/ponto corrido. Uma etapa futura adicionará
 **DST ⇄ PES ⇄ JEF**
 
 ## Validação no CI
+
+Além dos testes unitários, o pipeline executa um smoke test instrumentado em Android API 35 para confirmar que o aplicativo inicia e que a navegação crítica até Minha Conta continua funcional.
 
 O pipeline exige:
 - parser DST;
