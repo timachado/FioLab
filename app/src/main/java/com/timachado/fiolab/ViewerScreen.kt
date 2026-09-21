@@ -162,7 +162,9 @@ fun ViewerScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        horizontal =
+                        start =
+                            16.dp,
+                        end =
                             16.dp,
                         bottom =
                             6.dp
