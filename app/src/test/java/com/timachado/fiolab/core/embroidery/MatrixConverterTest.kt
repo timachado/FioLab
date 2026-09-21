@@ -156,26 +156,52 @@ class MatrixConverterTest {
             )
 
             sourceStitches
-                .zip(targetStitches)
+                .zipWithNext()
+                .zip(
+                    targetStitches
+                        .zipWithNext()
+                )
                 .forEachIndexed {
                         index,
-                        (before, after) ->
+                        (sourcePair, targetPair) ->
+                    val (
+                        sourceStart,
+                        sourceEnd
+                    ) =
+                        sourcePair
+
+                    val (
+                        targetStart,
+                        targetEnd
+                    ) =
+                        targetPair
+
                     assertEquals(
-                        "X mudou no ponto $index em $format",
-                        before.xUnits,
-                        after.xUnits
+                        "Direção horizontal mudou no segmento $index em $format",
+                        sourceEnd.xUnits -
+                            sourceStart.xUnits,
+                        targetEnd.xUnits -
+                            targetStart.xUnits
                     )
 
                     assertEquals(
-                        "Orientação vertical mudou no ponto $index em $format",
+                        "Orientação vertical mudou no segmento $index em $format",
                         visualY(
                             source,
-                            before.yUnits
-                        ),
+                            sourceEnd.yUnits
+                        ) -
+                            visualY(
+                                source,
+                                sourceStart.yUnits
+                            ),
                         visualY(
                             target,
-                            after.yUnits
-                        )
+                            targetEnd.yUnits
+                        ) -
+                            visualY(
+                                target,
+                                targetStart.yUnits
+                            )
                     )
                 }
         }
