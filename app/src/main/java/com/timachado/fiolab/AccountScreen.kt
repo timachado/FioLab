@@ -36,8 +36,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.timachado.fiolab.core.account.AccountPlanOption
 import com.timachado.fiolab.core.account.AccountPresentation
 import com.timachado.fiolab.core.account.AccountSnapshot
+import com.timachado.fiolab.core.account.AccountSubscriptionEvent
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -46,6 +48,9 @@ import com.timachado.fiolab.ui.theme.FioTextMuted
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.text.NumberFormat
+import java.util.Currency
+import java.util.Locale
 
 private enum class AccountMode(
     val label: String
@@ -70,6 +75,7 @@ fun AccountScreen(
     onSaveName: (
         displayName: String
     ) -> Unit,
+    onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -148,6 +154,8 @@ fun AccountScreen(
                     account,
                 onSaveName =
                     onSaveName,
+                onRefresh =
+                    onRefresh,
                 onSignOut =
                     onSignOut
             )
@@ -456,6 +464,7 @@ private fun SignedInAccount(
     onSaveName: (
         displayName: String
     ) -> Unit,
+    onRefresh: () -> Unit,
     onSignOut: () -> Unit
 ) {
     var displayName by remember(
@@ -655,15 +664,44 @@ private fun SignedInAccount(
                     )
                 )
 
+                val currentPlan =
+                    account.currentPlan
+
                 AccountLine(
                     label =
                         "Plano",
                     value =
-                        AccountPresentation
-                            .planLabel(
-                                account
-                                    .planCode
-                            )
+                        currentPlan
+                            ?.name
+                            ?: AccountPresentation
+                                .planLabel(
+                                    account
+                                        .planCode
+                                )
+                )
+
+                AccountLine(
+                    label =
+                        "Tipo",
+                    value =
+                        currentPlan
+                            ?.let {
+                                AccountPresentation
+                                    .billingLabel(
+                                        it.billingType
+                                    )
+                            }
+                            ?: if (
+                                account.isLifetime
+                            ) {
+                                "Acesso permanente"
+                            } else if (
+                                account.isPaid
+                            ) {
+                                "Assinatura"
+                            } else {
+                                "Gratuito"
+                            }
                 )
 
                 AccountLine(
@@ -677,15 +715,106 @@ private fun SignedInAccount(
                             )
                 )
 
-                AccountLine(
-                    label =
-                        "Validade / renovação",
-                    value =
-                        formattedPeriodEnd(
-                            account
-                                .currentPeriodEnd
+                when {
+                    account.isLifetime -> {
+                        AccountLine(
+                            label =
+                                "Acesso",
+                            value =
+                                "Permanente"
                         )
-                )
+
+                        if (
+                            !account.purchasedAt
+                                .isNullOrBlank()
+                        ) {
+                            AccountLine(
+                                label =
+                                    "Comprado em",
+                                value =
+                                    formattedDate(
+                                        account
+                                            .purchasedAt
+                                    )
+                            )
+                        }
+                    }
+
+                    account.isPaid -> {
+                        AccountLine(
+                            label =
+                                "Próxima renovação",
+                            value =
+                                formattedDate(
+                                    account
+                                        .currentPeriodEnd
+                                )
+                        )
+                    }
+
+                    else -> {
+                        AccountLine(
+                            label =
+                                "Renovação",
+                            value =
+                                "Não se aplica"
+                        )
+                    }
+                }
+
+                if (
+                    account.purchasePriceCents !=
+                        null
+                ) {
+                    AccountLine(
+                        label =
+                            "Valor pago",
+                        value =
+                            formattedMoney(
+                                account
+                                    .purchasePriceCents,
+                                account.currency
+                            )
+                    )
+                }
+
+                account.provider
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
+                    ?.let {
+                        AccountLine(
+                            label =
+                                "Pagamento",
+                            value =
+                                it
+                                    .replaceFirstChar {
+                                            first ->
+                                        first
+                                            .uppercase()
+                                    }
+                        )
+                    }
+
+                if (
+                    account.isLaunchLifetime
+                ) {
+                    Spacer(
+                        Modifier.height(
+                            10.dp
+                        )
+                    )
+
+                    Text(
+                        "★ Membro de Lançamento • benefício vitalício preservado",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.SemiBold,
+                        fontSize =
+                            11.sp
+                    )
+                }
 
                 Spacer(
                     Modifier.height(
@@ -694,18 +823,226 @@ private fun SignedInAccount(
                 )
 
                 Text(
-                    if (
-                        account.isPaid
-                    ) {
-                        "Sua assinatura será sincronizada com o acesso aos recursos do FioLab."
-                    } else {
-                        "Quando uma assinatura for vinculada à sua conta, o plano e a validade aparecerão aqui automaticamente."
+                    when {
+                        account.isLifetime ->
+                            "Este plano não possui renovação nem próxima cobrança."
+
+                        account.isPaid ->
+                            "O FioLab acompanha aqui o plano, status e renovação vinculados à sua conta."
+
+                        else ->
+                            "Quando uma contratação for confirmada, o plano será vinculado à sua conta automaticamente."
                     },
                     color =
                         FioTextMuted,
                     fontSize =
                         10.sp
                 )
+
+                Spacer(
+                    Modifier.height(
+                        12.dp
+                    )
+                )
+
+                OutlinedButton(
+                    onClick =
+                        onRefresh,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                ) {
+                    Text(
+                        "↻ Atualizar assinatura",
+                        color =
+                            FioGold,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
+        if (
+            account.availablePlans
+                .isNotEmpty()
+        ) {
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(),
+                colors =
+                    CardDefaults
+                        .cardColors(
+                            containerColor =
+                                FioSurface
+                        ),
+                shape =
+                    RoundedCornerShape(
+                        24.dp
+                    )
+            ) {
+                Column(
+                    Modifier.padding(
+                        18.dp
+                    )
+                ) {
+                    Text(
+                        "Planos FioLab",
+                        color =
+                            FioText,
+                        fontWeight =
+                            FontWeight.Bold,
+                        fontSize =
+                            18.sp
+                    )
+
+                    Text(
+                        "O app consulta o plano vinculado à sua conta; alterações de assinatura não são liberadas pelo próprio APK.",
+                        modifier =
+                            Modifier.padding(
+                                top =
+                                    4.dp,
+                                bottom =
+                                    10.dp
+                            ),
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+
+                    account.availablePlans
+                        .filter {
+                            it.active ||
+                                it.code ==
+                                    account.planCode
+                        }
+                        .sortedBy {
+                            it.displayOrder
+                        }
+                        .forEachIndexed {
+                                index,
+                                plan ->
+                            PlanSummary(
+                                plan =
+                                    plan,
+                                current =
+                                    plan.code ==
+                                        account.planCode
+                            )
+
+                            if (
+                                index <
+                                    account
+                                        .availablePlans
+                                        .filter {
+                                            it.active ||
+                                                it.code ==
+                                                    account.planCode
+                                        }
+                                        .lastIndex
+                            ) {
+                                Spacer(
+                                    Modifier.height(
+                                        10.dp
+                                    )
+                                )
+                            }
+                        }
+                }
+            }
+
+            Spacer(
+                Modifier.height(
+                    14.dp
+                )
+            )
+        }
+
+        Card(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            colors =
+                CardDefaults
+                    .cardColors(
+                        containerColor =
+                            FioSurface
+                    ),
+            shape =
+                RoundedCornerShape(
+                    24.dp
+                )
+        ) {
+            Column(
+                Modifier.padding(
+                    18.dp
+                )
+            ) {
+                Text(
+                    "Histórico da assinatura",
+                    color =
+                        FioText,
+                    fontWeight =
+                        FontWeight.Bold,
+                    fontSize =
+                        18.sp
+                )
+
+                Spacer(
+                    Modifier.height(
+                        8.dp
+                    )
+                )
+
+                if (
+                    account.subscriptionHistory
+                        .isEmpty()
+                ) {
+                    Text(
+                        "Seu histórico aparecerá aqui após a primeira contratação, renovação ou compra vitalícia.",
+                        color =
+                            FioTextMuted,
+                        fontSize =
+                            10.sp
+                    )
+                } else {
+                    account.subscriptionHistory
+                        .take(
+                            6
+                        )
+                        .forEachIndexed {
+                                index,
+                                event ->
+                            SubscriptionHistoryLine(
+                                event =
+                                    event
+                            )
+
+                            if (
+                                index <
+                                    account
+                                        .subscriptionHistory
+                                        .take(
+                                            6
+                                        )
+                                        .lastIndex
+                            ) {
+                                Spacer(
+                                    Modifier.height(
+                                        8.dp
+                                    )
+                                )
+                            }
+                        }
+                }
             }
         }
 
@@ -726,6 +1063,203 @@ private fun SignedInAccount(
                 "Sair da conta"
             )
         }
+    }
+}
+
+@Composable
+private fun PlanSummary(
+    plan: AccountPlanOption,
+    current: Boolean
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(
+                if (
+                    current
+                ) {
+                    FioGold.copy(
+                        alpha =
+                            .10f
+                    )
+                } else {
+                    FioBackground.copy(
+                        alpha =
+                            .34f
+                    )
+                },
+                RoundedCornerShape(
+                    16.dp
+                )
+            )
+            .padding(
+                12.dp
+            )
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth(),
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+            Text(
+                plan.name,
+                modifier =
+                    Modifier.weight(
+                        1f
+                    ),
+                color =
+                    if (
+                        current
+                    ) {
+                        FioGold
+                    } else {
+                        FioText
+                    },
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize =
+                    13.sp
+            )
+
+            if (
+                current
+            ) {
+                Text(
+                    "● Seu plano",
+                    color =
+                        FioGold,
+                    fontWeight =
+                        FontWeight.SemiBold,
+                    fontSize =
+                        9.sp
+                )
+            } else if (
+                plan.isPromotional
+            ) {
+                Text(
+                    "Lançamento",
+                    color =
+                        FioGold,
+                    fontWeight =
+                        FontWeight.SemiBold,
+                    fontSize =
+                        9.sp
+                )
+            }
+        }
+
+        Text(
+            AccountPresentation
+                .billingLabel(
+                    plan.billingType
+                ) +
+                " • " +
+                when {
+                    !plan.isPaid ->
+                        "Grátis"
+
+                    plan.priceCents !=
+                        null ->
+                        formattedMoney(
+                            plan.priceCents,
+                            plan.currency
+                        )
+
+                    else ->
+                        "Valor no checkout"
+                },
+            modifier =
+                Modifier.padding(
+                    top =
+                        3.dp
+                ),
+            color =
+                FioTextMuted,
+            fontSize =
+                10.sp
+        )
+
+        if (
+            plan.description
+                .isNotBlank()
+        ) {
+            Text(
+                plan.description,
+                modifier =
+                    Modifier.padding(
+                        top =
+                            4.dp
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    10.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionHistoryLine(
+    event:
+        AccountSubscriptionEvent
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+        Column(
+            Modifier.weight(
+                1f
+            )
+        ) {
+            Text(
+                AccountPresentation
+                    .eventLabel(
+                        event.eventType
+                    ),
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.SemiBold,
+                fontSize =
+                    12.sp
+            )
+
+            Text(
+                AccountPresentation
+                    .planLabel(
+                        event.planCode
+                    ) +
+                    " • " +
+                    formattedDate(
+                        event.occurredAt
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    9.sp
+            )
+        }
+
+        event.amountCents
+            ?.let {
+                Text(
+                    formattedMoney(
+                        it,
+                        event.currency
+                    ),
+                    color =
+                        FioText,
+                    fontWeight =
+                        FontWeight.SemiBold,
+                    fontSize =
+                        10.sp
+                )
+            }
     }
 }
 
@@ -766,7 +1300,7 @@ private fun AccountLine(
     }
 }
 
-private fun formattedPeriodEnd(
+private fun formattedDate(
     value: String?
 ): String {
     if (
@@ -796,3 +1330,34 @@ private fun formattedPeriodEnd(
             )
     )
 }
+
+private fun formattedMoney(
+    cents: Int,
+    currencyCode: String
+): String =
+    runCatching {
+        NumberFormat
+            .getCurrencyInstance(
+                Locale.forLanguageTag(
+                    "pt-BR"
+                )
+            )
+            .apply {
+                currency =
+                    Currency.getInstance(
+                        currencyCode
+                    )
+            }
+            .format(
+                cents /
+                    100.0
+            )
+    }.getOrDefault(
+        (
+            cents /
+                100.0
+            ).toString() +
+            " " +
+            currencyCode
+    )
+

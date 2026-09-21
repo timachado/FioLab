@@ -73,6 +73,43 @@ fun AccountHostScreen(
         )
     }
 
+    fun refreshAccount() {
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    FioLabAccountService
+                        .currentAccount()
+                }
+
+            loading =
+                false
+
+            result.fold(
+                onSuccess = {
+                        current ->
+                    account =
+                        current
+
+                    snackbar
+                        .showSnackbar(
+                            "Assinatura atualizada."
+                        )
+                },
+                onFailure = {
+                    snackbar
+                        .showSnackbar(
+                            "Não foi possível atualizar sua assinatura."
+                        )
+                }
+            )
+        }
+    }
+
     fun signIn(
         email: String,
         password: String
@@ -295,6 +332,9 @@ fun AccountHostScreen(
                 saveName(
                     name
                 )
+            },
+            onRefresh = {
+                refreshAccount()
             },
             onSignOut = {
                 signOut()

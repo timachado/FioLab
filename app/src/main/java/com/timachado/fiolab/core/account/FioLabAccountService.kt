@@ -307,6 +307,94 @@ object FioLabAccountService {
                 >()
                 .firstOrNull()
 
+        val plans =
+            runCatching {
+                client.from(
+                    "fiolab_plans"
+                ).select()
+                    .decodeList<
+                        FioLabPlanRow
+                    >()
+                    .sortedBy {
+                        it.displayOrder
+                    }
+                    .map {
+                        AccountPlanOption(
+                            code =
+                                it.code,
+                            name =
+                                it.name,
+                            billingType =
+                                it.billingType,
+                            isPaid =
+                                it.isPaid,
+                            isLifetime =
+                                it.isLifetime,
+                            isPromotional =
+                                it.isPromotional,
+                            description =
+                                it.description,
+                            priceCents =
+                                it.priceCents,
+                            currency =
+                                it.currency,
+                            active =
+                                it.active,
+                            availableFrom =
+                                it.availableFrom,
+                            availableUntil =
+                                it.availableUntil,
+                            displayOrder =
+                                it.displayOrder
+                        )
+                    }
+            }.getOrElse {
+                emptyList()
+            }
+
+        val history =
+            runCatching {
+                client.from(
+                    "fiolab_subscription_history"
+                ).select {
+                    filter {
+                        eq(
+                            "user_id",
+                            userId
+                        )
+                    }
+                }
+                    .decodeList<
+                        FioLabSubscriptionHistoryRow
+                    >()
+                    .sortedByDescending {
+                        it.occurredAt
+                    }
+                    .take(
+                        20
+                    )
+                    .map {
+                        AccountSubscriptionEvent(
+                            planCode =
+                                it.planCode,
+                            eventType =
+                                it.eventType,
+                            status =
+                                it.status,
+                            amountCents =
+                                it.amountCents,
+                            currency =
+                                it.currency,
+                            provider =
+                                it.provider,
+                            occurredAt =
+                                it.occurredAt
+                        )
+                    }
+            }.getOrElse {
+                emptyList()
+            }
+
         return AccountSnapshot(
             userId =
                 userId,
@@ -326,7 +414,24 @@ object FioLabAccountService {
                     ?: "active",
             currentPeriodEnd =
                 subscription
-                    ?.currentPeriodEnd
+                    ?.currentPeriodEnd,
+            purchasedAt =
+                subscription
+                    ?.purchasedAt,
+            purchasePriceCents =
+                subscription
+                    ?.purchasePriceCents,
+            currency =
+                subscription
+                    ?.currency
+                    ?: "BRL",
+            provider =
+                subscription
+                    ?.provider,
+            availablePlans =
+                plans,
+            subscriptionHistory =
+                history
         )
     }
 }

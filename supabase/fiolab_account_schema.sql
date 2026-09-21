@@ -109,3 +109,246 @@ create trigger fiolab_auth_user_created
 after insert on auth.users
 for each row
 execute function private.fiolab_handle_auth_user_created();
+
+
+-- FioLab 0.37.0 subscription catalog and purchase tracking.
+-- Prices remain nullable until the checkout is configured. Never trust the
+-- Android client to grant or change a paid plan.
+
+create table if not exists public.fiolab_plans (
+  code text primary key
+    check (char_length(code) between 1 and 40),
+  name text not null
+    check (char_length(name) between 1 and 80),
+  billing_type text not null
+    check (billing_type in ('free','monthly','annual','lifetime')),
+  is_paid boolean not null default false,
+  is_lifetime boolean not null default false,
+  is_promotional boolean not null default false,
+  description text not null default '',
+  price_cents integer null
+    check (price_cents is null or price_cents >= 0),
+  currency text not null default 'BRL'
+    check (char_length(currency) = 3),
+  active boolean not null default true,
+  available_from timestamptz null,
+  available_until timestamptz null,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.fiolab_plans (
+  code,
+  name,
+  billing_type,
+  is_paid,
+  is_lifetime,
+  is_promotional,
+  description,
+  currency,
+  active,
+  display_order
+)
+values
+  (
+    'free',
+    'Gratuito',
+    'free',
+    false,
+    false,
+    false,
+    'Recursos essenciais para começar no FioLab.',
+    'BRL',
+    true,
+    0
+  ),
+  (
+    'pro_monthly',
+    'FioLab Pro Mensal',
+    'monthly',
+    true,
+    false,
+    false,
+    'Acesso Pro com renovação mensal.',
+    'BRL',
+    true,
+    10
+  ),
+  (
+    'pro_annual',
+    'FioLab Pro Anual',
+    'annual',
+    true,
+    false,
+    false,
+    'Acesso Pro com renovação anual.',
+    'BRL',
+    true,
+    20
+  ),
+  (
+    'lifetime',
+    'FioLab Vitalício',
+    'lifetime',
+    true,
+    true,
+    false,
+    'Acesso permanente, sem renovação.',
+    'BRL',
+    true,
+    30
+  ),
+  (
+    'lifetime_launch',
+    'FioLab Vitalício • Lançamento',
+    'lifetime',
+    true,
+    true,
+    true,
+    'Oferta promocional de lançamento com acesso permanente.',
+    'BRL',
+    true,
+    40
+  )
+on conflict (code) do update
+set
+  name = excluded.name,
+  billing_type = excluded.billing_type,
+  is_paid = excluded.is_paid,
+  is_lifetime = excluded.is_lifetime,
+  is_promotional = excluded.is_promotional,
+  description = excluded.description,
+  currency = excluded.currency,
+  display_order = excluded.display_order,
+  updated_at = now();
+
+alter table public.fiolab_subscriptions
+  add column if not exists purchased_at timestamptz null,
+  add column if not exists purchase_price_cents integer null,
+  add column if not exists currency text not null default 'BRL',
+  add column if not exists provider text null,
+  add column if not exists external_reference text null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'fiolab_subscriptions_purchase_price_nonnegative'
+  ) then
+    alter table public.fiolab_subscriptions
+      add constraint fiolab_subscriptions_purchase_price_nonnegative
+      check (
+        purchase_price_cents is null or
+        purchase_price_cents >= 0
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'fiolab_subscriptions_currency_len'
+  ) then
+    alter table public.fiolab_subscriptions
+      add constraint fiolab_subscriptions_currency_len
+      check (char_length(currency) = 3);
+  end if;
+end $$;
+
+update public.fiolab_subscriptions
+set plan_code = 'pro_monthly'
+where plan_code in ('pro', 'premium');
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'fiolab_subscriptions_plan_code_fkey'
+  ) then
+    alter table public.fiolab_subscriptions
+      add constraint fiolab_subscriptions_plan_code_fkey
+      foreign key (plan_code)
+      references public.fiolab_plans(code);
+  end if;
+end $$;
+
+create index if not exists fiolab_subscriptions_plan_status_idx
+on public.fiolab_subscriptions(plan_code, status);
+
+create table if not exists public.fiolab_subscription_history (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null
+    references auth.users(id) on delete cascade,
+  plan_code text not null
+    references public.fiolab_plans(code),
+  event_type text not null
+    check (
+      event_type in (
+        'created',
+        'activated',
+        'renewed',
+        'upgraded',
+        'downgraded',
+        'canceled',
+        'expired',
+        'payment_failed',
+        'refunded',
+        'lifetime_purchase'
+      )
+    ),
+  status text not null
+    check (
+      status in (
+        'active',
+        'trialing',
+        'past_due',
+        'canceled',
+        'expired'
+      )
+    ),
+  amount_cents integer null
+    check (amount_cents is null or amount_cents >= 0),
+  currency text not null default 'BRL'
+    check (char_length(currency) = 3),
+  provider text null,
+  external_reference text null,
+  occurred_at timestamptz not null default now()
+);
+
+create index if not exists fiolab_subscription_history_user_time_idx
+on public.fiolab_subscription_history(user_id, occurred_at desc);
+
+create index if not exists fiolab_subscription_history_plan_code_idx
+on public.fiolab_subscription_history(plan_code);
+
+alter table public.fiolab_plans enable row level security;
+alter table public.fiolab_subscription_history enable row level security;
+
+create policy "fiolab_plans_select_authenticated"
+on public.fiolab_plans for select to authenticated
+using (true);
+
+create policy "fiolab_subscription_history_select_own"
+on public.fiolab_subscription_history for select to authenticated
+using ((select auth.uid()) = user_id);
+
+revoke all on public.fiolab_plans from anon;
+revoke all on public.fiolab_subscription_history from anon;
+revoke all on public.fiolab_plans from authenticated;
+revoke all on public.fiolab_subscription_history from authenticated;
+
+grant select on public.fiolab_plans to authenticated;
+grant select on public.fiolab_subscription_history to authenticated;
+
+revoke insert, update, delete, truncate, references, trigger
+on public.fiolab_subscriptions from authenticated;
+
+grant select on public.fiolab_subscriptions to authenticated;
+
+revoke delete, truncate, references, trigger
+on public.fiolab_profiles from authenticated;
+
+grant select, insert, update
+on public.fiolab_profiles to authenticated;

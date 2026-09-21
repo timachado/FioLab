@@ -52,16 +52,16 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.36.0-debug.apk
-          zip -9 FioLab-0.36.0-debug.zip FioLab-0.36.0-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.37.0-debug.apk
+          zip -9 FioLab-0.37.0-debug.zip FioLab-0.37.0-debug.apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.36.0-downloads
+          name: FioLab-0.37.0-downloads
           path: |
-            FioLab-0.36.0-debug.apk
-            FioLab-0.36.0-debug.zip
+            FioLab-0.37.0-debug.apk
+            FioLab-0.37.0-debug.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -69,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.36.0 >/dev/null 2>&1; then
-            gh release upload v0.36.0               FioLab-0.36.0-debug.apk               FioLab-0.36.0-debug.zip               --clobber
+          if gh release view v0.37.0 >/dev/null 2>&1; then
+            gh release upload v0.37.0               FioLab-0.37.0-debug.apk               FioLab-0.37.0-debug.zip               --clobber
           else
-            gh release create v0.36.0               FioLab-0.36.0-debug.apk               FioLab-0.36.0-debug.zip               --target main               --title "FioLab 0.36.0"               --notes "FioLab 0.36.0: corrige orientação de PES/JEF ao abrir e unifica fundo, grade, bastidor, escala e enquadramento nos modos Sólida, Pontos e Realista."
+            gh release create v0.37.0               FioLab-0.37.0-debug.apk               FioLab-0.37.0-debug.zip               --target main               --title "FioLab 0.37.0"               --notes "FioLab 0.37.0: Minha Conta com Pro mensal/anual, Vitalício e Vitalício de Lançamento, histórico e sincronização segura da assinatura."
           fi
