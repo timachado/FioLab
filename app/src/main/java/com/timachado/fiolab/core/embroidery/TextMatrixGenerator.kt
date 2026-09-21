@@ -518,7 +518,7 @@ object TextMatrixGenerator {
                 )
 
             val coordinates =
-                points.filter {
+                transformedPoints.filter {
                     it.command !=
                         StitchCommand.END
                 }
