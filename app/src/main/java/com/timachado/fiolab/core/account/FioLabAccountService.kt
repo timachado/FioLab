@@ -13,7 +13,10 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.time.Instant
 
 object FioLabAccountService {
 
@@ -56,12 +59,53 @@ object FioLabAccountService {
                 session.user
                     ?: return@runCatching null
 
+            val metadata =
+                user.userMetadata
+
+            val avatarUrl =
+                metadata
+                    ?.get(
+                        "avatar_url"
+                    )
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?: metadata
+                        ?.get(
+                            "picture"
+                        )
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+
+            val authDisplayName =
+                metadata
+                    ?.get(
+                        "full_name"
+                    )
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?: metadata
+                        ?.get(
+                            "name"
+                        )
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                    ?: metadata
+                        ?.get(
+                            "display_name"
+                        )
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+
             accountFor(
                 userId =
                     user.id,
                 email =
                     user.email
-                        ?: ""
+                        ?: "",
+                authDisplayName =
+                    authDisplayName,
+                authAvatarUrl =
+                    avatarUrl
             )
         }
 
@@ -269,9 +313,93 @@ object FioLabAccountService {
                 .signOut()
         }
 
+    suspend fun syncDevices(
+        localDevice:
+            LocalDeviceIdentity
+    ): Result<List<AccountDevice>> =
+        runCatching {
+            val session =
+                client.auth
+                    .currentSessionOrNull()
+                    ?: error(
+                        "Entre na sua conta primeiro."
+                    )
+
+            val user =
+                session.user
+                    ?: error(
+                        "Usuário não encontrado."
+                    )
+
+            client.from(
+                "fiolab_devices"
+            ).insert(
+                FioLabDeviceUpsert(
+                    userId =
+                        user.id,
+                    deviceId =
+                        localDevice
+                            .deviceId,
+                    deviceName =
+                        localDevice
+                            .deviceName,
+                    platform =
+                        "android",
+                    appVersion =
+                        BuildConfig
+                            .VERSION_NAME,
+                    lastSeenAt =
+                        Instant
+                            .now()
+                            .toString()
+                ),
+                upsert =
+                    true,
+                onConflict =
+                    "user_id,device_id"
+            )
+
+            client.from(
+                "fiolab_devices"
+            ).select {
+                filter {
+                    eq(
+                        "user_id",
+                        user.id
+                    )
+                }
+            }
+                .decodeList<
+                    FioLabDeviceRow
+                >()
+                .sortedByDescending {
+                    it.lastSeenAt
+                }
+                .map {
+                    AccountDevice(
+                        deviceId =
+                            it.deviceId,
+                        deviceName =
+                            it.deviceName,
+                        platform =
+                            it.platform,
+                        appVersion =
+                            it.appVersion,
+                        lastSeenAt =
+                            it.lastSeenAt,
+                        isCurrent =
+                            it.deviceId ==
+                                localDevice
+                                    .deviceId
+                    )
+                }
+        }
+
     private suspend fun accountFor(
         userId: String,
-        email: String
+        email: String,
+        authDisplayName: String? = null,
+        authAvatarUrl: String? = null
     ): AccountSnapshot {
         val profile =
             client.from(
@@ -290,16 +418,22 @@ object FioLabAccountService {
                 .firstOrNull()
                 ?: run {
                     val fallbackName =
-                        email
-                            .substringBefore(
-                                '@'
-                            )
-                            .take(
-                                80
-                            )
-                            .ifBlank {
-                                "Usuário FioLab"
+                        authDisplayName
+                            ?.trim()
+                            ?.takeIf {
+                                it.length in
+                                    2..80
                             }
+                            ?: email
+                                .substringBefore(
+                                    '@'
+                                )
+                                .take(
+                                    80
+                                )
+                                .ifBlank {
+                                    "Usuário FioLab"
+                                }
 
                     client.from(
                         "fiolab_profiles"
@@ -308,7 +442,9 @@ object FioLabAccountService {
                             userId =
                                 userId,
                             displayName =
-                                fallbackName
+                                fallbackName,
+                            avatarUrl =
+                                authAvatarUrl
                         )
                     )
 
@@ -330,6 +466,43 @@ object FioLabAccountService {
                             "Não foi possível criar o perfil."
                         )
                 }
+
+        val effectiveProfile =
+            if (
+                profile.avatarUrl
+                    .isNullOrBlank() &&
+                !authAvatarUrl
+                    .isNullOrBlank()
+            ) {
+                runCatching {
+                    client.from(
+                        "fiolab_profiles"
+                    ).update(
+                        {
+                            set(
+                                "avatar_url",
+                                authAvatarUrl
+                            )
+                        }
+                    ) {
+                        filter {
+                            eq(
+                                "user_id",
+                                userId
+                            )
+                        }
+                    }
+
+                    profile.copy(
+                        avatarUrl =
+                            authAvatarUrl
+                    )
+                }.getOrDefault(
+                    profile
+                )
+            } else {
+                profile
+            }
 
         val subscription =
             client.from(
@@ -441,9 +614,11 @@ object FioLabAccountService {
             email =
                 email,
             displayName =
-                profile.displayName,
+                effectiveProfile
+                    .displayName,
             avatarUrl =
-                profile.avatarUrl,
+                effectiveProfile
+                    .avatarUrl,
             planCode =
                 subscription
                     ?.planCode
@@ -468,6 +643,9 @@ object FioLabAccountService {
             provider =
                 subscription
                     ?.provider,
+            manageUrl =
+                subscription
+                    ?.manageUrl,
             availablePlans =
                 plans,
             subscriptionHistory =
