@@ -112,7 +112,7 @@ fun CreateNameScreen(
     }
 
     var spacingMm by remember {
-        mutableFloatStateOf(1.2f)
+        mutableFloatStateOf(0f)
     }
 
     var stitchLengthMm by remember {
@@ -130,7 +130,7 @@ fun CreateNameScreen(
     }
 
     var satinDensityMm by remember {
-        mutableFloatStateOf(0.45f)
+        mutableFloatStateOf(0.4f)
     }
 
     var satinPullCompensationMm by remember {
@@ -728,7 +728,7 @@ fun CreateNameScreen(
                             }
 
                             Text(
-                                "Conversão adaptativa: o FioLab analisa cada letra e escolhe automaticamente Satin por eixo ou preenchimento seguro conforme a geometria da fonte.",
+                                "Motor de colunas Satin: preserva o contorno da TTF/OTF, escolhe automaticamente o melhor eixo de varredura e divide apenas colunas fisicamente largas.",
                                 color =
                                     FioTextMuted,
                                 fontSize =
@@ -757,11 +757,11 @@ fun CreateNameScreen(
                                         it
                                 },
                                 valueRange =
-                                    4f..40f
+                                    4f..60f
                             )
 
                             Text(
-                                "Espaçamento " +
+                                "Ajuste de espaçamento " +
                                     mm(
                                         spacingMm
                                     ) +
