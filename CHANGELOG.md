@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.40.0
+
+### Consolidação de conta, assinatura, biblioteca e envio
+- **Minha Conta:** avatar do Google quando disponível, nome/e-mail, plano, status, início, renovação, dispositivos conectados e saída da conta.
+- O aparelho autenticado é registrado com identificador derivado localmente, modelo, versão do FioLab e último acesso; nenhum IMEI ou número de telefone é armazenado.
+- **Assinaturas:** botão Restaurar / atualizar assinatura, histórico existente preservado e suporte a link seguro de gerenciamento WooCommerce para renovar/cancelar quando a compra estiver vinculada.
+- Vitalício e Vitalício de Lançamento continuam sem renovação/cancelamento recorrente.
+- Adicionada política central de acesso `CORE` / `PRO_ONLY`; nenhum recurso atual foi bloqueado arbitrariamente antes de definirmos o mapa comercial dos produtos WooCommerce.
+- **Biblioteca:** unifica Minhas Matrizes, Recentes, Favoritos, Enviados e acesso às Fontes salvas.
+- Aberturas de projetos salvos alimentam Recentes; favoritos ficam persistentes no aparelho; arquivos entregues por USB/OTG ou Wi-Fi/app entram no histórico Enviados.
+- **Envio à máquina:** mantém PES/DST/JEF, USB OTG/pendrive e Wi-Fi/app, acrescentando validação obrigatória de formato, pontos, dimensões e encaixe no bastidor antes de liberar o envio.
+- O FioLab não redimensiona silenciosamente uma matriz apenas para fazê-la caber no bastidor.
+- Backend ganha tabela de dispositivos com RLS por usuário e campo opcional de URL de gerenciamento da assinatura.
+- Motor de bordado, TTF/OTF, Satin, orientação e simulação permanecem inalterados.
+
 ## 0.39.0
 
 ### Sobre o FioLab e crédito de desenvolvimento
