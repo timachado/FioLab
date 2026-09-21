@@ -117,12 +117,8 @@ fun AccountHostScreen(
                 true
 
             val result =
-                withContext(
-                    Dispatchers.IO
-                ) {
-                    FioLabAccountService
-                        .signInWithGoogle()
-                }
+                FioLabAccountService
+                    .signInWithGoogle()
 
             loading =
                 false
