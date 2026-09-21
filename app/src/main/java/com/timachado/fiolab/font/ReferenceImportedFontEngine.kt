@@ -47,14 +47,17 @@ internal object ReferenceImportedFontEngine {
     private const val MAX_STITCH_UNITS =
         70f
 
-    private const val TRIM_TRAVEL_UNITS =
-        50f
-
     private const val CONTINUOUS_CONNECTOR_STITCH_UNITS =
         15f
 
-    private const val LOCK_UNITS =
-        6f
+    private const val GLYPH_JOIN_UNITS =
+        12f
+
+    private const val CONNECTOR_SAMPLE_UNITS =
+        8f
+
+    private const val CONNECTOR_EDGE_MARGIN_UNITS =
+        4f
 
     private const val MAX_CONTOUR_SAMPLES =
         50_000
@@ -356,6 +359,13 @@ internal object ReferenceImportedFontEngine {
                     emitter.emitGlyph(
                         columns =
                             columns,
+                        polygons =
+                            polygons,
+                        startHint =
+                            polygons
+                                .firstOrNull()
+                                ?.points
+                                ?.firstOrNull(),
                         includeUnderlay =
                             options
                                 .satinUnderlayMode !=
@@ -1448,98 +1458,218 @@ internal object ReferenceImportedFontEngine {
             FPoint? =
             null
 
+        private data class OrientedChoice(
+            val original: SatinColumn,
+            val oriented: SatinColumn,
+            val entryDistance: Float
+        )
+
         fun emitGlyph(
             columns: List<SatinColumn>,
+            polygons: List<Polygon>,
+            startHint: FPoint?,
             includeUnderlay: Boolean,
             densityMm: Float
         ) {
-            val usableColumns =
-                columns.filter {
-                    it.rows
-                        .isNotEmpty()
-                }
+            val remaining =
+                columns
+                    .filter {
+                        it.rows
+                            .isNotEmpty()
+                    }
+                    .toMutableList()
 
             if (
-                usableColumns
-                    .isEmpty()
+                remaining.isEmpty()
             ) {
                 return
             }
 
-            val firstColumn =
-                usableColumns.first()
+            var firstColumn =
+                true
 
-            val firstRow =
-                firstColumn.rows
-                    .first()
-
-            travelTo(
-                target =
-                    firstRow.a,
-                continuous =
-                    false
-            )
-
-            if (
-                includeUnderlay
+            while (
+                remaining
+                    .isNotEmpty()
             ) {
-                emitGlyphCenterRunUnderlay(
-                    columns =
-                        usableColumns,
-                    densityMm =
-                        densityMm
-                )
-            }
-
-            emitLock(
-                firstRow
-            )
-
-            usableColumns
-                .forEachIndexed {
-                        columnIndex,
-                        column ->
-                    val first =
-                        column.rows
-                            .first()
-
+                val anchor =
                     if (
-                        columnIndex >
-                            0
+                        firstColumn
                     ) {
-                        travelTo(
-                            target =
-                                first.a,
-                            continuous =
-                                true
-                        )
+                        startHint
+                            ?: current
+                            ?: remaining
+                                .first()
+                                .rows
+                                .first()
+                                .a
+                    } else {
+                        current
+                            ?: startHint
+                            ?: remaining
+                                .first()
+                                .rows
+                                .first()
+                                .a
                     }
 
-                    column.rows
-                        .forEach {
-                                row ->
-                            stitchTo(
-                                row.a
-                            )
-
-                            stitchTo(
-                                row.b
+                val choice =
+                    remaining
+                        .map {
+                                column ->
+                            closestOrientation(
+                                column =
+                                    column,
+                                anchor =
+                                    anchor
                             )
                         }
+                        .minBy {
+                            it.entryDistance
+                        }
+
+                val column =
+                    choice.oriented
+
+                val entry =
+                    column.rows
+                        .first()
+                        .a
+
+                travelTo(
+                    target =
+                        entry,
+                    polygons =
+                        polygons,
+                    firstColumn =
+                        firstColumn
+                )
+
+                if (
+                    includeUnderlay
+                ) {
+                    emitEdgeRunUnderlay(
+                        column =
+                            column,
+                        densityMm =
+                            densityMm
+                    )
                 }
 
-            emitLock(
-                usableColumns
-                    .last()
-                    .rows
-                    .last()
+                emitSatinColumn(
+                    column
+                )
+
+                remaining.remove(
+                    choice.original
+                )
+
+                firstColumn =
+                    false
+            }
+        }
+
+        private fun closestOrientation(
+            column: SatinColumn,
+            anchor: FPoint
+        ): OrientedChoice {
+            val normal =
+                column.rows
+                    .toList()
+
+            val reversed =
+                column.rows
+                    .asReversed()
+
+            val candidates =
+                listOf(
+                    orientRows(
+                        normal,
+                        swap =
+                            false
+                    ),
+                    orientRows(
+                        normal,
+                        swap =
+                            true
+                    ),
+                    orientRows(
+                        reversed,
+                        swap =
+                            false
+                    ),
+                    orientRows(
+                        reversed,
+                        swap =
+                            true
+                    )
+                )
+
+            val best =
+                candidates.minBy {
+                        candidate ->
+                    distance(
+                        anchor,
+                        candidate.rows
+                            .first()
+                            .a
+                    )
+                }
+
+            return OrientedChoice(
+                original =
+                    column,
+                oriented =
+                    best,
+                entryDistance =
+                    distance(
+                        anchor,
+                        best.rows
+                            .first()
+                            .a
+                    )
             )
         }
 
-        private fun emitGlyphCenterRunUnderlay(
-            columns: List<SatinColumn>,
+        private fun orientRows(
+            rows: List<SatinRow>,
+            swap: Boolean
+        ): SatinColumn =
+            SatinColumn(
+                rows =
+                    rows
+                        .map {
+                                row ->
+                            if (
+                                swap
+                            ) {
+                                SatinRow(
+                                    a =
+                                        row.b,
+                                    b =
+                                        row.a
+                                )
+                            } else {
+                                row
+                            }
+                        }
+                        .toMutableList()
+            )
+
+        private fun emitEdgeRunUnderlay(
+            column: SatinColumn,
             densityMm: Float
         ) {
+            val rows =
+                column.rows
+
+            if (
+                rows.size <
+                    2
+            ) {
+                return
+            }
+
             val pitchUnits =
                 densityMm *
                     10f
@@ -1553,131 +1683,118 @@ internal object ReferenceImportedFontEngine {
                         ).roundToInt()
                 )
 
-            val centers =
-                mutableListOf<
-                    FPoint
-                >()
+            val indices =
+                mutableListOf<Int>()
 
-            columns.forEach {
-                    column ->
-                var index =
-                    0
+            var index =
+                0
 
-                while (
-                    index <
-                        column.rows
-                            .size
-                ) {
-                    val point =
-                        center(
-                            column.rows[
-                                index
-                            ]
-                        )
+            while (
+                index <
+                    rows.size
+            ) {
+                indices +=
+                    index
 
-                    if (
-                        centers.isEmpty() ||
-                        distance(
-                            centers.last(),
-                            point
-                        ) >
-                            0.01f
-                    ) {
-                        centers +=
-                            point
-                    }
-
-                    index +=
-                        step
-                }
-
-                val lastCenter =
-                    center(
-                        column.rows
-                            .last()
-                    )
-
-                if (
-                    centers.isEmpty() ||
-                    distance(
-                        centers.last(),
-                        lastCenter
-                    ) >
-                        0.01f
-                ) {
-                    centers +=
-                        lastCenter
-                }
+                index +=
+                    step
             }
 
             if (
-                centers.isEmpty()
+                indices.lastOrNull() !=
+                    rows.lastIndex
             ) {
-                return
+                indices +=
+                    rows.lastIndex
             }
 
-            centers.forEach {
+            // Ida: uma borda da coluna.
+            indices.forEach {
+                    rowIndex ->
                 stitchTo(
-                    it
+                    rows[
+                        rowIndex
+                    ].a
                 )
             }
 
+            // Cruza somente no final.
+            stitchTo(
+                rows
+                    .last()
+                    .b
+            )
+
+            // Volta: a outra borda, uma única vez.
             for (
                 reverseIndex in
-                    centers.size -
+                    indices.size -
                         2 downTo
                         0
             ) {
                 stitchTo(
-                    centers[
-                        reverseIndex
-                    ]
+                    rows[
+                        indices[
+                            reverseIndex
+                        ]
+                    ].b
                 )
             }
         }
 
-        private fun emitLock(
-            row: SatinRow
+        private fun emitSatinColumn(
+            column: SatinColumn
         ) {
-            val direction =
-                normalize(
-                    FPoint(
-                        row.b.x -
-                            row.a.x,
-                        row.b.y -
-                            row.a.y
-                    )
+            val rows =
+                column.rows
+
+            if (
+                rows.isEmpty()
+            ) {
+                return
+            }
+
+            val before =
+                current
+
+            var nextIsA =
+                if (
+                    before ==
+                        null
+                ) {
+                    false
+                } else {
+                    distance(
+                        before,
+                        rows.first().a
+                    ) >=
+                        distance(
+                            before,
+                            rows.first().b
+                        )
+                }
+
+            rows.forEach {
+                    row ->
+                stitchTo(
+                    if (
+                        nextIsA
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
                 )
 
-            val offset =
-                FPoint(
-                    direction.x *
-                        LOCK_UNITS,
-                    direction.y *
-                        LOCK_UNITS
-                )
-
-            stitchTo(
-                row.a
-            )
-
-            stitchTo(
-                FPoint(
-                    row.a.x +
-                        offset.x,
-                    row.a.y +
-                        offset.y
-                )
-            )
-
-            stitchTo(
-                row.a
-            )
+                nextIsA =
+                    !nextIsA
+            }
         }
 
         private fun travelTo(
             target: FPoint,
-            continuous: Boolean
+            polygons: List<Polygon>,
+            firstColumn: Boolean
         ) {
             val before =
                 current
@@ -1710,32 +1827,22 @@ internal object ReferenceImportedFontEngine {
                 return
             }
 
-            if (
-                continuous
-            ) {
-                emitSegmented(
-                    from =
-                        before,
-                    to =
-                        target,
-                    command =
-                        StitchCommand.STITCH,
-                    maxSegmentUnits =
-                        CONTINUOUS_CONNECTOR_STITCH_UNITS
-                )
-
-                return
-            }
-
-            if (
-                travelDistance >
-                    TRIM_TRAVEL_UNITS
-            ) {
-                emit(
-                    before,
-                    StitchCommand.TRIM
-                )
-            }
+            val canHideConnector =
+                if (
+                    firstColumn
+                ) {
+                    travelDistance <=
+                        GLYPH_JOIN_UNITS
+                } else {
+                    segmentInsideGlyph(
+                        from =
+                            before,
+                        to =
+                            target,
+                        polygons =
+                            polygons
+                    )
+                }
 
             emitSegmented(
                 from =
@@ -1743,7 +1850,313 @@ internal object ReferenceImportedFontEngine {
                 to =
                     target,
                 command =
-                    StitchCommand.JUMP
+                    if (
+                        canHideConnector
+                    ) {
+                        StitchCommand.STITCH
+                    } else {
+                        StitchCommand.JUMP
+                    },
+                maxSegmentUnits =
+                    if (
+                        canHideConnector
+                    ) {
+                        CONTINUOUS_CONNECTOR_STITCH_UNITS
+                    } else {
+                        MAX_STITCH_UNITS
+                    }
+            )
+        }
+
+        private fun segmentInsideGlyph(
+            from: FPoint,
+            to: FPoint,
+            polygons: List<Polygon>
+        ): Boolean {
+            if (
+                polygons.isEmpty()
+            ) {
+                return false
+            }
+
+            val total =
+                distance(
+                    from,
+                    to
+                )
+
+            val samples =
+                max(
+                    2,
+                    ceil(
+                        total /
+                            CONNECTOR_SAMPLE_UNITS
+                    ).toInt()
+                )
+
+            for (
+                part in
+                    1 until
+                        samples
+            ) {
+                val ratio =
+                    part.toFloat() /
+                        samples
+
+                val point =
+                    lerp(
+                        from,
+                        to,
+                        ratio
+                    )
+
+                if (
+                    !pointInsideOrNearGlyph(
+                        point =
+                            point,
+                        polygons =
+                            polygons
+                    )
+                ) {
+                    return false
+                }
+            }
+
+            return true
+        }
+
+        private fun pointInsideOrNearGlyph(
+            point: FPoint,
+            polygons: List<Polygon>
+        ): Boolean {
+            var inside =
+                false
+
+            polygons.forEach {
+                    polygon ->
+                if (
+                    pointInsidePolygon(
+                        point =
+                            point,
+                        polygon =
+                            polygon
+                    )
+                ) {
+                    inside =
+                        !inside
+                }
+            }
+
+            if (
+                inside
+            ) {
+                return true
+            }
+
+            return polygons.any {
+                    polygon ->
+                pointNearPolygonEdge(
+                    point =
+                        point,
+                    polygon =
+                        polygon,
+                    margin =
+                        CONNECTOR_EDGE_MARGIN_UNITS
+                )
+            }
+        }
+
+        private fun pointInsidePolygon(
+            point: FPoint,
+            polygon: Polygon
+        ): Boolean {
+            val points =
+                polygon.points
+
+            if (
+                points.size <
+                    3
+            ) {
+                return false
+            }
+
+            var inside =
+                false
+
+            var previous =
+                points.last()
+
+            points.forEach {
+                    currentPoint ->
+                val crosses =
+                    (
+                        currentPoint.y >
+                            point.y
+                        ) !=
+                        (
+                            previous.y >
+                                point.y
+                            )
+
+                if (
+                    crosses
+                ) {
+                    val denominator =
+                        previous.y -
+                            currentPoint.y
+
+                    if (
+                        abs(
+                            denominator
+                        ) >
+                            0.00001f
+                    ) {
+                        val crossingX =
+                            (
+                                previous.x -
+                                    currentPoint.x
+                                ) *
+                                (
+                                    point.y -
+                                        currentPoint.y
+                                    ) /
+                                denominator +
+                                currentPoint.x
+
+                        if (
+                            point.x <
+                                crossingX
+                        ) {
+                            inside =
+                                !inside
+                        }
+                    }
+                }
+
+                previous =
+                    currentPoint
+            }
+
+            return inside
+        }
+
+        private fun pointNearPolygonEdge(
+            point: FPoint,
+            polygon: Polygon,
+            margin: Float
+        ): Boolean {
+            val points =
+                polygon.points
+
+            if (
+                points.size <
+                    2
+            ) {
+                return false
+            }
+
+            for (
+                index in
+                    points.indices
+            ) {
+                val a =
+                    points[
+                        index
+                    ]
+
+                val b =
+                    points[
+                        (
+                            index +
+                                1
+                            ) %
+                            points.size
+                    ]
+
+                if (
+                    pointToSegmentDistance(
+                        point =
+                            point,
+                        a =
+                            a,
+                        b =
+                            b
+                    ) <=
+                    margin
+                ) {
+                    return true
+                }
+            }
+
+            return false
+        }
+
+        private fun pointToSegmentDistance(
+            point: FPoint,
+            a: FPoint,
+            b: FPoint
+        ): Float {
+            val dx =
+                b.x -
+                    a.x
+
+            val dy =
+                b.y -
+                    a.y
+
+            val lengthSquared =
+                dx *
+                    dx +
+                    dy *
+                        dy
+
+            if (
+                lengthSquared <=
+                    0.00001f
+            ) {
+                return distance(
+                    point,
+                    a
+                )
+            }
+
+            val projection =
+                (
+                    (
+                        point.x -
+                            a.x
+                        ) *
+                        dx +
+                        (
+                            point.y -
+                                a.y
+                            ) *
+                            dy
+                    ) /
+                    lengthSquared
+
+            val ratio =
+                projection
+                    .coerceIn(
+                        0f,
+                        1f
+                    )
+
+            val closest =
+                FPoint(
+                    x =
+                        a.x +
+                            dx *
+                                ratio,
+                    y =
+                        a.y +
+                            dy *
+                                ratio
+                )
+
+            return distance(
+                point,
+                closest
             )
         }
 
@@ -1870,8 +2283,11 @@ internal object ReferenceImportedFontEngine {
         }
     }
 
-    internal fun debugContinuousGlyphCommands():
-        List<StitchCommand> {
+    internal fun debugReferencePath(
+        connected: Boolean,
+        includeUnderlay: Boolean =
+            true
+    ): List<EmbroideryPoint> {
         val output =
             mutableListOf<
                 EmbroideryPoint
@@ -1882,67 +2298,189 @@ internal object ReferenceImportedFontEngine {
                 output
             )
 
-        emitter.emitGlyph(
-            columns =
-                listOf(
-                    SatinColumn(
-                        mutableListOf(
-                            SatinRow(
-                                FPoint(
-                                    0f,
-                                    0f
-                                ),
-                                FPoint(
-                                    12f,
-                                    0f
-                                )
-                            ),
-                            SatinRow(
-                                FPoint(
-                                    0f,
-                                    8f
-                                ),
-                                FPoint(
-                                    12f,
-                                    8f
-                                )
-                            )
+        val first =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            5f
+                        ),
+                        FPoint(
+                            20f,
+                            5f
                         )
                     ),
-                    SatinColumn(
-                        mutableListOf(
-                            SatinRow(
-                                FPoint(
-                                    90f,
-                                    10f
-                                ),
-                                FPoint(
-                                    104f,
-                                    10f
-                                )
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            13f
+                        ),
+                        FPoint(
+                            20f,
+                            13f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            21f
+                        ),
+                        FPoint(
+                            20f,
+                            21f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            5f,
+                            29f
+                        ),
+                        FPoint(
+                            20f,
+                            29f
+                        )
+                    )
+                )
+            )
+
+        val second =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            34f,
+                            5f
+                        ),
+                        FPoint(
+                            49f,
+                            5f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            34f,
+                            13f
+                        ),
+                        FPoint(
+                            49f,
+                            13f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            34f,
+                            21f
+                        ),
+                        FPoint(
+                            49f,
+                            21f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            34f,
+                            29f
+                        ),
+                        FPoint(
+                            49f,
+                            29f
+                        )
+                    )
+                )
+            )
+
+        val polygons =
+            if (
+                connected
+            ) {
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                0f,
+                                0f
                             ),
-                            SatinRow(
-                                FPoint(
-                                    90f,
-                                    18f
-                                ),
-                                FPoint(
-                                    104f,
-                                    18f
-                                )
+                            FPoint(
+                                54f,
+                                0f
+                            ),
+                            FPoint(
+                                54f,
+                                34f
+                            ),
+                            FPoint(
+                                0f,
+                                34f
                             )
                         )
                     )
+                )
+            } else {
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                0f,
+                                0f
+                            ),
+                            FPoint(
+                                24f,
+                                0f
+                            ),
+                            FPoint(
+                                24f,
+                                34f
+                            ),
+                            FPoint(
+                                0f,
+                                34f
+                            )
+                        )
+                    ),
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                30f,
+                                0f
+                            ),
+                            FPoint(
+                                54f,
+                                0f
+                            ),
+                            FPoint(
+                                54f,
+                                34f
+                            ),
+                            FPoint(
+                                30f,
+                                34f
+                            )
+                        )
+                    )
+                )
+            }
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    first,
+                    second
+                ),
+            polygons =
+                polygons,
+            startHint =
+                FPoint(
+                    5f,
+                    5f
                 ),
             includeUnderlay =
-                true,
+                includeUnderlay,
             densityMm =
                 0.4f
         )
 
-        return output.map {
-            it.command
-        }
+        return output
     }
 
     private fun buildGuidePoints(

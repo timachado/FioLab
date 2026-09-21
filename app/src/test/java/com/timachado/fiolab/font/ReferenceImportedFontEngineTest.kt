@@ -1,5 +1,7 @@
 package com.timachado.fiolab.font
 
+import com.timachado.fiolab.core.embroidery.StitchCommand
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,38 +58,116 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
-    fun oneGlyphHasOnlyInitialPositioningJump() {
-        val commands =
+    fun connectedColumnsUseHiddenRunningConnector() {
+        val points =
             ReferenceImportedFontEngine
-                .debugContinuousGlyphCommands()
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        false
+                )
 
-        assertTrue(
-            commands
-                .isNotEmpty()
+        assertEquals(
+            StitchCommand.JUMP,
+            points.first()
+                .command
         )
 
         assertTrue(
-            commands.first() ==
-                com.timachado.fiolab
-                    .core.embroidery
-                    .StitchCommand.JUMP
-        )
-
-        assertTrue(
-            commands
+            points
                 .drop(
                     1
                 )
                 .none {
-                    it ==
-                        com.timachado.fiolab
-                            .core.embroidery
-                            .StitchCommand.JUMP ||
-                        it ==
-                        com.timachado.fiolab
-                            .core.embroidery
-                            .StitchCommand.TRIM
+                    it.command ==
+                        StitchCommand.JUMP ||
+                        it.command ==
+                        StitchCommand.TRIM
                 }
+        )
+    }
+
+    @Test
+    fun disconnectedColumnsJumpInsteadOfCrossingEmptyArea() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        false,
+                    includeUnderlay =
+                        false
+                )
+
+        assertTrue(
+            points.count {
+                it.command ==
+                    StitchCommand.JUMP
+            } >=
+                2
+        )
+    }
+
+    @Test
+    fun satinUsesOneAlternatingStitchPerSampleRow() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        false
+                )
+
+        val stitches =
+            points.count {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        // 4 linhas em cada coluna + ligação contínua entre as colunas.
+        assertTrue(
+            stitches in
+                9..12
+        )
+    }
+
+    @Test
+    fun edgeRunUnderlayAddsSingleOutAndBackPass() {
+        val without =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        false
+                )
+
+        val with =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        true
+                )
+
+        assertTrue(
+            with.count {
+                it.command ==
+                    StitchCommand.STITCH
+            } >
+                without.count {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+        )
+
+        assertTrue(
+            with.none {
+                it.command ==
+                    StitchCommand.TRIM
+            }
         )
     }
 

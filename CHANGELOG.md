@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.46.8
+
+### Sequência Satin refeita com referência no comportamento do Mão Design
+- A inspeção do APK de referência confirmou o uso de um pipeline baseado em amostragem/divisão de colunas Satin; a implementação do FioLab continua própria e não reutiliza código proprietário.
+- Removida a estratégia agressiva da 0.46.7 que costurava todas as colunas da letra em sequência mesmo quando a ligação atravessava área vazia.
+- Cada coluna pode ser invertida e trocar os lados A/B para começar pelo ponto mais próximo e reduzir deslocamentos.
+- O underlay passa a fazer edge-run: uma borda para frente, cruza somente no final e retorna pela outra borda uma única vez.
+- O preenchimento Satin principal passa a alternar um único lado por linha amostrada, evitando a duplicação de cruzamentos que existia antes.
+- Entre colunas da mesma letra, a ligação vira ponto corrido somente quando todo o segmento permanece dentro ou encostado na área preenchida do glifo.
+- Quando a ligação atravessaria buraco/área vazia, o gerador usa JUMP em vez de costurar uma diagonal visível.
+- Entre caracteres consecutivos muito próximos (até 1,2 mm), o FioLab pode manter a ligação em ponto corrido, útil em fontes cursivas; acima disso reposiciona.
+- Locks internos do motor TTF/OTF foram removidos para evitar arremate duplicado; tie-in/tie-off continuam sendo aplicados uma única vez pela camada MachineFinishing.
+- Adicionados testes para colunas conectadas, áreas desconectadas, Satin alternado e underlay ida/volta.
+
 ## 0.46.7
 
 ### Preenchimento contínuo por letra
