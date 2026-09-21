@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.33.0
+
+### Biblioteca de fontes persistente
+- A Home passa a exibir **Biblioteca de fontes** com acesso direto ao gerenciamento de TTF/OTF.
+- A ação principal agora é **Importar e salvar fonte TTF/OTF**, deixando explícito que a fonte fica armazenada no FioLab.
+- Fontes salvas continuam disponíveis em **Criar Nome** até serem excluídas pelo usuário.
+- Importações repetidas são reconhecidas e não criam cópias duplicadas.
+- A seção de Criar Nome passa a usar o rótulo **Fontes salvas** e orienta o usuário a usar a Biblioteca de fontes na Home.
+- O motor de matrizes, Satin, simulação e demais recursos da 0.32.0 permanecem inalterados.
+
 ## 0.32.0
 
 ### Exibição sem reduzir a área da matriz
