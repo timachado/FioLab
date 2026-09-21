@@ -63,6 +63,7 @@ private enum class AccountMode(
 fun AccountScreen(
     account: AccountSnapshot?,
     onBack: () -> Unit,
+    onGoogleSignIn: () -> Unit,
     onSignIn: (
         email: String,
         password: String
@@ -143,6 +144,8 @@ fun AccountScreen(
                 null
         ) {
             SignedOutAccount(
+                onGoogleSignIn =
+                    onGoogleSignIn,
                 onSignIn =
                     onSignIn,
                 onSignUp =
@@ -165,6 +168,7 @@ fun AccountScreen(
 
 @Composable
 private fun SignedOutAccount(
+    onGoogleSignIn: () -> Unit,
     onSignIn: (
         email: String,
         password: String
@@ -226,6 +230,39 @@ private fun SignedOutAccount(
                     18.dp
                 )
             ) {
+                OutlinedButton(
+                    onClick =
+                        onGoogleSignIn,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                ) {
+                    Text(
+                        "G  Continuar com Google",
+                        color =
+                            FioText,
+                        fontWeight =
+                            FontWeight.SemiBold
+                    )
+                }
+
+                Text(
+                    "Mais rápido e sem precisar criar outra senha no FioLab.",
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                top =
+                                    6.dp,
+                                bottom =
+                                    14.dp
+                            ),
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        10.sp
+                )
+
                 Row(
                     Modifier
                         .fillMaxWidth(),

@@ -53,13 +53,50 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    private var accountOpenRequest by
+        mutableStateOf(
+            0
+        )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (
+            intent.getBooleanExtra(
+                EXTRA_OPEN_ACCOUNT_FROM_AUTH,
+                false
+            )
+        ) {
+            accountOpenRequest++
+        }
+
         setContent {
             FioLabTheme {
-                FioLabApp()
+                FioLabApp(
+                    openAccountRequest =
+                        accountOpenRequest
+                )
             }
+        }
+    }
+
+    override fun onNewIntent(
+        intent: Intent
+    ) {
+        super.onNewIntent(
+            intent
+        )
+        setIntent(
+            intent
+        )
+
+        if (
+            intent.getBooleanExtra(
+                EXTRA_OPEN_ACCOUNT_FROM_AUTH,
+                false
+            )
+        ) {
+            accountOpenRequest++
         }
     }
 }
@@ -121,7 +158,9 @@ private data class PendingDocument(
 )
 
 @Composable
-private fun FioLabApp() {
+private fun FioLabApp(
+    openAccountRequest: Int = 0
+) {
     val context =
         LocalContext.current
 
@@ -159,6 +198,18 @@ private fun FioLabApp() {
 
     var loading by remember {
         mutableStateOf(false)
+    }
+
+    LaunchedEffect(
+        openAccountRequest
+    ) {
+        if (
+            openAccountRequest >
+                0
+        ) {
+            screen =
+                Screen.Account
+        }
     }
 
     fun activateDesign(
@@ -1151,7 +1202,9 @@ private fun FioLabApp() {
                     AccountHostScreen(
                         onBack = {
                             goBack()
-                        }
+                        },
+                        refreshRequest =
+                            openAccountRequest
                     )
                 }
 
