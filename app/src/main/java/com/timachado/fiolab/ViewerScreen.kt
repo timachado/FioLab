@@ -1,6 +1,8 @@
 package com.timachado.fiolab
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -177,7 +179,7 @@ fun ViewerScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(1.18f)
                     .padding(
                         horizontal =
                             16.dp
@@ -196,7 +198,13 @@ fun ViewerScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .weight(.92f)
+                    .padding(
+                        horizontal =
+                            16.dp,
+                        vertical =
+                            10.dp
+                    ),
             colors =
                 CardDefaults
                     .cardColors(
@@ -209,9 +217,14 @@ fun ViewerScreen(
                 )
         ) {
             Column(
-                Modifier.padding(
-                    18.dp
-                )
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(
+                        rememberScrollState()
+                    )
+                    .padding(
+                        18.dp
+                    )
             ) {
                 Text(
                     "Informações da matriz",

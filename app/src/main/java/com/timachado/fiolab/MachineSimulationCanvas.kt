@@ -54,7 +54,7 @@ fun MachineSimulationCanvas(
             modifier
                 .background(
                     Color(
-                        0xFFF3EFE5
+                        0xFFF4EDDD
                     ),
                     RoundedCornerShape(
                         24.dp
@@ -73,7 +73,7 @@ fun MachineSimulationCanvas(
                     canvasHeight =
                         size.height,
                     padding =
-                        38.dp.toPx(),
+                        22.dp.toPx(),
                     hoop =
                         hoop
                 )
@@ -250,12 +250,12 @@ private data class SimulationTransform(
             availableWidth /
                 (
                     widthUnits *
-                        1.18f
+                        1.04f
                     ),
             availableHeight /
                 (
                     heightUnits *
-                        1.18f
+                        1.04f
                     )
         )
 
@@ -349,16 +349,12 @@ private fun DrawScope.drawFabricGrid(
     val minor =
         transform
             .unitsToPx(
-                50f
+                25f
             )
             .coerceIn(
-                18.dp.toPx(),
-                54.dp.toPx()
+                10.dp.toPx(),
+                28.dp.toPx()
             )
-
-    val major =
-        minor *
-            2f
 
     var x = 0f
     var index = 0
@@ -370,7 +366,7 @@ private fun DrawScope.drawFabricGrid(
             color =
                 if (
                     index %
-                        2 ==
+                        4 ==
                         0
                 ) {
                     Color(
@@ -394,7 +390,7 @@ private fun DrawScope.drawFabricGrid(
             strokeWidth =
                 if (
                     index %
-                        2 ==
+                        4 ==
                         0
                 ) {
                     1.2f
@@ -417,7 +413,7 @@ private fun DrawScope.drawFabricGrid(
             color =
                 if (
                     index %
-                        2 ==
+                        4 ==
                         0
                 ) {
                     Color(
@@ -441,7 +437,7 @@ private fun DrawScope.drawFabricGrid(
             strokeWidth =
                 if (
                     index %
-                        2 ==
+                        4 ==
                         0
                 ) {
                     1.2f
@@ -570,7 +566,7 @@ private fun DrawScope.drawHoop(
     drawRoundRect(
         color =
             Color(
-                0xAA34373B
+                0xD9F0A62B
             ),
         topLeft =
             Offset(
@@ -825,7 +821,7 @@ private fun DrawScope.drawStitches(
                         if (ghost) {
                             color.copy(
                                 alpha =
-                                    0.16f
+                                    0.52f
                             )
                         } else {
                             color
@@ -868,7 +864,7 @@ private fun DrawScope.drawStitches(
                             baseColor
                                 .copy(
                                     alpha =
-                                        0.10f
+                                        0.52f
                                 )
                         } else {
                             baseColor
@@ -901,7 +897,7 @@ private fun DrawScope.drawStitches(
                             end =
                                 end,
                             strokeWidth =
-                                1.05.dp
+                                .58.dp
                                     .toPx(),
                             cap =
                                 StrokeCap.Round
@@ -956,27 +952,64 @@ private fun DrawScope.drawStitches(
                             }
 
                             EmbroideryDisplayMode.REALISTIC -> {
+                                val vector =
+                                    end -
+                                        start
+
+                                val length =
+                                    kotlin.math.sqrt(
+                                        vector.x *
+                                            vector.x +
+                                            vector.y *
+                                                vector.y
+                                    ).coerceAtLeast(
+                                        0.001f
+                                    )
+
+                                val normal =
+                                    Offset(
+                                        x =
+                                            -vector.y /
+                                                length,
+                                        y =
+                                            vector.x /
+                                                length
+                                    )
+
+                                val shadowOffset =
+                                    normal *
+                                        .32.dp.toPx()
+
+                                val highlightOffset =
+                                    normal *
+                                        -.18.dp.toPx()
+
+                                val shadow =
+                                    Color(
+                                        red =
+                                            baseColor.red *
+                                                .38f,
+                                        green =
+                                            baseColor.green *
+                                                .38f,
+                                        blue =
+                                            baseColor.blue *
+                                                .38f,
+                                        alpha =
+                                            .58f
+                                    )
+
                                 drawLine(
                                     color =
-                                        Color.Black
-                                            .copy(
-                                                alpha =
-                                                    0.22f
-                                            ),
+                                        shadow,
                                     start =
                                         start +
-                                            Offset(
-                                                0.7.dp.toPx(),
-                                                0.7.dp.toPx()
-                                            ),
+                                            shadowOffset,
                                     end =
                                         end +
-                                            Offset(
-                                                0.7.dp.toPx(),
-                                                0.7.dp.toPx()
-                                            ),
+                                            shadowOffset,
                                     strokeWidth =
-                                        2.9.dp
+                                        1.75.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
@@ -984,13 +1017,16 @@ private fun DrawScope.drawStitches(
 
                                 drawLine(
                                     color =
-                                        color,
+                                        baseColor.copy(
+                                            alpha =
+                                                .98f
+                                        ),
                                     start =
                                         start,
                                     end =
                                         end,
                                     strokeWidth =
-                                        2.35.dp
+                                        1.18.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
@@ -1001,14 +1037,16 @@ private fun DrawScope.drawStitches(
                                         Color.White
                                             .copy(
                                                 alpha =
-                                                    0.18f
+                                                    .30f
                                             ),
                                     start =
-                                        start,
+                                        start +
+                                            highlightOffset,
                                     end =
-                                        end,
+                                        end +
+                                            highlightOffset,
                                     strokeWidth =
-                                        0.55.dp
+                                        .28.dp
                                             .toPx(),
                                     cap =
                                         StrokeCap.Round
