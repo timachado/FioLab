@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/imported-running-centerline-0290"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
