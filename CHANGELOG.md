@@ -5,6 +5,7 @@
 ### Roteamento Satin por continuidade — referência de comportamento PE-DESIGN
 - Mantido o início determinístico no começo visual da letra, sem voltar ao primeiro ponto arbitrário do contorno TTF/OTF.
 - Depois da primeira região, o motor procura primeiro uma continuação cuja ligação inteira permaneça dentro ou encostada na própria área bordável do glifo.
+- A validação usada para escolher essa continuação ganhou amostragem geométrica mais fina, evitando falso positivo em diagonais que atravessam vãos estreitos entre partes desconectadas.
 - Quando há mais de uma continuação válida, é escolhida a entrada de menor distância; a ordem padrão continua como critério determinístico de desempate.
 - Se nenhuma continuação puder ser escondida dentro da letra, o motor volta à ordem padrão e reposiciona com JUMP, evitando diagonais aparentes atravessando buracos ou áreas vazias.
 - O Satin principal continua alternando um lado por linha amostrada; o edge-run underlay continua fazendo uma ida, cruza no final e volta uma única vez.

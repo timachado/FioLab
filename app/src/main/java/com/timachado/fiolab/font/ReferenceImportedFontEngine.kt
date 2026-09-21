@@ -56,6 +56,14 @@ internal object ReferenceImportedFontEngine {
     private const val CONNECTOR_SAMPLE_UNITS =
         8f
 
+    /*
+     * A escolha do próximo objeto Satin precisa ser mais conservadora
+     * que o travel já escolhido. Passos menores impedem que uma diagonal
+     * "salte" por cima de um vão estreito entre regiões desconectadas.
+     */
+    private const val ROUTING_SAMPLE_UNITS =
+        2f
+
     private const val CONNECTOR_EDGE_MARGIN_UNITS =
         2f
 
@@ -1716,7 +1724,9 @@ internal object ReferenceImportedFontEngine {
                             to =
                                 entry,
                             polygons =
-                                polygons
+                                polygons,
+                            sampleUnits =
+                                ROUTING_SAMPLE_UNITS
                         )
                     ) {
                         return@forEach
@@ -2073,7 +2083,9 @@ internal object ReferenceImportedFontEngine {
         private fun segmentInsideGlyph(
             from: FPoint,
             to: FPoint,
-            polygons: List<Polygon>
+            polygons: List<Polygon>,
+            sampleUnits: Float =
+                CONNECTOR_SAMPLE_UNITS
         ): Boolean {
             if (
                 polygons.isEmpty()
@@ -2092,7 +2104,7 @@ internal object ReferenceImportedFontEngine {
                     2,
                     ceil(
                         total /
-                            CONNECTOR_SAMPLE_UNITS
+                            sampleUnits
                     ).toInt()
                 )
 
