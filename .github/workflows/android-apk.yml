@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "feat/account-subscriptions-0.37.0"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
