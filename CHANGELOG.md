@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.34.0
+
+### Simulação realista de bordado
+- O modo Realista passa a renderizar cada ponto como fio fino direcional, com sombra e brilho acompanhando o ângulo real do ponto.
+- A simulação mantém o desenho ainda não bordado visível como referência, mas com acabamento mais próximo de uma matriz real em tecido.
+- O fundo usa tecido claro com grade técnica mais fina e o bastidor recebe contorno tracejado dourado.
+- O enquadramento da simulação foi ampliado para aproveitar melhor a área útil.
+- O visualizador da matriz agora reserva mais espaço vertical para o desenho; o cartão de informações passa a ter rolagem própria.
+- O modo Realista do visualizador usa o mesmo conceito visual de tecido, grade e fio da simulação.
+- Geração de matrizes, leitura PES/DST/JEF, TTF/OTF, Satin, cores e sequência de pontos permanecem inalterados.
+
 ## 0.33.0
 
 ### Biblioteca de fontes persistente
