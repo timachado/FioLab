@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.36.0
+
+### Orientação correta e consistência entre todos os modos de exibição
+- PES e JEF importados passam a preservar a convenção correta do eixo Y apenas na renderização, evitando abrir a matriz de ponta-cabeça.
+- Os pontos reais da matriz e os bytes originais não são invertidos, preservando exportação, transferência e sequência de bordado.
+- Viewer, Editor e Simulador passam a usar a mesma regra de orientação.
+- Sólida, Pontos e Realista passam a compartilhar o mesmo fundo de tecido, grade, bastidor, escala e enquadramento; somente o estilo de desenho dos pontos muda entre os modos.
+- A orientação de renderização passa a ser salva nos projetos FioLab para não se perder ao reabrir uma matriz salva.
+- O formato interno de projeto sobe para v3 mantendo leitura compatível com projetos v1/v2.
+- Incluídos testes de regressão para orientação de coordenadas importadas e coordenadas nativas do FioLab.
+- Geração de matrizes, TTF/OTF, Satin, conversão e sequência de pontos permanecem inalterados.
+
 ## 0.35.0
 
 ### Simulação alinhada ao comportamento de referência
