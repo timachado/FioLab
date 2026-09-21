@@ -497,7 +497,7 @@ object TextMatrixGenerator {
                     ) {
                         EmbroideryStressPolicy
                             .MAX_GENERATED_COMMANDS /
-                            4
+                            16
                     } else {
                         EmbroideryStressPolicy
                             .MAX_GENERATED_COMMANDS
