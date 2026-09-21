@@ -2,6 +2,29 @@
 
 A chave definitiva de produção **não deve ser adicionada ao repositório**. O FioLab possui um workflow manual separado em `.github/workflows/android-production-sign.yml`, que só funciona quando os secrets de assinatura estiverem configurados.
 
+## Geradores locais prontos
+
+O repositório inclui dois scripts que **não armazenam senha** e criam a chave fora da pasta do projeto:
+
+- Windows PowerShell: `scripts/create_production_keystore.ps1`
+- Linux/macOS: `scripts/create_production_keystore.sh`
+
+Por padrão, ambos usam `FioLab-Production-Key` dentro da pasta pessoal do usuário. Eles não sobrescrevem uma keystore já existente.
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\create_production_keystore.ps1
+```
+
+Linux/macOS:
+
+```bash
+bash scripts/create_production_keystore.sh
+```
+
+Os scripts também criam uma representação Base64 local para facilitar o cadastro do secret `FIOLAB_RELEASE_KEYSTORE_BASE64`. Essa cópia continua sendo sensível.
+
 ## 1. Criar a keystore fora do repositório
 
 Em um computador confiável com JDK instalado:
