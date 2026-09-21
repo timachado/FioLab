@@ -6,6 +6,9 @@ import android.provider.OpenableColumns
 import java.util.Locale
 
 object EmbroideryLoader {
+    private const val MAX_FILE_BYTES =
+        64 * 1024 * 1024
+
     private val plannedExtensions = setOf(
         "dst",
         "pes",
@@ -46,6 +49,30 @@ object EmbroideryLoader {
                     it.isNotBlank()
                 }
 
+        val declaredLength =
+            runCatching {
+                contentResolver
+                    .openAssetFileDescriptor(
+                        uri,
+                        "r"
+                    )
+                    ?.use {
+                        it.length
+                    }
+            }.getOrNull()
+
+        if (
+            declaredLength !=
+                null &&
+            declaredLength >
+                MAX_FILE_BYTES
+        ) {
+            return EmbroideryLoadResult.Error(
+                "O arquivo é grande demais para importar com segurança.",
+                "Limite: 64 MB"
+            )
+        }
+
         val bytes =
             try {
                 contentResolver
@@ -53,8 +80,18 @@ object EmbroideryLoader {
                         uri
                     )
                     ?.use {
-                        it.readBytes()
+                        readBytesWithLimit(
+                            it
+                        )
                     }
+            } catch (
+                error:
+                    FileTooLargeException
+            ) {
+                return EmbroideryLoadResult.Error(
+                    "O arquivo é grande demais para importar com segurança.",
+                    "Limite: 64 MB"
+                )
             } catch (
                 error:
                     SecurityException
@@ -287,6 +324,60 @@ object EmbroideryLoader {
                 "." +
                 extension
         }
+    }
+
+    private class FileTooLargeException :
+        Exception()
+
+    private fun readBytesWithLimit(
+        input:
+            java.io.InputStream
+    ): ByteArray {
+        val output =
+            java.io.ByteArrayOutputStream()
+
+        val buffer =
+            ByteArray(
+                16 * 1024
+            )
+
+        var total =
+            0
+
+        while (
+            true
+        ) {
+            val read =
+                input.read(
+                    buffer
+                )
+
+            if (
+                read <
+                    0
+            ) {
+                break
+            }
+
+            total +=
+                read
+
+            if (
+                total >
+                    MAX_FILE_BYTES
+            ) {
+                throw FileTooLargeException()
+            }
+
+            output.write(
+                buffer,
+                0,
+                read
+            )
+        }
+
+        return output
+            .toByteArray()
     }
 
     private fun resolveDisplayName(
