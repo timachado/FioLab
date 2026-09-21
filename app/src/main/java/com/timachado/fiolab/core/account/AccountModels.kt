@@ -18,7 +18,9 @@ data class FioLabProfileUpsert(
     @SerialName("user_id")
     val userId: String,
     @SerialName("display_name")
-    val displayName: String
+    val displayName: String,
+    @SerialName("avatar_url")
+    val avatarUrl: String? = null
 )
 
 @Serializable
