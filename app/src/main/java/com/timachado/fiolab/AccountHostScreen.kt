@@ -158,6 +158,9 @@ fun AccountHostScreen(
         result.fold(
             onSuccess = {
                     current ->
+                offline =
+                    false
+
                 account =
                     withDevices(
                         current
@@ -391,6 +394,9 @@ fun AccountHostScreen(
                     ) {
                         is SignUpOutcome
                             .SignedIn -> {
+                            offline =
+                                false
+
                             account =
                                 withDevices(
                                     outcome.account
@@ -404,6 +410,9 @@ fun AccountHostScreen(
 
                         is SignUpOutcome
                             .ConfirmationRequired -> {
+                            offline =
+                                false
+
                             account =
                                 null
 
@@ -466,6 +475,9 @@ fun AccountHostScreen(
             result.fold(
                 onSuccess = {
                         updated ->
+                    offline =
+                        false
+
                     account =
                         withDevices(
                             updated
