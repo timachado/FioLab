@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main", "fix/display-mode-simulation-0.31.0"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
