@@ -33,7 +33,7 @@ object ProjectCodec {
         "FIOLAB_PROJECT"
 
     private const val VERSION =
-        2
+        3
 
     private const val MAX_POINTS =
         2_000_000
@@ -139,6 +139,10 @@ object ProjectCodec {
                         .optimizeTravel
                 )
             }
+
+            output.writeBoolean(
+                design.sourceYAxisDown
+            )
 
             require(
                 design.points
@@ -320,6 +324,16 @@ object ProjectCodec {
                     null
                 }
 
+            val sourceYAxisDown =
+                if (
+                    version >=
+                        3
+                ) {
+                    input.readBoolean()
+                } else {
+                    false
+                }
+
             val pointCount =
                 input.readInt()
 
@@ -472,6 +486,8 @@ object ProjectCodec {
                     guidePoints,
                 threadColors =
                     colors,
+                sourceYAxisDown =
+                    sourceYAxisDown,
                 isModified =
                     true,
                 hoopProfile =
