@@ -1,9 +1,13 @@
 package com.timachado.fiolab.core.account
 
+import android.content.Intent
 import com.timachado.fiolab.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.handleDeeplinks
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -25,7 +29,14 @@ object FioLabAccountService {
         ) {
             install(
                 Auth
-            )
+            ) {
+                flowType =
+                    FlowType.PKCE
+                scheme =
+                    AUTH_SCHEME
+                host =
+                    AUTH_HOST
+            }
 
             install(
                 Postgrest
@@ -53,6 +64,33 @@ object FioLabAccountService {
                         ?: ""
             )
         }
+
+    suspend fun signInWithGoogle():
+        Result<Unit> =
+        runCatching {
+            client.auth
+                .signInWith(
+                    Google
+                )
+        }
+
+    fun handleAuthRedirect(
+        intent: Intent,
+        onSuccess: () -> Unit,
+        onError: (
+            Throwable
+        ) -> Unit
+    ) {
+        client.handleDeeplinks(
+            intent =
+                intent,
+            onSessionSuccess = {
+                onSuccess()
+            },
+            onError =
+                onError
+        )
+    }
 
     suspend fun signIn(
         email: String,
@@ -434,4 +472,13 @@ object FioLabAccountService {
                 history
         )
     }
+
+    const val AUTH_SCHEME =
+        "com.timachado.fiolab"
+
+    const val AUTH_HOST =
+        "login-callback"
+
+    const val AUTH_REDIRECT_URL =
+        "$AUTH_SCHEME://$AUTH_HOST"
 }
