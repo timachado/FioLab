@@ -39,6 +39,8 @@ import com.timachado.fiolab.core.embroidery.EmbroideryLoader
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
+import com.timachado.fiolab.core.library.LibraryActivityStore
+import com.timachado.fiolab.core.library.SentMatrixRecord
 import com.timachado.fiolab.core.project.ActiveDesignStore
 import com.timachado.fiolab.core.project.ProjectBackupStore
 import com.timachado.fiolab.core.project.ProjectStore
@@ -154,7 +156,9 @@ private sealed interface Screen {
 private data class PendingDocument(
     val fileName: String,
     val bytes: ByteArray,
-    val successMessage: String
+    val successMessage: String,
+    val machineMethod: String? = null,
+    val machineFormat: String? = null
 )
 
 @Composable
@@ -196,6 +200,35 @@ private fun FioLabApp(
         >(emptyList())
     }
 
+    var favoriteProjectIds by remember {
+        mutableStateOf(
+            LibraryActivityStore
+                .favoriteIds(
+                    context
+                )
+        )
+    }
+
+    var recentProjectIds by remember {
+        mutableStateOf(
+            LibraryActivityStore
+                .recentIds(
+                    context
+                )
+        )
+    }
+
+    var sentMatrices by remember {
+        mutableStateOf<
+            List<SentMatrixRecord>
+        >(
+            LibraryActivityStore
+                .sentMatrices(
+                    context
+                )
+        )
+    }
+
     var loading by remember {
         mutableStateOf(false)
     }
@@ -210,6 +243,46 @@ private fun FioLabApp(
             screen =
                 Screen.Account
         }
+    }
+
+    fun refreshLibraryActivity() {
+        favoriteProjectIds =
+            LibraryActivityStore
+                .favoriteIds(
+                    context
+                )
+
+        recentProjectIds =
+            LibraryActivityStore
+                .recentIds(
+                    context
+                )
+
+        sentMatrices =
+            LibraryActivityStore
+                .sentMatrices(
+                    context
+                )
+    }
+
+    fun recordMachineDelivery(
+        fileName: String,
+        format: String,
+        method: String
+    ) {
+        LibraryActivityStore
+            .recordSent(
+                context =
+                    context,
+                fileName =
+                    fileName,
+                format =
+                    format,
+                method =
+                    method
+            )
+
+        refreshLibraryActivity()
     }
 
     fun activateDesign(
