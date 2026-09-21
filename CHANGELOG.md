@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.39.0
+
+### Sobre o FioLab e crédito de desenvolvimento
+- Minha Conta ganha a seção **Sobre o FioLab**, disponível com ou sem login.
+- A seção mostra a versão instalada e a assinatura **Desenvolvido por T.I. Machado — Soluções em Tecnologia**.
+- Incluído acesso direto ao site/portfólio de T.I. Machado.
+- O crédito foi mantido discreto, fora da Home, preservando o protagonismo da marca FioLab.
+- Login Google, assinaturas, biblioteca de fontes e motor de bordado permanecem inalterados.
+
 ## 0.38.0
 
 ### Login com Google
