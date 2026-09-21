@@ -1214,25 +1214,33 @@ private fun FioLabApp() {
                             goBack()
                         },
                         onCreate = {
-                                created ->
+                                created,
+                                displayMode ->
                             activateDesign(
                                 created
                             )
 
                             screen =
                                 Screen.Viewer(
-                                    created
+                                    design =
+                                        created,
+                                    displayMode =
+                                        displayMode
                                 )
                         },
                         onSimulate = {
-                                created ->
+                                created,
+                                displayMode ->
                             activateDesign(
                                 created
                             )
 
                             screen =
                                 Screen.Simulator(
-                                    created
+                                    design =
+                                        created,
+                                    displayMode =
+                                        displayMode
                                 )
                         }
                     )
