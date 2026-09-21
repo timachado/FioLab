@@ -1,5 +1,7 @@
 package com.timachado.fiolab
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -492,6 +495,14 @@ private fun SignedOutAccount(
             fontSize =
                 10.sp
         )
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
+        AboutFioLabCard()
     }
 }
 
@@ -1089,6 +1100,14 @@ private fun SignedInAccount(
             )
         )
 
+        AboutFioLabCard()
+
+        Spacer(
+            Modifier.height(
+                14.dp
+            )
+        )
+
         OutlinedButton(
             onClick =
                 onSignOut,
@@ -1099,6 +1118,135 @@ private fun SignedInAccount(
             Text(
                 "Sair da conta"
             )
+        }
+    }
+}
+
+@Composable
+private fun AboutFioLabCard() {
+    val context =
+        LocalContext.current
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth(),
+        colors =
+            CardDefaults
+                .cardColors(
+                    containerColor =
+                        FioSurface
+                ),
+        shape =
+            RoundedCornerShape(
+                24.dp
+            )
+    ) {
+        Column(
+            Modifier.padding(
+                18.dp
+            )
+        ) {
+            Text(
+                "Sobre o FioLab",
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.Bold,
+                fontSize =
+                    18.sp
+            )
+
+            Text(
+                "FioLab • " +
+                    FioLabAbout
+                        .productTagline,
+                modifier =
+                    Modifier.padding(
+                        top =
+                            4.dp
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    10.sp
+            )
+
+            Spacer(
+                Modifier.height(
+                    12.dp
+                )
+            )
+
+            AccountLine(
+                label =
+                    "Versão",
+                value =
+                    BuildConfig
+                        .VERSION_NAME
+            )
+
+            Text(
+                FioLabAbout
+                    .developerCredit,
+                modifier =
+                    Modifier.padding(
+                        top =
+                            10.dp
+                    ),
+                color =
+                    FioText,
+                fontWeight =
+                    FontWeight.SemiBold,
+                fontSize =
+                    12.sp
+            )
+
+            Text(
+                "Crédito de desenvolvimento exibido de forma discreta dentro do aplicativo.",
+                modifier =
+                    Modifier.padding(
+                        top =
+                            3.dp
+                    ),
+                color =
+                    FioTextMuted,
+                fontSize =
+                    9.sp
+            )
+
+            Spacer(
+                Modifier.height(
+                    12.dp
+                )
+            )
+
+            OutlinedButton(
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(
+                                    FioLabAbout
+                                        .developerWebsite
+                                )
+                            )
+                        )
+                    }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+            ) {
+                Text(
+                    "Conhecer T.I. Machado",
+                    color =
+                        FioGold,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+            }
         }
     }
 }
