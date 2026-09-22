@@ -1660,6 +1660,110 @@ internal object ReferenceImportedFontEngine {
         return true
     }
 
+    private fun resampleContourForPairing(
+        points: List<FPoint>,
+        spacingUnits: Float
+    ): List<FPoint> {
+        if (
+            points.size <
+                2
+        ) {
+            return points
+        }
+
+        val spacing =
+            spacingUnits
+                .coerceIn(
+                    0.8f,
+                    3f
+                )
+
+        val result =
+            mutableListOf<FPoint>()
+
+        var previous =
+            points.last()
+
+        points.forEach {
+                current ->
+            val length =
+                distance(
+                    previous,
+                    current
+                )
+
+            val segments =
+                max(
+                    1,
+                    ceil(
+                        (
+                            length /
+                                spacing
+                            ).toDouble()
+                    ).toInt()
+                )
+
+            for (
+                part in
+                    0 until segments
+            ) {
+                val ratio =
+                    part.toFloat() /
+                        segments
+
+                val point =
+                    lerp(
+                        previous,
+                        current,
+                        ratio
+                    )
+
+                if (
+                    result.lastOrNull()
+                        ?.let {
+                            distance(
+                                it,
+                                point
+                            ) <
+                                0.15f
+                        } !=
+                        true
+                ) {
+                    result +=
+                        point
+                }
+            }
+
+            previous =
+                current
+        }
+
+        return if (
+            result.size >
+                MAX_POLYGON_SAMPLES_PER_GLYPH
+        ) {
+            val step =
+                ceil(
+                    result.size.toDouble() /
+                        MAX_POLYGON_SAMPLES_PER_GLYPH
+                )
+                    .toInt()
+                    .coerceAtLeast(
+                        1
+                    )
+
+            result.filterIndexed {
+                    index,
+                    _ ->
+                index %
+                    step ==
+                    0
+            }
+        } else {
+            result
+        }
+    }
+
     private fun contourPairCandidates(
         polygons: List<Polygon>,
         pitchUnits: Float,
@@ -1671,19 +1775,19 @@ internal object ReferenceImportedFontEngine {
                 ContourRowCandidate
             >()
 
-        val sampleStride =
-            max(
-                1,
-                (
-                    pitchUnits /
-                        2f
-                    ).roundToInt()
-            )
-
         polygons.forEach {
                 polygon ->
             val points =
-                polygon.points
+                resampleContourForPairing(
+                    points =
+                        polygon.points,
+                    spacingUnits =
+                        max(
+                            1f,
+                            pitchUnits *
+                                0.45f
+                        )
+                )
 
             if (
                 points.size <
@@ -1691,6 +1795,9 @@ internal object ReferenceImportedFontEngine {
             ) {
                 return@forEach
             }
+
+            val sampleStride =
+                1
 
             var index =
                 0
