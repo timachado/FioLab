@@ -98,7 +98,6 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            set -euo pipefail
             adb install -r out/FioLab-MAUI-0.70.0-debug.apk
             adb logcat -c
             adb shell monkey -p com.timachado.fiolab.maui -c android.intent.category.LAUNCHER 1
