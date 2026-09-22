@@ -95,6 +95,12 @@ var holedObjects = engine.DigitizePath(
     options,
     ref holeObjectIndex);
 
+if (holedObjects.Count > 6)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: false junctions fragmented a simple holed shape into {holedObjects.Count} objects.");
+}
+
 var holedPoints = holedObjects
     .SelectMany(static item => item.Points)
     .ToList();
