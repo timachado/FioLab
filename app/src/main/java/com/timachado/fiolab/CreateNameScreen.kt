@@ -48,8 +48,6 @@ import com.timachado.fiolab.core.embroidery.EmbroideryFontPreset
 import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
-import com.timachado.fiolab.core.embroidery.ImportedFontDigitizingMode
-import com.timachado.fiolab.core.embroidery.ImportedFontSewingOrder
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.SpecialStitchMode
 import com.timachado.fiolab.core.embroidery.TextGlyphProvider
@@ -173,18 +171,6 @@ fun CreateNameScreen(
         )
     }
 
-    var importedFontDigitizingMode by remember {
-        mutableStateOf(
-            ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
-        )
-    }
-
-    var importedFontSewingOrder by remember {
-        mutableStateOf(
-            ImportedFontSewingOrder.CONTINUITY
-        )
-    }
-
     var specialStitchMode by remember {
         mutableStateOf<
             SpecialStitchMode?
@@ -301,10 +287,6 @@ fun CreateNameScreen(
                         satinShortStitches,
                     satinUnderlayMode =
                         satinUnderlayMode,
-                    importedFontDigitizingMode =
-                        importedFontDigitizingMode,
-                    importedFontSewingOrder =
-                        importedFontSewingOrder,
                     specialStitchMode =
                         specialStitchMode,
                     color =
@@ -353,8 +335,6 @@ fun CreateNameScreen(
         satinPullCompensationMm,
         satinShortStitches,
         satinUnderlayMode,
-        importedFontDigitizingMode,
-        importedFontSewingOrder,
         specialStitchMode,
         font,
         importedFontId,
@@ -1345,133 +1325,6 @@ fun CreateNameScreen(
                         }
 
                         else -> {
-                            if (
-                                importedFont !=
-                                    null &&
-                                stitchStyle ==
-                                    TextStitchStyle.SATIN &&
-                                specialStitchMode ==
-                                    null
-                            ) {
-                                Text(
-                                    "Digitalização por blocos",
-                                    color =
-                                        FioText,
-                                    fontWeight =
-                                        FontWeight.SemiBold
-                                )
-
-                                Text(
-                                    "Ferramenta profissional para TTF/OTF: cria blocos Satin com linhas de direção próprias, underlay seguro e ordem controlada. Implementação própria inspirada no fluxo de softwares como PE-DESIGN.",
-                                    color =
-                                        FioTextMuted,
-                                    fontSize =
-                                        10.sp
-                                )
-
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(
-                                                rememberScrollState()
-                                            )
-                                            .padding(
-                                                vertical =
-                                                    6.dp
-                                            ),
-                                    horizontalArrangement =
-                                        Arrangement.spacedBy(
-                                            7.dp
-                                        )
-                                ) {
-                                    ImportedFontDigitizingMode
-                                        .entries
-                                        .forEach {
-                                                mode ->
-                                            ChoiceButton(
-                                                text =
-                                                    mode.displayName,
-                                                selected =
-                                                    importedFontDigitizingMode ==
-                                                        mode,
-                                                onClick = {
-                                                    importedFontDigitizingMode =
-                                                        mode
-                                                }
-                                            )
-                                        }
-                                }
-
-                                Text(
-                                    "Ordem de costura",
-                                    modifier =
-                                        Modifier.padding(
-                                            top =
-                                                6.dp
-                                        ),
-                                    color =
-                                        FioText,
-                                    fontWeight =
-                                        FontWeight.SemiBold
-                                )
-
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(
-                                                rememberScrollState()
-                                            )
-                                            .padding(
-                                                vertical =
-                                                    6.dp
-                                            ),
-                                    horizontalArrangement =
-                                        Arrangement.spacedBy(
-                                            7.dp
-                                        )
-                                ) {
-                                    ImportedFontSewingOrder
-                                        .entries
-                                        .forEach {
-                                                order ->
-                                            ChoiceButton(
-                                                text =
-                                                    order.displayName,
-                                                selected =
-                                                    importedFontSewingOrder ==
-                                                        order,
-                                                onClick = {
-                                                    importedFontSewingOrder =
-                                                        order
-                                                }
-                                            )
-                                        }
-                                }
-
-                                Text(
-                                    if (
-                                        importedFontDigitizingMode ==
-                                            ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
-                                    ) {
-                                        "Objetos inteligentes: traços estreitos usam Satin; áreas largas usam Tatami com underlay e ordem real de costura."
-                                    } else {
-                                        "Compatibilidade: permite usar o motor adaptativo legado quando a fonte exigir."
-                                    },
-                                    color =
-                                        FioTextMuted,
-                                    fontSize =
-                                        10.sp
-                                )
-
-                                Spacer(
-                                    Modifier.height(
-                                        12.dp
-                                    )
-                                )
-                            }
-
                             Text(
                                 "Exibição",
                                 color =
