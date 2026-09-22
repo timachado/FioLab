@@ -214,12 +214,18 @@ if (satinBranchCount < 2)
         $"Smoke test: expected multiple Satin branches, got {satinBranchCount}.");
 }
 
-if (!branchObjects.Any(static item =>
+if (branchObjects.Any(static item =>
     item.Kind == EmbroideryObjectKind.Tatami))
 {
     throw new InvalidOperationException(
-        "Smoke test: branched geometry did not emit a local Tatami junction patch.");
+        "Smoke test: narrow branched script emitted an unnecessary Tatami junction patch.");
+}
+
+if (branchObjects.Count > 3)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: branched geometry fragmented into {branchObjects.Count} objects.");
 }
 
 Console.WriteLine(
-    $"OK: {objects.Count} base objects, {flattened.Count} base points. Tatami row continuity preserved. Branch topology emitted {satinBranchCount} Satin branches.");
+    $"OK: {objects.Count} base objects, {flattened.Count} base points. Branch topology emitted {satinBranchCount} Satin branches without junction patches.");
