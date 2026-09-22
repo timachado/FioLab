@@ -202,6 +202,1799 @@ internal object ReferenceImportedFontEngine {
         val path: Path
     )
 
+    /*
+     * Motor V2 limpo para fontes salvas.
+     *
+     * Princípios observáveis no fluxo profissional usado como referência:
+     * - primeiro classificar a geometria;
+     * - Running para detalhe muito estreito;
+     * - Satin somente com duas bordas reais válidas;
+     * - Tatami para largura acima do limite físico do Satin;
+     * - underlay, densidade, comprimento e compensação são propriedades
+     *   do objeto, não correções aplicadas depois de uma geometria errada.
+     *
+     * Nenhum código proprietário é reutilizado aqui.
+     */
+    private enum class CleanObjectKind {
+        RUNNING,
+        SATIN,
+        TATAMI
+    }
+
+    private data class CleanObject(
+        val kind: CleanObjectKind,
+        val rows: List<SatinRow>,
+        val path: List<FPoint>
+    )
+
+    private const val CLEAN_MIN_DETAIL_MM =
+        0.50f
+
+    private const val CLEAN_MAX_SATIN_WIDTH_MM =
+        7f
+
+    private const val CLEAN_DIRECTION_SPLIT_DEGREES =
+        38f
+
+    private const val CLEAN_WIDTH_SPLIT_RATIO =
+        1.55f
+
+    private const val CLEAN_CENTER_JUMP_FACTOR =
+        3.25f
+
+    private fun cleanObjectKind(
+        widthUnits: Float
+    ): CleanObjectKind =
+        when {
+            widthUnits <
+                CLEAN_MIN_DETAIL_MM *
+                    10f ->
+                CleanObjectKind.RUNNING
+
+            widthUnits <=
+                CLEAN_MAX_SATIN_WIDTH_MM *
+                    10f ->
+                CleanObjectKind.SATIN
+
+            else ->
+                CleanObjectKind.TATAMI
+        }
+
+    private fun cleanRowCenter(
+        row: SatinRow
+    ): FPoint =
+        FPoint(
+            (
+                row.a.x +
+                    row.b.x
+                ) /
+                2f,
+            (
+                row.a.y +
+                    row.b.y
+                ) /
+                2f
+        )
+
+    private fun cleanSegmentInsideRaster(
+        a: FPoint,
+        b: FPoint,
+        raster: RasterGlyph
+    ): Boolean {
+        for (
+            index in
+                1..9
+        ) {
+            val point =
+                lerp(
+                    a,
+                    b,
+                    index /
+                        10f
+                )
+
+            if (
+                !raster.contains(
+                    point
+                )
+            ) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    private fun cleanResampleCenters(
+        source: List<FPoint>,
+        pitchUnits: Float
+    ): List<FPoint> {
+        if (
+            source.size <
+                2
+        ) {
+            return source
+        }
+
+        val smoothed =
+            smoothCenterline(
+                source =
+                    source,
+                radius =
+                    1,
+                passes =
+                    1
+            )
+
+        val result =
+            mutableListOf(
+                smoothed.first()
+            )
+
+        var last =
+            smoothed.first()
+
+        smoothed
+            .drop(
+                1
+            )
+            .forEach {
+                    point ->
+                if (
+                    distance(
+                        last,
+                        point
+                    ) >=
+                    pitchUnits
+                ) {
+                    result +=
+                        point
+
+                    last =
+                        point
+                }
+            }
+
+        if (
+            distance(
+                result.last(),
+                smoothed.last()
+            ) >
+                pitchUnits *
+                    0.35f
+        ) {
+            result +=
+                smoothed.last()
+        }
+
+        return result
+    }
+
+    private fun cleanObjectsFromSkeletonPath(
+        pathIndices: List<Int>,
+        raster: RasterGlyph,
+        polygons: List<Polygon>,
+        densityMm: Float,
+        pullMm: Float
+    ): List<CleanObject> {
+        if (
+            pathIndices.size <
+                2
+        ) {
+            return emptyList()
+        }
+
+        val pitchUnits =
+            (
+                densityMm *
+                    10f
+                ).coerceIn(
+                2.5f,
+                6f
+            )
+
+        val centers =
+            cleanResampleCenters(
+                source =
+                    pathIndices.map {
+                        raster.center(
+                            it
+                        )
+                    },
+                pitchUnits =
+                    pitchUnits
+            )
+
+        if (
+            centers.size <
+                2
+        ) {
+            return emptyList()
+        }
+
+        val maxRayUnits =
+            max(
+                raster.width,
+                raster.height
+            ) *
+                raster.step *
+                1.25f
+
+        val pullUnits =
+            pullMm
+                .coerceIn(
+                    0f,
+                    0.5f
+                ) *
+                10f
+
+        val minimumDirectionDot =
+            kotlin.math.cos(
+                Math.toRadians(
+                    CLEAN_DIRECTION_SPLIT_DEGREES
+                        .toDouble()
+                )
+            )
+                .toFloat()
+
+        val objects =
+            mutableListOf<CleanObject>()
+
+        var rows =
+            mutableListOf<SatinRow>()
+
+        var rowCenters =
+            mutableListOf<FPoint>()
+
+        var currentKind:
+            CleanObjectKind? =
+            null
+
+        var previousDirection:
+            FPoint? =
+            null
+
+        var previousWidth:
+            Float? =
+            null
+
+        var previousCenter:
+            FPoint? =
+            null
+
+        fun flush() {
+            if (
+                rowCenters.size >=
+                    2
+            ) {
+                val kind =
+                    currentKind
+                        ?: CleanObjectKind.RUNNING
+
+                objects +=
+                    CleanObject(
+                        kind =
+                            kind,
+                        rows =
+                            rows.toList(),
+                        path =
+                            rowCenters.toList()
+                    )
+            }
+
+            rows =
+                mutableListOf()
+
+            rowCenters =
+                mutableListOf()
+
+            currentKind =
+                null
+
+            previousDirection =
+                null
+
+            previousWidth =
+                null
+
+            previousCenter =
+                null
+        }
+
+        centers.forEachIndexed {
+                index,
+                center ->
+            val before =
+                centers[
+                    (
+                        index -
+                            1
+                        ).coerceAtLeast(
+                        0
+                    )
+                ]
+
+            val after =
+                centers[
+                    (
+                        index +
+                            1
+                        ).coerceAtMost(
+                        centers.lastIndex
+                    )
+                ]
+
+            val tangent =
+                normalize(
+                    FPoint(
+                        after.x -
+                            before.x,
+                        after.y -
+                            before.y
+                    )
+                )
+
+            if (
+                abs(
+                    tangent.x
+                ) <
+                    0.0001f &&
+                abs(
+                    tangent.y
+                ) <
+                    0.0001f
+            ) {
+                return@forEachIndexed
+            }
+
+            val normal =
+                FPoint(
+                    -tangent.y,
+                    tangent.x
+                )
+
+            val positive =
+                rayToRasterBoundary(
+                    center =
+                        center,
+                    direction =
+                        normal,
+                    raster =
+                        raster,
+                    maxDistance =
+                        maxRayUnits
+                )
+
+            val negative =
+                rayToRasterBoundary(
+                    center =
+                        center,
+                    direction =
+                        FPoint(
+                            -normal.x,
+                            -normal.y
+                        ),
+                    raster =
+                        raster,
+                    maxDistance =
+                        maxRayUnits
+                )
+
+            if (
+                positive <=
+                    raster.step *
+                        0.25f ||
+                negative <=
+                    raster.step *
+                        0.25f
+            ) {
+                flush()
+                return@forEachIndexed
+            }
+
+            val rawA =
+                FPoint(
+                    center.x -
+                        normal.x *
+                            negative,
+                    center.y -
+                        normal.y *
+                            negative
+                )
+
+            val rawB =
+                FPoint(
+                    center.x +
+                        normal.x *
+                            positive,
+                    center.y +
+                        normal.y *
+                            positive
+                )
+
+            if (
+                !cleanSegmentInsideRaster(
+                    a =
+                        rawA,
+                    b =
+                        rawB,
+                    raster =
+                        raster
+                )
+            ) {
+                flush()
+                return@forEachIndexed
+            }
+
+            val width =
+                positive +
+                    negative
+
+            val kind =
+                cleanObjectKind(
+                    width
+                )
+
+            val row =
+                SatinRow(
+                    a =
+                        FPoint(
+                            rawA.x -
+                                normal.x *
+                                    pullUnits,
+                            rawA.y -
+                                normal.y *
+                                    pullUnits
+                        ),
+                    b =
+                        FPoint(
+                            rawB.x +
+                                normal.x *
+                                    pullUnits,
+                            rawB.y +
+                                normal.y *
+                                    pullUnits
+                        )
+                )
+
+            val direction =
+                normalize(
+                    FPoint(
+                        row.b.x -
+                            row.a.x,
+                        row.b.y -
+                            row.a.y
+                    )
+                )
+
+            val oldDirection =
+                previousDirection
+
+            val oldWidth =
+                previousWidth
+
+            val oldCenter =
+                previousCenter
+
+            val directionDot =
+                if (
+                    oldDirection ==
+                        null
+                ) {
+                    1f
+                } else {
+                    abs(
+                        oldDirection.x *
+                            direction.x +
+                            oldDirection.y *
+                                direction.y
+                    )
+                }
+
+            val widthRatio =
+                if (
+                    oldWidth ==
+                        null ||
+                    oldWidth <=
+                        0.001f ||
+                    width <=
+                        0.001f
+                ) {
+                    1f
+                } else {
+                    max(
+                        oldWidth /
+                            width,
+                        width /
+                            oldWidth
+                    )
+                }
+
+            val centerJump =
+                oldCenter !=
+                    null &&
+                    distance(
+                        oldCenter,
+                        center
+                    ) >
+                        pitchUnits *
+                            CLEAN_CENTER_JUMP_FACTOR
+
+            val shouldSplit =
+                rows.size >=
+                    2 &&
+                    (
+                        currentKind !=
+                            kind ||
+                        directionDot <
+                            minimumDirectionDot ||
+                        widthRatio >
+                            CLEAN_WIDTH_SPLIT_RATIO ||
+                        centerJump
+                        )
+
+            if (
+                shouldSplit
+            ) {
+                flush()
+            }
+
+            if (
+                currentKind ==
+                    null
+            ) {
+                currentKind =
+                    kind
+            }
+
+            rows +=
+                row
+
+            rowCenters +=
+                center
+
+            previousDirection =
+                direction
+
+            previousWidth =
+                width
+
+            previousCenter =
+                center
+        }
+
+        flush()
+
+        return objects
+    }
+
+    private fun buildCleanObjects(
+        polygons: List<Polygon>,
+        densityMm: Float,
+        pullMm: Float
+    ): List<CleanObject> {
+        val all =
+            polygons.flatMap {
+                it.points
+            }
+
+        if (
+            all.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val minX =
+            all.minOf {
+                it.x
+            }
+
+        val maxX =
+            all.maxOf {
+                it.x
+            }
+
+        val minY =
+            all.minOf {
+                it.y
+            }
+
+        val maxY =
+            all.maxOf {
+                it.y
+            }
+
+        val widthUnits =
+            maxX -
+                minX
+
+        val heightUnits =
+            maxY -
+                minY
+
+        if (
+            widthUnits <
+                0.5f ||
+            heightUnits <
+                0.5f
+        ) {
+            return emptyList()
+        }
+
+        var rasterStep =
+            (
+                densityMm *
+                    10f /
+                    2f
+                ).coerceIn(
+                0.9f,
+                2f
+            )
+
+        fun cellCount(
+            step: Float
+        ): Long =
+            (
+                ceil(
+                    widthUnits /
+                        step
+                ).toLong() +
+                    3L
+                ) *
+                (
+                    ceil(
+                        heightUnits /
+                            step
+                    ).toLong() +
+                        3L
+                    )
+
+        val cells =
+            cellCount(
+                rasterStep
+            )
+
+        if (
+            cells >
+                MAX_ADAPTIVE_RASTER_CELLS
+        ) {
+            rasterStep *=
+                kotlin.math.sqrt(
+                    cells.toDouble() /
+                        MAX_ADAPTIVE_RASTER_CELLS
+                )
+                    .toFloat()
+        }
+
+        val raster =
+            rasterizeGlyph(
+                polygons =
+                    polygons,
+                minX =
+                    minX,
+                minY =
+                    minY,
+                maxX =
+                    maxX,
+                maxY =
+                    maxY,
+                step =
+                    rasterStep
+            )
+
+        val skeleton =
+            thinMask(
+                raster
+            )
+
+        val objects =
+            traceSkeletonPaths(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            )
+                .flatMap {
+                        path ->
+                    cleanObjectsFromSkeletonPath(
+                        pathIndices =
+                            path,
+                        raster =
+                            raster,
+                        polygons =
+                            polygons,
+                        densityMm =
+                            densityMm,
+                        pullMm =
+                            pullMm
+                    )
+                }
+                .filter {
+                    it.path.size >=
+                        2
+                }
+                .toMutableList()
+
+        if (
+            objects.isNotEmpty()
+        ) {
+            return objects
+        }
+
+        /*
+         * Fallback somente para componentes degenerados (pontos muito
+         * pequenos, por exemplo). Não participa do fluxo normal do motor V2.
+         */
+        sampleColumnsByAxis(
+            polygons =
+                polygons,
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                24f,
+            pullCompensationMm =
+                pullMm
+        )
+            .forEach {
+                    column ->
+                if (
+                    column.rows.size <
+                        2
+                ) {
+                    return@forEach
+                }
+
+                val widths =
+                    column.rows.map {
+                        distance(
+                            it.a,
+                            it.b
+                        )
+                    }
+
+                val medianWidth =
+                    widths
+                        .sorted()[
+                            widths.size /
+                                2
+                        ]
+
+                objects +=
+                    CleanObject(
+                        kind =
+                            cleanObjectKind(
+                                medianWidth
+                            ),
+                        rows =
+                            column.rows,
+                        path =
+                            column.rows.map {
+                                cleanRowCenter(
+                                    it
+                                )
+                            }
+                    )
+            }
+
+        return objects
+    }
+
+    private class CleanEmitter(
+        private val output:
+            MutableList<EmbroideryPoint>
+    ) {
+
+        private var current:
+            FPoint? =
+            null
+
+        fun emitGlyph(
+            objects: List<CleanObject>,
+            polygons: List<Polygon>,
+            startHint: FPoint?,
+            endHint: FPoint?,
+            includeUnderlay: Boolean,
+            stitchLengthMm: Float
+        ) {
+            val remaining =
+                objects.toMutableList()
+
+            if (
+                remaining.isEmpty()
+            ) {
+                return
+            }
+
+            val reservedTerminal =
+                if (
+                    endHint ==
+                        null
+                ) {
+                    null
+                } else {
+                    val index =
+                        remaining.indices.minByOrNull {
+                                objectIndex ->
+                            cleanObjectEndpoints(
+                                remaining[
+                                    objectIndex
+                                ]
+                            )
+                                .minOfOrNull {
+                                    distance(
+                                        it,
+                                        endHint
+                                    )
+                                }
+                                ?: Float.MAX_VALUE
+                        }
+
+                    index?.let {
+                        remaining.removeAt(
+                            it
+                        )
+                    }
+                }
+
+            var first =
+                true
+
+            while (
+                remaining.isNotEmpty()
+            ) {
+                val anchor =
+                    if (
+                        first
+                    ) {
+                        startHint
+                            ?: current
+                    } else {
+                        current
+                    }
+
+                val selectedIndex =
+                    remaining.indices.minByOrNull {
+                            index ->
+                        val objectValue =
+                            remaining[
+                                index
+                            ]
+
+                        val endpoints =
+                            cleanObjectEndpoints(
+                                objectValue
+                            )
+
+                        val proximity =
+                            if (
+                                anchor ==
+                                    null
+                            ) {
+                                cleanObjectMinX(
+                                    objectValue
+                                )
+                            } else {
+                                endpoints.minOf {
+                                    distance(
+                                        it,
+                                        anchor
+                                    )
+                                }
+                            }
+
+                        val insidePenalty =
+                            if (
+                                anchor ==
+                                    null ||
+                                endpoints.any {
+                                    segmentInsideGlyphGeometry(
+                                        from =
+                                            anchor,
+                                        to =
+                                            it,
+                                        polygons =
+                                            polygons,
+                                        sampleUnits =
+                                            2f
+                                    )
+                                }
+                            ) {
+                                0f
+                            } else {
+                                10_000f
+                            }
+
+                        proximity +
+                            insidePenalty
+                    }
+                    ?: 0
+
+                val selected =
+                    remaining.removeAt(
+                        selectedIndex
+                    )
+
+                emitObject(
+                    objectValue =
+                        selected,
+                    polygons =
+                        polygons,
+                    includeUnderlay =
+                        includeUnderlay,
+                    stitchLengthMm =
+                        stitchLengthMm,
+                    terminalHint =
+                        null
+                )
+
+                first =
+                    false
+            }
+
+            reservedTerminal?.let {
+                emitObject(
+                    objectValue =
+                        it,
+                    polygons =
+                        polygons,
+                    includeUnderlay =
+                        includeUnderlay,
+                    stitchLengthMm =
+                        stitchLengthMm,
+                    terminalHint =
+                        endHint
+                )
+            }
+        }
+
+        private fun cleanObjectMinX(
+            objectValue: CleanObject
+        ): Float {
+            val points =
+                if (
+                    objectValue.rows.isNotEmpty()
+                ) {
+                    objectValue.rows.flatMap {
+                        listOf(
+                            it.a,
+                            it.b
+                        )
+                    }
+                } else {
+                    objectValue.path
+                }
+
+            return points.minOfOrNull {
+                it.x
+            }
+                ?: Float.MAX_VALUE
+        }
+
+        private fun cleanObjectEndpoints(
+            objectValue: CleanObject
+        ): List<FPoint> =
+            when (
+                objectValue.kind
+            ) {
+                CleanObjectKind.RUNNING ->
+                    listOfNotNull(
+                        objectValue.path.firstOrNull(),
+                        objectValue.path.lastOrNull()
+                    )
+
+                CleanObjectKind.SATIN,
+                CleanObjectKind.TATAMI -> {
+                    val first =
+                        objectValue.rows.firstOrNull()
+
+                    val last =
+                        objectValue.rows.lastOrNull()
+
+                    listOfNotNull(
+                        first?.a,
+                        first?.b,
+                        last?.a,
+                        last?.b
+                    )
+                }
+            }
+
+        private fun orientedRows(
+            rows: List<SatinRow>,
+            anchor: FPoint?
+        ): List<SatinRow> {
+            if (
+                rows.size <
+                    2 ||
+                anchor ==
+                    null
+            ) {
+                return rows
+            }
+
+            val firstDistance =
+                minOf(
+                    distance(
+                        anchor,
+                        rows.first().a
+                    ),
+                    distance(
+                        anchor,
+                        rows.first().b
+                    )
+                )
+
+            val lastDistance =
+                minOf(
+                    distance(
+                        anchor,
+                        rows.last().a
+                    ),
+                    distance(
+                        anchor,
+                        rows.last().b
+                    )
+                )
+
+            return if (
+                lastDistance <
+                    firstDistance
+            ) {
+                rows.asReversed()
+            } else {
+                rows
+            }
+        }
+
+        private fun orientedPath(
+            path: List<FPoint>,
+            anchor: FPoint?
+        ): List<FPoint> {
+            if (
+                path.size <
+                    2 ||
+                anchor ==
+                    null
+            ) {
+                return path
+            }
+
+            return if (
+                distance(
+                    anchor,
+                    path.last()
+                ) <
+                distance(
+                    anchor,
+                    path.first()
+                )
+            ) {
+                path.asReversed()
+            } else {
+                path
+            }
+        }
+
+        private fun emitObject(
+            objectValue: CleanObject,
+            polygons: List<Polygon>,
+            includeUnderlay: Boolean,
+            stitchLengthMm: Float,
+            terminalHint: FPoint?
+        ) {
+            when (
+                objectValue.kind
+            ) {
+                CleanObjectKind.RUNNING ->
+                    emitRunning(
+                        path =
+                            objectValue.path,
+                        polygons =
+                            polygons,
+                        stitchLengthMm =
+                            stitchLengthMm
+                    )
+
+                CleanObjectKind.SATIN ->
+                    emitSatin(
+                        rows =
+                            objectValue.rows,
+                        polygons =
+                            polygons,
+                        includeUnderlay =
+                            includeUnderlay,
+                        stitchLengthMm =
+                            stitchLengthMm,
+                        terminalHint =
+                            terminalHint
+                    )
+
+                CleanObjectKind.TATAMI ->
+                    emitTatami(
+                        rows =
+                            objectValue.rows,
+                        polygons =
+                            polygons,
+                        includeUnderlay =
+                            includeUnderlay,
+                        stitchLengthMm =
+                            stitchLengthMm,
+                        terminalHint =
+                            terminalHint
+                    )
+            }
+        }
+
+        private fun emitUnderlay(
+            rows: List<SatinRow>,
+            polygons: List<Polygon>,
+            stitchLengthMm: Float
+        ) {
+            if (
+                rows.size <
+                    3
+            ) {
+                return
+            }
+
+            val path =
+                rows.map {
+                    cleanRowCenter(
+                        it
+                    )
+                }
+
+            val oriented =
+                orientedPath(
+                    path =
+                        path,
+                    anchor =
+                        current
+                )
+
+            travelTo(
+                target =
+                    oriented.first(),
+                polygons =
+                    polygons
+            )
+
+            oriented
+                .drop(
+                    1
+                )
+                .forEach {
+                    stitchTo(
+                        target =
+                            it,
+                        maxSegmentUnits =
+                            stitchLengthMm
+                                .coerceIn(
+                                    1.2f,
+                                    4f
+                                ) *
+                                10f
+                    )
+                }
+        }
+
+        private fun emitRunning(
+            path: List<FPoint>,
+            polygons: List<Polygon>,
+            stitchLengthMm: Float
+        ) {
+            if (
+                path.size <
+                    2
+            ) {
+                return
+            }
+
+            val oriented =
+                orientedPath(
+                    path =
+                        path,
+                    anchor =
+                        current
+                )
+
+            travelTo(
+                target =
+                    oriented.first(),
+                polygons =
+                    polygons
+            )
+
+            oriented
+                .drop(
+                    1
+                )
+                .forEach {
+                    stitchTo(
+                        target =
+                            it,
+                        maxSegmentUnits =
+                            stitchLengthMm
+                                .coerceIn(
+                                    1f,
+                                    5f
+                                ) *
+                                10f
+                    )
+                }
+        }
+
+        private fun emitSatin(
+            rows: List<SatinRow>,
+            polygons: List<Polygon>,
+            includeUnderlay: Boolean,
+            stitchLengthMm: Float,
+            terminalHint: FPoint?
+        ) {
+            if (
+                rows.size <
+                    2
+            ) {
+                return
+            }
+
+            val oriented =
+                orientedRows(
+                    rows =
+                        rows,
+                    anchor =
+                        current
+                )
+
+            if (
+                includeUnderlay
+            ) {
+                emitUnderlay(
+                    rows =
+                        oriented,
+                    polygons =
+                        polygons,
+                    stitchLengthMm =
+                        stitchLengthMm
+                )
+            }
+
+            val before =
+                current
+
+            val lastIndex =
+                oriented.lastIndex
+
+            fun finalPoint(
+                startOnA: Boolean
+            ): FPoint {
+                val useA =
+                    if (
+                        startOnA
+                    ) {
+                        lastIndex %
+                            2 ==
+                            0
+                    } else {
+                        lastIndex %
+                            2 !=
+                            0
+                    }
+
+                return if (
+                    useA
+                ) {
+                    oriented.last().a
+                } else {
+                    oriented.last().b
+                }
+            }
+
+            val startOnA =
+                if (
+                    terminalHint !=
+                        null
+                ) {
+                    distance(
+                        finalPoint(
+                            true
+                        ),
+                        terminalHint
+                    ) <=
+                        distance(
+                            finalPoint(
+                                false
+                            ),
+                            terminalHint
+                        )
+                } else if (
+                    before ==
+                        null
+                ) {
+                    true
+                } else {
+                    distance(
+                        before,
+                        oriented.first().a
+                    ) <=
+                        distance(
+                            before,
+                            oriented.first().b
+                        )
+                }
+
+            val firstPoint =
+                if (
+                    startOnA
+                ) {
+                    oriented.first().a
+                } else {
+                    oriented.first().b
+                }
+
+            travelTo(
+                target =
+                    firstPoint,
+                polygons =
+                    polygons
+            )
+
+            for (
+                index in
+                    1..lastIndex
+            ) {
+                val useA =
+                    if (
+                        startOnA
+                    ) {
+                        index %
+                            2 ==
+                            0
+                    } else {
+                        index %
+                            2 !=
+                            0
+                    }
+
+                val target =
+                    if (
+                        useA
+                    ) {
+                        oriented[
+                            index
+                        ].a
+                    } else {
+                        oriented[
+                            index
+                        ].b
+                    }
+
+                stitchTo(
+                    target =
+                        target,
+                    maxSegmentUnits =
+                        80f
+                )
+            }
+        }
+
+        private fun emitTatami(
+            rows: List<SatinRow>,
+            polygons: List<Polygon>,
+            includeUnderlay: Boolean,
+            stitchLengthMm: Float,
+            terminalHint: FPoint?
+        ) {
+            if (
+                rows.size <
+                    2
+            ) {
+                return
+            }
+
+            val oriented =
+                orientedRows(
+                    rows =
+                        rows,
+                    anchor =
+                        current
+                )
+
+            if (
+                includeUnderlay
+            ) {
+                emitUnderlay(
+                    rows =
+                        oriented,
+                    polygons =
+                        polygons,
+                    stitchLengthMm =
+                        stitchLengthMm
+                )
+            }
+
+            var forward =
+                true
+
+            oriented.forEachIndexed {
+                    index,
+                    row ->
+                val start =
+                    if (
+                        forward
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
+
+                val end =
+                    if (
+                        forward
+                    ) {
+                        row.b
+                    } else {
+                        row.a
+                    }
+
+                if (
+                    index ==
+                        oriented.lastIndex &&
+                    terminalHint !=
+                        null
+                ) {
+                    val normalDistance =
+                        distance(
+                            end,
+                            terminalHint
+                        )
+
+                    val reversedDistance =
+                        distance(
+                            start,
+                            terminalHint
+                        )
+
+                    if (
+                        reversedDistance <
+                            normalDistance
+                    ) {
+                        forward =
+                            !forward
+                    }
+                }
+
+                val actualStart =
+                    if (
+                        forward
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
+
+                val actualEnd =
+                    if (
+                        forward
+                    ) {
+                        row.b
+                    } else {
+                        row.a
+                    }
+
+                travelTo(
+                    target =
+                        actualStart,
+                    polygons =
+                        polygons
+                )
+
+                stitchTo(
+                    target =
+                        actualEnd,
+                    maxSegmentUnits =
+                        stitchLengthMm
+                            .coerceIn(
+                                1.2f,
+                                5f
+                            ) *
+                            10f
+                )
+
+                forward =
+                    !forward
+            }
+        }
+
+        private fun travelTo(
+            target: FPoint,
+            polygons: List<Polygon>
+        ) {
+            val before =
+                current
+
+            if (
+                before ==
+                    null
+            ) {
+                emit(
+                    point =
+                        target,
+                    command =
+                        StitchCommand.JUMP
+                )
+
+                return
+            }
+
+            val distanceValue =
+                distance(
+                    before,
+                    target
+                )
+
+            if (
+                distanceValue <
+                    0.25f
+            ) {
+                current =
+                    target
+                return
+            }
+
+            val hidden =
+                segmentInsideGlyphGeometry(
+                    from =
+                        before,
+                    to =
+                        target,
+                    polygons =
+                        polygons,
+                    sampleUnits =
+                        2f
+                )
+
+            if (
+                hidden
+            ) {
+                emitSegmented(
+                    from =
+                        before,
+                    to =
+                        target,
+                    command =
+                        StitchCommand.STITCH,
+                    maxSegmentUnits =
+                        15f
+                )
+            } else {
+                emit(
+                    point =
+                        target,
+                    command =
+                        StitchCommand.JUMP
+                )
+            }
+        }
+
+        private fun stitchTo(
+            target: FPoint,
+            maxSegmentUnits: Float
+        ) {
+            val before =
+                current
+
+            if (
+                before ==
+                    null
+            ) {
+                emit(
+                    point =
+                        target,
+                    command =
+                        StitchCommand.JUMP
+                )
+
+                return
+            }
+
+            if (
+                distance(
+                    before,
+                    target
+                ) <
+                    0.0001f
+            ) {
+                current =
+                    target
+                return
+            }
+
+            emitSegmented(
+                from =
+                    before,
+                to =
+                    target,
+                command =
+                    StitchCommand.STITCH,
+                maxSegmentUnits =
+                    maxSegmentUnits
+            )
+        }
+
+        private fun emitSegmented(
+            from: FPoint,
+            to: FPoint,
+            command: StitchCommand,
+            maxSegmentUnits: Float
+        ) {
+            val total =
+                distance(
+                    from,
+                    to
+                )
+
+            val segments =
+                max(
+                    1,
+                    ceil(
+                        total /
+                            maxSegmentUnits
+                                .coerceAtLeast(
+                                    1f
+                                )
+                    ).toInt()
+                )
+
+            for (
+                part in
+                    1..segments
+            ) {
+                emit(
+                    point =
+                        lerp(
+                            from,
+                            to,
+                            part.toFloat() /
+                                segments
+                        ),
+                    command =
+                        command
+                )
+            }
+        }
+
+        private fun emit(
+            point: FPoint,
+            command: StitchCommand
+        ) {
+            require(
+                point.x.isFinite() &&
+                    point.y.isFinite()
+            ) {
+                "O motor V2 gerou coordenadas inválidas."
+            }
+
+            require(
+                output.size <
+                    EmbroideryStressPolicy
+                        .MAX_GENERATED_COMMANDS
+            ) {
+                "O motor V2 gerou pontos demais para processar com segurança."
+            }
+
+            output +=
+                EmbroideryPoint(
+                    xUnits =
+                        point.x
+                            .roundToInt(),
+                    yUnits =
+                        point.y
+                            .roundToInt(),
+                    command =
+                        command,
+                    colorIndex =
+                        0
+                )
+
+            current =
+                point
+        }
+    }
+
+    internal fun debugCleanSatinRailXs():
+        List<Int> {
+        val output =
+            mutableListOf<EmbroideryPoint>()
+
+        val emitter =
+            CleanEmitter(
+                output
+            )
+
+        val rows =
+            (
+                0 until 8
+            ).map {
+                    index ->
+                SatinRow(
+                    a =
+                        FPoint(
+                            0f,
+                            index *
+                                4f
+                        ),
+                    b =
+                        FPoint(
+                            40f,
+                            index *
+                                4f
+                        )
+                )
+            }
+
+        emitter.emitGlyph(
+            objects =
+                listOf(
+                    CleanObject(
+                        kind =
+                            CleanObjectKind.SATIN,
+                        rows =
+                            rows,
+                        path =
+                            rows.map {
+                                cleanRowCenter(
+                                    it
+                                )
+                            }
+                    )
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                -2f,
+                                -2f
+                            ),
+                            FPoint(
+                                42f,
+                                -2f
+                            ),
+                            FPoint(
+                                42f,
+                                34f
+                            ),
+                            FPoint(
+                                -2f,
+                                34f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    0f,
+                    0f
+                ),
+            endHint =
+                null,
+            includeUnderlay =
+                false,
+            stitchLengthMm =
+                2.5f
+        )
+
+        return output
+            .filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+            .map {
+                it.xUnits
+            }
+    }
+
     fun fitHeightToHoopFast(
         font: ImportedFont,
         sourceText: String,
@@ -562,30 +2355,13 @@ internal object ReferenceImportedFontEngine {
                     DEFAULT_PULL_MM
                 }
 
-            /*
-             * O app de referência usa 7 mm como largura máxima Satin.
-             * O FioLab antigo usava 2,4 mm como "largura" fixa, o que
-             * fragmentava demais letras largas. Aqui a forma da fonte
-             * define a largura e este valor atua somente como limite para
-             * dividir colunas fisicamente largas.
-             */
-            val maxSatinWidthMm =
-                if (
-                    options.importedFontDigitizingMode ==
-                        ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
-                ) {
-                    OBJECT_SAMPLING_MAX_WIDTH_MM
-                } else {
-                    DEFAULT_MAX_SATIN_WIDTH_MM
-                }
-
             val points =
                 mutableListOf<
                     EmbroideryPoint
                 >()
 
             val emitter =
-                SatinEmitter(
+                CleanEmitter(
                     output =
                         points
                 )
@@ -594,39 +2370,25 @@ internal object ReferenceImportedFontEngine {
                 .forEachIndexed {
                         glyphIndex,
                         polygons ->
-                    val columns =
-                        sampleColumns(
+                    val objects =
+                        buildCleanObjects(
                             polygons =
                                 polygons,
                             densityMm =
                                 densityMm,
-                            maxSatinWidthMm =
-                                maxSatinWidthMm,
-                            pullCompensationMm =
-                                pullMm,
-                            digitizingMode =
-                                options.importedFontDigitizingMode
+                            pullMm =
+                                pullMm
                         )
 
                     emitter.emitGlyph(
-                        columns =
-                            columns,
+                        objects =
+                            objects,
                         polygons =
                             polygons,
                         startHint =
                             glyphVisualStartPoint(
                                 polygons
                             ),
-                        includeUnderlay =
-                            options
-                                .satinUnderlayMode !=
-                                SatinUnderlayMode
-                                    .NONE,
-                        densityMm =
-                            densityMm,
-                        strictVisualOrder =
-                            options.importedFontSewingOrder ==
-                                ImportedFontSewingOrder.VISUAL,
                         endHint =
                             if (
                                 glyphIndex ==
@@ -637,7 +2399,19 @@ internal object ReferenceImportedFontEngine {
                                 )
                             } else {
                                 null
-                            }
+                            },
+                        includeUnderlay =
+                            options
+                                .satinUnderlayMode !=
+                                SatinUnderlayMode
+                                    .NONE,
+                        stitchLengthMm =
+                            options
+                                .stitchLengthMm
+                                .coerceIn(
+                                    1f,
+                                    5f
+                                )
                     )
                 }
 
