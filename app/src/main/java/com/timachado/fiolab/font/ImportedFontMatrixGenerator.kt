@@ -9,6 +9,7 @@ import android.graphics.RectF
 import com.timachado.fiolab.core.embroidery.EmbroideryBounds
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.StitchCommand
@@ -24,6 +25,24 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object ImportedFontMatrixGenerator {
+
+    fun fitHeightToHoopFast(
+        font: ImportedFont,
+        text: String,
+        spacingMm: Float,
+        hoop: HoopProfile
+    ): Result<Float> =
+        ReferenceImportedFontEngine
+            .fitHeightToHoopFast(
+                font =
+                    font,
+                sourceText =
+                    text,
+                spacingMm =
+                    spacingMm,
+                hoop =
+                    hoop
+            )
 
     fun generateGlyph(
         font: ImportedFont,
