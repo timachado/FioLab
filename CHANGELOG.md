@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.52.1
+
+### Junções sem Satin radial
+- Removido o bloco Satin dedicado que preenchia junções do eixo medial usando uma direção média entre vários ramos.
+- Ramos de letras cursivas passam a permanecer independentes nas bifurcações.
+- O centro da junção só recebe pontos quando a auditoria de cobertura detectar uma área realmente descoberta.
+- O reparo continua local e limitado, evitando leques e travessas longas no M sem aumentar a densidade do nome inteiro.
+- Mantidos o corte por giro acumulado, eixo medial, Tatami automático, underlay, bastidor e saída estrutural final.
+- Atualizado o teste de regressão para exigir cobertura da junção sem depender de Satin radial.
+
 ## 0.52.0
 
 ### Motor automático e anti-leque acumulado
