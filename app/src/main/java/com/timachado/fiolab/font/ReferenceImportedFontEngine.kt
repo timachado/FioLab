@@ -43,6 +43,15 @@ internal object ReferenceImportedFontEngine {
     private const val DEFAULT_MAX_SATIN_WIDTH_MM =
         7f
 
+    private const val OBJECT_SAMPLING_MAX_WIDTH_MM =
+        24f
+
+    private const val DEFAULT_TATAMI_STITCH_LENGTH_MM =
+        2.5f
+
+    private const val TATAMI_MIN_WIDE_ROW_RATIO =
+        0.25f
+
     private const val DEFAULT_PULL_MM =
         0.2f
 
@@ -541,7 +550,14 @@ internal object ReferenceImportedFontEngine {
              * dividir colunas fisicamente largas.
              */
             val maxSatinWidthMm =
-                DEFAULT_MAX_SATIN_WIDTH_MM
+                if (
+                    options.importedFontDigitizingMode ==
+                        ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
+                ) {
+                    OBJECT_SAMPLING_MAX_WIDTH_MM
+                } else {
+                    DEFAULT_MAX_SATIN_WIDTH_MM
+                }
 
             val points =
                 mutableListOf<
@@ -8663,11 +8679,267 @@ internal object ReferenceImportedFontEngine {
             }
         }
 
+        private fun columnUsesTatami(
+            column: SatinColumn
+        ): Boolean {
+            val rows =
+                column.rows
+
+            if (
+                rows.size <
+                    3
+            ) {
+                return false
+            }
+
+            val limitUnits =
+                DEFAULT_MAX_SATIN_WIDTH_MM *
+                    10f
+
+            val widths =
+                rows.map {
+                    distance(
+                        it.a,
+                        it.b
+                    )
+                }
+
+            val requiredWideRows =
+                max(
+                    2,
+                    ceil(
+                        rows.size *
+                            TATAMI_MIN_WIDE_ROW_RATIO
+                    ).toInt()
+                )
+
+            return widths.count {
+                it >
+                    limitUnits
+            } >=
+                requiredWideRows &&
+                widths.average() >=
+                    limitUnits *
+                        0.82
+        }
+
+        private fun emitTatamiColumn(
+            column: SatinColumn,
+            endHint: FPoint? =
+                null
+        ) {
+            val sourceRows =
+                column.rows
+
+            if (
+                sourceRows.isEmpty()
+            ) {
+                return
+            }
+
+            val before =
+                current
+
+            val rows =
+                if (
+                    endHint !=
+                        null &&
+                    sourceRows.size >=
+                        2
+                ) {
+                    val normalDistance =
+                        minOf(
+                            distance(
+                                endHint,
+                                sourceRows.last().a
+                            ),
+                            distance(
+                                endHint,
+                                sourceRows.last().b
+                            )
+                        )
+
+                    val reversedDistance =
+                        minOf(
+                            distance(
+                                endHint,
+                                sourceRows.first().a
+                            ),
+                            distance(
+                                endHint,
+                                sourceRows.first().b
+                            )
+                        )
+
+                    if (
+                        reversedDistance <
+                            normalDistance
+                    ) {
+                        sourceRows
+                            .asReversed()
+                    } else {
+                        sourceRows
+                    }
+                } else if (
+                    before !=
+                        null &&
+                    sourceRows.size >=
+                        2
+                ) {
+                    val firstDistance =
+                        minOf(
+                            distance(
+                                before,
+                                sourceRows.first().a
+                            ),
+                            distance(
+                                before,
+                                sourceRows.first().b
+                            )
+                        )
+
+                    val lastDistance =
+                        minOf(
+                            distance(
+                                before,
+                                sourceRows.last().a
+                            ),
+                            distance(
+                                before,
+                                sourceRows.last().b
+                            )
+                        )
+
+                    if (
+                        lastDistance <
+                            firstDistance
+                    ) {
+                        sourceRows
+                            .asReversed()
+                    } else {
+                        sourceRows
+                    }
+                } else {
+                    sourceRows
+                }
+
+            var startOnA =
+                if (
+                    endHint !=
+                        null
+                ) {
+                    val oddRowCount =
+                        rows.size %
+                            2 ==
+                            1
+
+                    val endIfStartA =
+                        if (
+                            oddRowCount
+                        ) {
+                            rows.last().b
+                        } else {
+                            rows.last().a
+                        }
+
+                    val endIfStartB =
+                        if (
+                            oddRowCount
+                        ) {
+                            rows.last().a
+                        } else {
+                            rows.last().b
+                        }
+
+                    distance(
+                        endHint,
+                        endIfStartA
+                    ) <=
+                        distance(
+                            endHint,
+                            endIfStartB
+                        )
+                } else if (
+                    before ==
+                        null
+                ) {
+                    true
+                } else {
+                    distance(
+                        before,
+                        rows.first().a
+                    ) <=
+                        distance(
+                            before,
+                            rows.first().b
+                        )
+                }
+
+            val maxSegmentUnits =
+                DEFAULT_TATAMI_STITCH_LENGTH_MM *
+                    10f
+
+            rows.forEach {
+                    row ->
+                val start =
+                    if (
+                        startOnA
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
+
+                val end =
+                    if (
+                        startOnA
+                    ) {
+                        row.b
+                    } else {
+                        row.a
+                    }
+
+                stitchTo(
+                    start
+                )
+
+                emitSegmented(
+                    from =
+                        current
+                            ?: start,
+                    to =
+                        end,
+                    command =
+                        StitchCommand.STITCH,
+                    maxSegmentUnits =
+                        maxSegmentUnits
+                )
+
+                startOnA =
+                    !startOnA
+            }
+        }
+
         private fun emitSatinColumn(
             column: SatinColumn,
             endHint: FPoint? =
                 null
         ) {
+            if (
+                columnUsesTatami(
+                    column
+                )
+            ) {
+                emitTatamiColumn(
+                    column =
+                        column,
+                    endHint =
+                        endHint
+                )
+
+                return
+            }
+
             val sourceRows =
                 column.rows
 
@@ -9661,6 +9933,84 @@ internal object ReferenceImportedFontEngine {
                 it.y
             )
         }
+
+    internal fun debugWideObjectUsesTatami():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<EmbroideryPoint>()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val rows =
+            mutableListOf<SatinRow>()
+
+        for (
+            index in
+                0 until 7
+        ) {
+            rows +=
+                SatinRow(
+                    a =
+                        FPoint(
+                            0f,
+                            index *
+                                4f
+                        ),
+                    b =
+                        FPoint(
+                            100f,
+                            index *
+                                4f
+                        )
+                )
+        }
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    SatinColumn(
+                        rows
+                    )
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                -2f,
+                                -2f
+                            ),
+                            FPoint(
+                                102f,
+                                -2f
+                            ),
+                            FPoint(
+                                102f,
+                                30f
+                            ),
+                            FPoint(
+                                -2f,
+                                30f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    0f,
+                    0f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f
+        )
+
+        return output
+    }
 
     internal fun debugTerminalStructuralLegPath():
         List<EmbroideryPoint> {
