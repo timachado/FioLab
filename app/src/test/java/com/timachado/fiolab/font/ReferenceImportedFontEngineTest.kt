@@ -463,6 +463,20 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun accumulatedSmoothTurnIsSplitBeforeBecomingFan() {
+        val blocks =
+            ReferenceImportedFontEngine
+                .debugAccumulatedFanBlockCount()
+
+        assertTrue(
+            "Uma rotação gradual grande não pode permanecer em uma única coluna Satin e formar leque.",
+            blocks >=
+                2
+        )
+    }
+
+
+    @Test
     fun coverageAuditRepairsUncoveredInternalAreas() {
         val repairedRows =
             ReferenceImportedFontEngine
