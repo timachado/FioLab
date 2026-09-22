@@ -8215,6 +8215,111 @@ internal object ReferenceImportedFontEngine {
             )
         }
 
+    internal fun debugFirstVisualBlockPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<EmbroideryPoint>()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val lowerFlourish =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            0f
+                        ),
+                        FPoint(
+                            16f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            14f
+                        ),
+                        FPoint(
+                            16f,
+                            14f
+                        )
+                    )
+                )
+            )
+
+        val upperStem =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            8f,
+                            82f
+                        ),
+                        FPoint(
+                            24f,
+                            82f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            8f,
+                            100f
+                        ),
+                        FPoint(
+                            24f,
+                            100f
+                        )
+                    )
+                )
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    lowerFlourish,
+                    upperStem
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                -2f,
+                                -2f
+                            ),
+                            FPoint(
+                                30f,
+                                -2f
+                            ),
+                            FPoint(
+                                30f,
+                                104f
+                            ),
+                            FPoint(
+                                -2f,
+                                104f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    8f,
+                    100f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f
+        )
+
+        return output
+    }
+
     internal fun debugVisualStartPath():
         List<EmbroideryPoint> {
         val output =
