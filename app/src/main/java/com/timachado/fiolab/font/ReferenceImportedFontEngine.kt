@@ -2985,19 +2985,262 @@ internal object ReferenceImportedFontEngine {
                         pitchUnits
                 )
 
+            val cappedRows =
+                addContourEndCaps(
+                    rows =
+                        densifiedRows,
+                    polygons =
+                        polygons,
+                    pitchUnits =
+                        pitchUnits
+                )
+
             if (
-                densifiedRows.size >=
+                cappedRows.size >=
                     2
             ) {
                 columns +=
                     SatinColumn(
                         rows =
-                            densifiedRows
+                            cappedRows
                     )
             }
         }
 
         return columns
+    }
+
+    private fun addContourEndCaps(
+        rows: List<SatinRow>,
+        polygons: List<Polygon>,
+        pitchUnits: Float
+    ): MutableList<SatinRow> {
+        if (
+            rows.size <
+                2
+        ) {
+            return rows
+                .toMutableList()
+        }
+
+        fun center(
+            row: SatinRow
+        ): FPoint =
+            FPoint(
+                (
+                    row.a.x +
+                        row.b.x
+                    ) /
+                    2f,
+                (
+                    row.a.y +
+                        row.b.y
+                    ) /
+                    2f
+            )
+
+        fun shiftedRow(
+            edge: SatinRow,
+            neighbor: SatinRow,
+            outward: Boolean
+        ): SatinRow? {
+            val edgeCenter =
+                center(
+                    edge
+                )
+
+            val neighborCenter =
+                center(
+                    neighbor
+                )
+
+            val rawDirection =
+                if (
+                    outward
+                ) {
+                    FPoint(
+                        edgeCenter.x -
+                            neighborCenter.x,
+                        edgeCenter.y -
+                            neighborCenter.y
+                    )
+                } else {
+                    FPoint(
+                        neighborCenter.x -
+                            edgeCenter.x,
+                        neighborCenter.y -
+                            edgeCenter.y
+                    )
+                }
+
+            val direction =
+                normalize(
+                    rawDirection
+                )
+
+            if (
+                kotlin.math.abs(
+                    direction.x
+                ) <
+                    0.0001f &&
+                kotlin.math.abs(
+                    direction.y
+                ) <
+                    0.0001f
+            ) {
+                return null
+            }
+
+            val neighborGap =
+                distance(
+                    edgeCenter,
+                    neighborCenter
+                )
+
+            val shift =
+                minOf(
+                    pitchUnits *
+                        0.55f,
+                    neighborGap *
+                        0.55f
+                )
+
+            if (
+                shift <=
+                    0.25f
+            ) {
+                return null
+            }
+
+            val candidate =
+                SatinRow(
+                    a =
+                        FPoint(
+                            edge.a.x +
+                                direction.x *
+                                    shift,
+                            edge.a.y +
+                                direction.y *
+                                    shift
+                        ),
+                    b =
+                        FPoint(
+                            edge.b.x +
+                                direction.x *
+                                    shift,
+                            edge.b.y +
+                                direction.y *
+                                    shift
+                        )
+                )
+
+            val candidateCenter =
+                center(
+                    candidate
+                )
+
+            val innerA =
+                lerp(
+                    candidate.a,
+                    candidateCenter,
+                    0.10f
+                )
+
+            val innerB =
+                lerp(
+                    candidate.b,
+                    candidateCenter,
+                    0.10f
+                )
+
+            val centerTravelSafe =
+                segmentInsideGlyphGeometry(
+                    from =
+                        candidateCenter,
+                    to =
+                        edgeCenter,
+                    polygons =
+                        polygons,
+                    sampleUnits =
+                        1.0f
+                )
+
+            val rowSafe =
+                pointInsideGlyphAdaptive(
+                    point =
+                        candidateCenter,
+                    polygons =
+                        polygons
+                ) &&
+                    segmentInsideGlyphGeometry(
+                        from =
+                            innerA,
+                        to =
+                            innerB,
+                        polygons =
+                            polygons,
+                        sampleUnits =
+                            1.0f
+                    )
+
+            return if (
+                centerTravelSafe &&
+                rowSafe
+            ) {
+                candidate
+            } else {
+                null
+            }
+        }
+
+        val result =
+            rows
+                .toMutableList()
+
+        val startCap =
+            shiftedRow(
+                edge =
+                    result.first(),
+                neighbor =
+                    result[
+                        1
+                    ],
+                outward =
+                    true
+            )
+
+        if (
+            startCap !=
+                null
+        ) {
+            result.add(
+                0,
+                startCap
+            )
+        }
+
+        val endCap =
+            shiftedRow(
+                edge =
+                    result.last(),
+                neighbor =
+                    result[
+                        result.lastIndex -
+                            1
+                    ],
+                outward =
+                    true
+            )
+
+        if (
+            endCap !=
+                null
+        ) {
+            result +=
+                endCap
+        }
+
+        return result
     }
 
     private fun densifyContourRows(
