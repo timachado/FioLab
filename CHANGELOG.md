@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.48.2
+
+### Início de costura e underlay das fontes salvas
+- Corrigido o início observado no vídeo 1000309853.mp4: a letra cursiva deixava a agulha entrar pela parte inferior esquerda do primeiro glifo.
+- O ponto inicial visual agora segue esquerda → direita e, para o mesmo X, cima → baixo no espaço cartesiano do glifo.
+- O underlay de borda da série 0.48 foi substituído por uma camada única e espaçada de zigue-zague dentro da região do bloco Satin.
+- Isso evita que a simulação comece contornando toda a borda da letra antes do preenchimento principal.
+- Depois do underlay, o Satin principal escolhe automaticamente a extremidade mais próxima da posição atual da agulha e percorre o bloco no sentido de retorno, sem criar uma diagonal longa apenas para voltar ao começo.
+- Mantidos o pareamento vetorial TTF/OTF, densificação de pequenas lacunas, roteamento entre blocos, auto-fit, bastidor automático do viewer e exportação PES/DST/JEF.
+- Adicionados testes para preferência de início superior esquerdo e para impedir a volta do underlay que percorre as duas bordas antes do Satin.
+
 ## 0.48.1
 
 ### Abertura correta de matrizes PES e fechamento de pequenas falhas Satin
