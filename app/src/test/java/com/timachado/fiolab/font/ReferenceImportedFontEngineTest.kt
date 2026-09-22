@@ -463,6 +463,33 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun primaryEngineDoesNotCreateAbruptFanAtBranch() {
+        val maxTurn =
+            ReferenceImportedFontEngine
+                .debugPrimaryMaxTurnDegrees(
+                    polygon =
+                        listOf(
+                            40f to 0f,
+                            60f to 0f,
+                            60f to 45f,
+                            98f to 84f,
+                            84f to 100f,
+                            51f to 66f,
+                            18f to 100f,
+                            4f to 86f,
+                            40f to 49f
+                        )
+                )
+
+        assertTrue(
+            "O motor principal não pode criar leque abrupto em bifurcações cursivas.",
+            maxTurn <=
+                53f
+        )
+    }
+
+
+    @Test
     fun directionalBlocksKeepJunctionWidthLocal() {
         val widths =
             ReferenceImportedFontEngine
@@ -520,7 +547,7 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
-    fun primarySavedFontEngineProducesStableVectorRowsWithoutSkeleton() {
+    fun primarySavedFontEngineProducesStableCenterlineRows() {
         val vectors =
             ReferenceImportedFontEngine
                 .debugPrimaryRowVectors(
@@ -536,7 +563,7 @@ class ReferenceImportedFontEngineTest {
                 )
 
         assertTrue(
-            "O motor profissional de fontes salvas deve produzir travessas vetoriais válidas.",
+            "O motor principal por eixo medial deve produzir travessas locais válidas.",
             vectors.isNotEmpty() &&
                 vectors.all {
                         vector ->
