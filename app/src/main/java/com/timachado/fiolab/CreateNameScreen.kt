@@ -494,8 +494,6 @@ fun CreateNameScreen(
         satinPullCompensationMm,
         satinShortStitches,
         satinUnderlayMode,
-        importedFontDigitizingMode,
-        importedFontSewingOrder,
         specialStitchMode,
         font,
         importedFontId,
