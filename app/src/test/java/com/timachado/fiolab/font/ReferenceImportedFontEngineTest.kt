@@ -545,7 +545,7 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
-    fun junctionCenterIsCoveredByDedicatedSatinBlock() {
+    fun junctionCenterIsCoveredWithoutRadialSatinFan() {
         val distance =
             ReferenceImportedFontEngine
                 .debugNearestSatinRowCenterDistance(
@@ -567,7 +567,7 @@ class ReferenceImportedFontEngineTest {
                 )
 
         assertTrue(
-            "A região central da junção deve receber um bloco Satin próprio, sem ficar vazia.",
+            "A região central da junção deve continuar coberta sem depender de um bloco Satin radial.",
             distance <=
                 12f
         )
