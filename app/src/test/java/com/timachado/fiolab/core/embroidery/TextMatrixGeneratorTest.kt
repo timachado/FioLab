@@ -491,7 +491,7 @@ class TextMatrixGeneratorTest {
 
 
     @Test
-    fun importedFontsDefaultToProfessionalBlocksAndVisualOrder() {
+    fun importedFontsDefaultToProfessionalBlocksAndContinuityOrder() {
         val options =
             TextMatrixOptions(
                 text =
@@ -506,7 +506,7 @@ class TextMatrixGeneratorTest {
         )
 
         assertEquals(
-            ImportedFontSewingOrder.VISUAL,
+            ImportedFontSewingOrder.CONTINUITY,
             options.importedFontSewingOrder
         )
     }
