@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../FioLab2.Engine/FioLab2.Engine.csproj" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.151.2" />
+  </ItemGroup>
+</Project>
