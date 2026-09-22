@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.17
+
+### Correção visual do Satin em letras cursivas
+- Corrigidos os leques, triângulos e cruzamentos vistos na simulação da palavra "Maria".
+- Componentes pequenos e desconectados, como o ponto do "i" e acentos compactos, passam a ser tratados como uma única coluna Satin simples em vez de virar uma estrela de ramificações do eixo medial.
+- Caminhos que começam ou terminam em bifurcações do esqueleto são recuados alguns pixels antes de gerar travessas, evitando usar o próprio nó de junção como centro de uma faixa Satin.
+- O eixo central é suavizado antes do cálculo da normal local, reduzindo mudanças bruscas de ângulo causadas pelo raster.
+- Travessas anormalmente largas em relação ao limite Satin são descartadas antes da divisão de colunas, impedindo que um raio atravesse outro traço da letra e crie o padrão em leque.
+- Mantidos o Satin adaptativo por múltiplas direções, o início visual, o underlay, a compensação de repuxo e o roteamento por continuidade.
+- Adicionado teste de regressão para haste + ponto destacado, exigindo exatamente duas colunas Satin e impedindo a volta do ponto radial.
+
 ## 0.46.16
 
 ### Correções após validação em vídeo
