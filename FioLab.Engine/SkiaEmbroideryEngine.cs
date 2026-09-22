@@ -1738,19 +1738,30 @@ public sealed class SkiaEmbroideryEngine
                 options.StitchLengthPx * raster.Scale);
         }
 
-        PixelPoint? previousEnd = null;
+        var coverSegments =
+            new List<(PixelPoint A, PixelPoint B)>();
 
-        for (var i = 0; i < rows.Count; i++)
+        PixelPoint? previousEnd = null;
+        var emittedRowIndex = 0;
+
+        foreach (var rawRow in rows)
         {
-            var row = rows[i];
+            if (!TryFitCoverRowAgainstSegments(
+                rawRow,
+                emittedRowIndex,
+                coverSegments,
+                out var row))
+            {
+                continue;
+            }
 
             var start =
-                i % 2 == 0
+                emittedRowIndex % 2 == 0
                     ? row.A
                     : row.B;
 
             var end =
-                i % 2 == 0
+                emittedRowIndex % 2 == 0
                     ? row.B
                     : row.A;
 
@@ -1762,12 +1773,23 @@ public sealed class SkiaEmbroideryEngine
                 end.X,
                 end.Y);
 
-            var startCommand =
+            var connectorInside =
                 previousEnd is not null &&
                 SegmentInsideComponent(
                     component,
                     previousEnd.Value,
-                    start)
+                    start);
+
+            var connectorCrosses =
+                previousEnd is not null &&
+                SegmentCrossesAny(
+                    previousEnd.Value,
+                    start,
+                    coverSegments);
+
+            var startCommand =
+                connectorInside &&
+                !connectorCrosses
                     ? StitchCommand.Stitch
                     : StitchCommand.Jump;
 
@@ -1777,16 +1799,112 @@ public sealed class SkiaEmbroideryEngine
                 startCommand,
                 objectIndex));
 
+            if (
+                startCommand == StitchCommand.Stitch &&
+                previousEnd is not null)
+            {
+                coverSegments.Add(
+                    (previousEnd.Value, start));
+            }
+
             points.Add(new StitchPoint(
                 endWorld.X,
                 endWorld.Y,
                 StitchCommand.Stitch,
                 objectIndex));
 
+            coverSegments.Add(
+                (start, end));
+
             previousEnd = end;
+            emittedRowIndex++;
         }
 
         return points;
+    }
+
+    private static bool TryFitCoverRowAgainstSegments(
+        SatinRow source,
+        int emittedRowIndex,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> priorSegments,
+        out SatinRow fitted)
+    {
+        var center = new PixelPoint(
+            (source.A.X + source.B.X) / 2f,
+            (source.A.Y + source.B.Y) / 2f);
+
+        ReadOnlySpan<float> scales =
+        [
+            1.00f,
+            0.90f,
+            0.80f,
+            0.70f,
+            0.60f,
+            0.50f,
+            0.42f,
+            0.35f
+        ];
+
+        foreach (var scale in scales)
+        {
+            var candidate = scale >= 0.999f
+                ? source
+                : new SatinRow(
+                    new PixelPoint(
+                        center.X +
+                        (source.A.X - center.X) * scale,
+                        center.Y +
+                        (source.A.Y - center.Y) * scale),
+                    new PixelPoint(
+                        center.X +
+                        (source.B.X - center.X) * scale,
+                        center.Y +
+                        (source.B.Y - center.Y) * scale));
+
+            var start =
+                emittedRowIndex % 2 == 0
+                    ? candidate.A
+                    : candidate.B;
+
+            var end =
+                emittedRowIndex % 2 == 0
+                    ? candidate.B
+                    : candidate.A;
+
+            if (SegmentCrossesAny(
+                start,
+                end,
+                priorSegments))
+            {
+                continue;
+            }
+
+            fitted = candidate;
+            return true;
+        }
+
+        fitted = default;
+        return false;
+    }
+
+    private static bool SegmentCrossesAny(
+        PixelPoint a,
+        PixelPoint b,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> segments)
+    {
+        foreach (var segment in segments)
+        {
+            if (SegmentsProperlyIntersect(
+                a,
+                b,
+                segment.A,
+                segment.B))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void AppendSafePolyline(
