@@ -403,4 +403,34 @@ class ReferenceImportedFontEngineTest {
                 2
         )
     }
+
+    @Test
+    fun compactDetachedDotUsesSingleSatinColumn() {
+        val count =
+            ReferenceImportedFontEngine
+                .debugColumnCount(
+                    polygons =
+                        listOf(
+                            listOf(
+                                0f to 0f,
+                                18f to 0f,
+                                18f to 80f,
+                                0f to 80f
+                            ),
+                            listOf(
+                                2f to 100f,
+                                16f to 100f,
+                                16f to 114f,
+                                2f to 114f
+                            )
+                        )
+                )
+
+        assertEquals(
+            "Uma haste e um ponto destacado devem gerar duas colunas, sem transformar o ponto em vários ramos radiais.",
+            2,
+            count
+        )
+    }
+
 }
