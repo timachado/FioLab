@@ -676,4 +676,25 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
-}
+
+    @Test
+    fun firstBlockUsesUpperVisualEntryInsteadOfLowerFlourish() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugFirstVisualBlockPath()
+
+        val first =
+            points.first()
+
+        assertEquals(
+            StitchCommand.JUMP,
+            first.command
+        )
+
+        assertTrue(
+            "O primeiro bloco deve ser a haste superior próxima do início visual, não o floreio inferior mais à esquerda.",
+            first.yUnits >=
+                80
+        )
+    }
+\n}
