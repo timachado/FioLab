@@ -463,6 +463,50 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun cleanEngineSatinAlternatesOnlyBetweenRealRails() {
+        val xs =
+            ReferenceImportedFontEngine
+                .debugCleanSatinRailXs()
+
+        assertTrue(
+            "O motor V2 precisa produzir várias passadas Satin reais.",
+            xs.size >=
+                6
+        )
+
+        assertTrue(
+            "Cada ponto principal Satin deve terminar em um dos dois trilhos reais, nunca no meio do traço.",
+            xs.all {
+                it <=
+                    1 ||
+                    it >=
+                        39
+            }
+        )
+
+        assertTrue(
+            "O Satin deve alternar ida e volta entre as duas bordas.",
+            xs.zipWithNext()
+                .all {
+                        pair ->
+                    (
+                        pair.first <=
+                            1 &&
+                        pair.second >=
+                            39
+                        ) ||
+                        (
+                            pair.first >=
+                                39 &&
+                            pair.second <=
+                                1
+                            )
+                }
+        )
+    }
+
+
+    @Test
     fun satinRowsReachRealGlyphBoundaryWhenRadiusIsUnderestimated() {
         val width =
             ReferenceImportedFontEngine
