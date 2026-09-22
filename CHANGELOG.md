@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.49.2
+
+### Ordem final e saída estrutural do último glifo
+- Consolidadas as correções posteriores à 0.49.1 no motor de fontes TTF/OTF salvas.
+- O último glifo agora calcula um alvo visual de saída na região estrutural inferior direita, evitando usar um floreio fino como término da costura.
+- A coluna estrutural compatível com esse alvo é reservada para ser bordada por último; colunas muito pequenas são descartadas como candidatas ao término.
+- O último bloco Satin é orientado nos dois sentidos possíveis e também alterna o lado inicial para que a última pontada real fique o mais próximo possível do alvo de saída.
+- No caso observado do nome terminando em "a", a sequência passa a terminar na perninha estrutural do "a", e o comando END permanece na mesma coordenada da última pontada.
+- Mantidos o início visual superior, Blocos profissionais, Ordem Visual/Continuidade, underlay seguro em curvas, fechamento de microvazios, limites de bastidor e leitura de matrizes.
+- Adicionado teste de regressão que exige o último ponto na perna estrutural e rejeita o floreio fino como saída final.
+
 ## 0.49.1
 
 ### Fechamento de microvazios no Satin
