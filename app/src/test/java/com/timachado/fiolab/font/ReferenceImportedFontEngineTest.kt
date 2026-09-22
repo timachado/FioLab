@@ -463,6 +463,20 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun satinRowsReachRealGlyphBoundaryWhenRadiusIsUnderestimated() {
+        val width =
+            ReferenceImportedFontEngine
+                .debugSatinReachesTrueRasterBoundary()
+
+        assertTrue(
+            "O Satin deve atravessar até a borda real do glifo, sem parar no meio por causa do raio medial suavizado.",
+            width >=
+                38f
+        )
+    }
+
+
+    @Test
     fun accumulatedSmoothTurnIsSplitBeforeBecomingFan() {
         val blocks =
             ReferenceImportedFontEngine
