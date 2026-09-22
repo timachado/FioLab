@@ -336,6 +336,44 @@ public sealed class SkiaEmbroideryEngine
             return [];
         }
 
+        var compactWidthWorld =
+            component.Width / raster.Scale;
+
+        var compactHeightWorld =
+            component.Height / raster.Scale;
+
+        var compactMin = MathF.Max(
+            1f,
+            MathF.Min(
+                compactWidthWorld,
+                compactHeightWorld));
+
+        var compactMax = MathF.Max(
+            compactWidthWorld,
+            compactHeightWorld);
+
+        var compactAspect =
+            compactMax / compactMin;
+
+        var compactFillRatio =
+            component.Pixels.Count /
+            MathF.Max(
+                1f,
+                component.Width * component.Height);
+
+        // Detached compact ornaments (heart-shaped i dots, round dots,
+        // small filled symbols) are area fills, not stroke graphs. Sending
+        // them through skeleton topology creates artificial triangles and
+        // branches. Let the whole-component classifier emit a compact
+        // Tatami fill instead.
+        if (
+            compactAspect <= 1.55f &&
+            compactFillRatio >= 0.42f &&
+            compactMax <= options.MaxSatinWidthPx * 1.35f)
+        {
+            return [];
+        }
+
         var skeleton = ThinMask(component);
 
         if (CountTrue(skeleton) < 4)
@@ -1587,157 +1625,184 @@ public sealed class SkiaEmbroideryEngine
 
         foreach (var junction in junctions)
         {
-            var endpoints = new List<CandidateEndpoint>();
-
-            for (var index = 0; index < candidates.Count; index++)
+            // A crossing can legitimately contain two independent
+            // continuations (degree 4). Pair repeatedly at the same
+            // junction until no more strongly collinear branch endpoints
+            // remain. The merged candidate's endpoints move away from the
+            // junction, so it cannot be merged again accidentally here.
+            while (true)
             {
-                var candidate = candidates[index];
+                var endpoints = new List<CandidateEndpoint>();
 
-                if (candidate.Centers.Count < 2)
+                for (var index = 0; index < candidates.Count; index++)
                 {
+                    var candidate = candidates[index];
+
+                    if (candidate.Centers.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    AddEndpoint(index, atStart: true);
+                    AddEndpoint(index, atStart: false);
+
                     continue;
+
+                    void AddEndpoint(
+                        int candidateIndex,
+                        bool atStart)
+                    {
+                        var current = candidates[candidateIndex];
+                        var endpoint = atStart
+                            ? current.Centers[0]
+                            : current.Centers[^1];
+
+                        if (Distance(endpoint, junction) > radius)
+                        {
+                            return;
+                        }
+
+                        var adjacent = atStart
+                            ? current.Centers[1]
+                            : current.Centers[^2];
+
+                        var direction = NormalizeVector(
+                            adjacent.X - endpoint.X,
+                            adjacent.Y - endpoint.Y);
+
+                        endpoints.Add(new CandidateEndpoint(
+                            candidateIndex,
+                            atStart,
+                            endpoint,
+                            direction.X,
+                            direction.Y));
+                    }
                 }
 
-                AddEndpoint(index, atStart: true);
-                AddEndpoint(index, atStart: false);
+                CandidatePair? best = null;
 
-                continue;
-
-                void AddEndpoint(
-                    int candidateIndex,
-                    bool atStart)
+                for (var a = 0; a < endpoints.Count; a++)
                 {
-                    var current = candidates[candidateIndex];
-                    var endpoint = atStart
-                        ? current.Centers[0]
-                        : current.Centers[^1];
-
-                    if (Distance(endpoint, junction) > radius)
+                    for (var b = a + 1; b < endpoints.Count; b++)
                     {
-                        return;
+                        var first = endpoints[a];
+                        var second = endpoints[b];
+
+                        if (first.CandidateIndex == second.CandidateIndex)
+                        {
+                            continue;
+                        }
+
+                        var pairCandidateA =
+                            candidates[first.CandidateIndex];
+
+                        var pairCandidateB =
+                            candidates[second.CandidateIndex];
+
+                        if (pairCandidateA.Kind != pairCandidateB.Kind)
+                        {
+                            continue;
+                        }
+
+                        var dot =
+                            first.DirectionX * second.DirectionX +
+                            first.DirectionY * second.DirectionY;
+
+                        // Require a strong through-direction. This avoids
+                        // joining two merely nearby side branches at sharp
+                        // script corners while still pairing both halves of
+                        // a real crossing.
+                        if (dot > -0.68f)
+                        {
+                            continue;
+                        }
+
+                        var score =
+                            dot +
+                            0.025f *
+                            (
+                                Distance(first.Point, junction) +
+                                Distance(second.Point, junction)
+                            );
+
+                        if (best is null || score < best.Value.Score)
+                        {
+                            best = new CandidatePair(
+                                first,
+                                second,
+                                score);
+                        }
                     }
-
-                    var adjacent = atStart
-                        ? current.Centers[1]
-                        : current.Centers[^2];
-
-                    var direction = NormalizeVector(
-                        adjacent.X - endpoint.X,
-                        adjacent.Y - endpoint.Y);
-
-                    endpoints.Add(new CandidateEndpoint(
-                        candidateIndex,
-                        atStart,
-                        endpoint,
-                        direction.X,
-                        direction.Y));
                 }
-            }
 
-            CandidatePair? best = null;
-
-            for (var a = 0; a < endpoints.Count; a++)
-            {
-                for (var b = a + 1; b < endpoints.Count; b++)
+                if (best is null)
                 {
-                    var first = endpoints[a];
-                    var second = endpoints[b];
-
-                    if (first.CandidateIndex == second.CandidateIndex)
-                    {
-                        continue;
-                    }
-
-                    var pairCandidateA = candidates[first.CandidateIndex];
-                    var pairCandidateB = candidates[second.CandidateIndex];
-
-                    if (pairCandidateA.Kind != pairCandidateB.Kind)
-                    {
-                        continue;
-                    }
-
-                    var dot =
-                        first.DirectionX * second.DirectionX +
-                        first.DirectionY * second.DirectionY;
-
-                    // Opposite outward tangents mean one continuous stroke
-                    // passing through the junction.
-                    if (dot > -0.55f)
-                    {
-                        continue;
-                    }
-
-                    var score =
-                        dot +
-                        0.025f *
-                        (
-                            Distance(first.Point, junction) +
-                            Distance(second.Point, junction)
-                        );
-
-                    if (best is null || score < best.Value.Score)
-                    {
-                        best = new CandidatePair(
-                            first,
-                            second,
-                            score);
-                    }
+                    break;
                 }
+
+                var pair = best.Value;
+                var firstIndex = pair.First.CandidateIndex;
+                var secondIndex = pair.Second.CandidateIndex;
+
+                var firstCandidate =
+                    OrientCandidateToJunctionEnd(
+                        candidates[firstIndex],
+                        pair.First.AtStart);
+
+                var secondCandidate =
+                    OrientCandidateFromJunctionStart(
+                        candidates[secondIndex],
+                        pair.Second.AtStart);
+
+                var mergedCenters = new List<PixelPoint>(
+                    firstCandidate.Centers.Count +
+                    secondCandidate.Centers.Count + 1);
+
+                mergedCenters.AddRange(
+                    firstCandidate.Centers);
+
+                if (
+                    Distance(
+                        mergedCenters[^1],
+                        junction) > 0.75f &&
+                    Distance(
+                        junction,
+                        secondCandidate.Centers[0]) > 0.75f)
+                {
+                    mergedCenters.Add(junction);
+                }
+
+                mergedCenters.AddRange(
+                    secondCandidate.Centers);
+
+                var mergedRows = new List<SatinRow>(
+                    firstCandidate.Rows.Count +
+                    secondCandidate.Rows.Count);
+
+                mergedRows.AddRange(
+                    firstCandidate.Rows);
+
+                mergedRows.AddRange(
+                    secondCandidate.Rows);
+
+                mergedRows =
+                    AlignSatinRows(mergedRows);
+
+                var merged = new TopologyCandidate(
+                    firstCandidate.Kind,
+                    mergedRows,
+                    mergedCenters);
+
+                var high =
+                    Math.Max(firstIndex, secondIndex);
+
+                var low =
+                    Math.Min(firstIndex, secondIndex);
+
+                candidates.RemoveAt(high);
+                candidates.RemoveAt(low);
+                candidates.Add(merged);
             }
-
-            if (best is null)
-            {
-                continue;
-            }
-
-            var pair = best.Value;
-            var firstIndex = pair.First.CandidateIndex;
-            var secondIndex = pair.Second.CandidateIndex;
-
-            var firstCandidate = OrientCandidateToJunctionEnd(
-                candidates[firstIndex],
-                pair.First.AtStart);
-
-            var secondCandidate = OrientCandidateFromJunctionStart(
-                candidates[secondIndex],
-                pair.Second.AtStart);
-
-            var mergedCenters = new List<PixelPoint>(
-                firstCandidate.Centers.Count +
-                secondCandidate.Centers.Count + 1);
-
-            mergedCenters.AddRange(firstCandidate.Centers);
-
-            if (
-                Distance(mergedCenters[^1], junction) >
-                    0.75f &&
-                Distance(junction, secondCandidate.Centers[0]) >
-                    0.75f)
-            {
-                mergedCenters.Add(junction);
-            }
-
-            mergedCenters.AddRange(secondCandidate.Centers);
-
-            var mergedRows = new List<SatinRow>(
-                firstCandidate.Rows.Count +
-                secondCandidate.Rows.Count);
-
-            mergedRows.AddRange(firstCandidate.Rows);
-            mergedRows.AddRange(secondCandidate.Rows);
-            mergedRows = AlignSatinRows(mergedRows);
-
-            var merged = new TopologyCandidate(
-                firstCandidate.Kind,
-                mergedRows,
-                mergedCenters);
-
-            var high = Math.Max(firstIndex, secondIndex);
-            var low = Math.Min(firstIndex, secondIndex);
-
-            candidates.RemoveAt(high);
-            candidates.RemoveAt(low);
-            candidates.Add(merged);
         }
 
         return candidates;
