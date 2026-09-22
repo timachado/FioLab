@@ -79,8 +79,8 @@ jobs:
             APK="$(find FioLab.Maui/bin/Debug -type f -name '*.apk' | head -n 1)"
           fi
           test -n "$APK"
-          cp "$APK" out/FioLab-MAUI-0.70.1-debug.apk
-          sha256sum out/FioLab-MAUI-0.70.1-debug.apk > out/FioLab-MAUI-0.70.1-SHA256.txt
+          cp "$APK" out/FioLab-MAUI-0.70.2-debug.apk
+          sha256sum out/FioLab-MAUI-0.70.2-debug.apk > out/FioLab-MAUI-0.70.2-SHA256.txt
 
       - name: Enable KVM for Android emulator
         shell: bash
@@ -99,10 +99,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            bash -lc 'set -e; adb install -r out/FioLab-MAUI-0.70.1-debug.apk; adb logcat -c; adb shell monkey -p com.timachado.fiolab.maui -c android.intent.category.LAUNCHER 1; sleep 8; PID="$(adb shell pidof com.timachado.fiolab.maui | tr -d "\r")"; if [ -z "$PID" ]; then echo "FioLab MAUI morreu durante a inicializacao."; echo "===== CRASH BUFFER ====="; adb logcat -b crash -d || true; echo "===== FILTRO FIOLAB/ANDROIDRUNTIME ====="; adb logcat -d -v threadtime | grep -E "com\\.timachado\\.fiolab\\.maui|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc" || true; exit 1; fi; echo "FioLab MAUI permaneceu aberto. PID=$PID"'
+            bash -lc 'set -e; adb install -r out/FioLab-MAUI-0.70.2-debug.apk; adb logcat -c; adb shell monkey -p com.timachado.fiolab.maui -c android.intent.category.LAUNCHER 1; sleep 8; PID="$(adb shell pidof com.timachado.fiolab.maui | tr -d "\r")"; if [ -z "$PID" ]; then echo "FioLab MAUI morreu durante a inicializacao."; echo "===== CRASH BUFFER ====="; adb logcat -b crash -d || true; echo "===== FILTRO FIOLAB/ANDROIDRUNTIME ====="; adb logcat -d -v threadtime | grep -E "com\\.timachado\\.fiolab\\.maui|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc" || true; exit 1; fi; echo "FioLab MAUI permaneceu aberto. PID=$PID"'
 
       - name: Upload MAUI APK
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-MAUI-0.70.1
+          name: FioLab-MAUI-0.70.2
           path: out/*
