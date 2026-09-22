@@ -7864,6 +7864,108 @@ internal object ReferenceImportedFontEngine {
             return best
         }
 
+        private fun terminalVisualChoice(
+            columns: List<SatinColumn>,
+            endHint: FPoint?
+        ): RoutedChoice? {
+            val anchor =
+                endHint
+                    ?: return null
+
+            if (
+                columns.size <
+                    2
+            ) {
+                return null
+            }
+
+            val maxRows =
+                columns.maxOfOrNull {
+                    it.rows.size
+                }
+                    ?: return null
+
+            val minimumStructuralRows =
+                max(
+                    2,
+                    (
+                        maxRows *
+                            0.35f
+                        ).roundToInt()
+                )
+
+            var best:
+                RoutedChoice? =
+                null
+
+            columns.forEachIndexed {
+                    index,
+                    column ->
+                if (
+                    column.rows.size <
+                        minimumStructuralRows
+                ) {
+                    return@forEachIndexed
+                }
+
+                orientationCandidates(
+                    column
+                ).forEach {
+                        candidate ->
+                    val last =
+                        candidate.rows
+                            .lastOrNull()
+                            ?: return@forEach
+
+                    val exitDistance =
+                        minOf(
+                            distance(
+                                anchor,
+                                last.a
+                            ),
+                            distance(
+                                anchor,
+                                last.b
+                            )
+                        )
+
+                    val previous =
+                        best
+
+                    if (
+                        previous ==
+                            null ||
+                        exitDistance <
+                            previous.entryDistance -
+                                0.001f ||
+                        (
+                            kotlin.math.abs(
+                                exitDistance -
+                                    previous.entryDistance
+                            ) <=
+                                0.001f &&
+                            column.rows.size >
+                                columns[
+                                    previous.index
+                                ].rows.size
+                        )
+                    ) {
+                        best =
+                            RoutedChoice(
+                                index =
+                                    index,
+                                oriented =
+                                    candidate,
+                                entryDistance =
+                                    exitDistance
+                            )
+                    }
+                }
+            }
+
+            return best
+        }
+
         fun emitGlyph(
             columns: List<SatinColumn>,
             polygons: List<Polygon>,
@@ -7871,7 +7973,9 @@ internal object ReferenceImportedFontEngine {
             includeUnderlay: Boolean,
             densityMm: Float,
             strictVisualOrder: Boolean =
-                false
+                false,
+            endHint: FPoint? =
+                null
         ) {
             val remaining =
                 standardSewingOrder(
@@ -7883,6 +7987,24 @@ internal object ReferenceImportedFontEngine {
             ) {
                 return
             }
+
+            val terminalChoice =
+                terminalVisualChoice(
+                    columns =
+                        remaining,
+                    endHint =
+                        endHint
+                )
+
+            val reservedTerminal =
+                terminalChoice?.let {
+                        choice ->
+                    remaining.removeAt(
+                        choice.index
+                    )
+
+                    choice.oriented
+                }
 
             var regionIndex =
                 0
@@ -8030,6 +8152,43 @@ internal object ReferenceImportedFontEngine {
 
                 regionIndex +=
                     1
+            }
+
+            reservedTerminal?.let {
+                    terminal ->
+                val entry =
+                    terminal.rows
+                        .first()
+                        .a
+
+                travelTo(
+                    target =
+                        entry,
+                    polygons =
+                        polygons,
+                    firstColumn =
+                        false
+                )
+
+                if (
+                    includeUnderlay
+                ) {
+                    emitRegionZigzagUnderlay(
+                        column =
+                            terminal,
+                        polygons =
+                            polygons,
+                        densityMm =
+                            densityMm
+                    )
+                }
+
+                emitSatinColumn(
+                    column =
+                        terminal,
+                    endHint =
+                        endHint
+                )
             }
         }
 
