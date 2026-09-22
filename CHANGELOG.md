@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.49.0
+
+### Digitalização por Blocos
+- Nova ferramenta visível na aba Mais para fontes TTF/OTF salvas.
+- O modo padrão passa a ser Blocos profissionais, inspirado no fluxo público de softwares de digitalização como PE-DESIGN: pequenas regiões Satin com linhas de direção próprias e ordem de costura controlada.
+- No modo profissional, o motor prioriza pareamento vetorial das bordas do traço e não volta ao esqueleto raster. Se o pareamento não for suficiente, usa somente a varredura geométrica por eixo como fallback previsível.
+- Adicionada seleção de ordem de costura: Visual ou Continuidade.
+- Ordem Visual mantém os blocos na sequência visual determinística do glifo; Continuidade permite reordenar regiões conectadas para reduzir deslocamentos.
+- Mantidos o início superior da primeira letra e o underlay seguro da 0.48.4, que não atravessa vazados em curvas.
+- O modo Compatibilidade preserva o motor adaptativo legado para fontes específicas que dependam dele.
+- As fontes internas FioLab continuam sem alteração.
+- Adicionado teste garantindo que fontes importadas usem Blocos profissionais + ordem Visual por padrão.
+
 ## 0.48.4
 
 ### Underlay seguro em curvas e vazados
