@@ -219,19 +219,6 @@ public sealed class MainPage : ContentPage
             result.Stitches.Count == 0 ||
             result.Bounds.IsEmpty)
         {
-            using var emptyPaint = new SKPaint
-            {
-                Color = new SKColor(95, 102, 110),
-                TextSize = 28,
-                IsAntialias = true
-            };
-
-            canvas.DrawText(
-                "Importe a fonte e gere “Maria”",
-                32,
-                64,
-                emptyPaint);
-
             return;
         }
 
