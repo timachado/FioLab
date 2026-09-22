@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.48.0
+
+### Novo motor vetorial para fontes TTF/OTF salvas
+- O motor principal de fontes salvas deixa de usar o esqueleto raster como fonte de direção.
+- Cada contorno TTF/OTF é amostrado diretamente; a normal interna de cada borda é calculada e a borda oposta do mesmo traço é localizada por interseção vetorial.
+- Só são aceitos pares de borda com tangentes compatíveis, largura segura e segmento totalmente dentro do glifo, evitando atravessar outra perna da letra ou um vazado.
+- Pares duplicados vindos dos dois lados do mesmo traço são removidos e as travessas restantes são agrupadas em blocos pela continuidade de direção e centro.
+- Mudanças graduais de direção permanecem contínuas; regiões incompatíveis tornam-se blocos separados.
+- O motor raster/esqueleto da série 0.47 permanece apenas como fallback quando uma geometria não produz pares vetoriais suficientes.
+- O comportamento é inspirado nas funções públicas do PE-DESIGN 11 de converter texto em pequenos blocos com múltiplas linhas de direção; nenhum código proprietário foi copiado.
+- Mantidos auto-fit, underlay, compensação de repuxo, início visual, roteamento, PES/DST/JEF e todas as fontes FioLab internas.
+- Os testes de largura local, ponto destacado, cobertura de junção e múltiplas direções passam a exercer também o motor principal vetorial.
+
 ## 0.47.1
 
 ### Junções sem buracos nas fontes salvas
