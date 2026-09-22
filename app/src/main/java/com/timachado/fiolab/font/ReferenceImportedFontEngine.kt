@@ -11739,32 +11739,16 @@ internal object ReferenceImportedFontEngine {
                             0f
                         ),
                         FPoint(
-                            100f,
+                            180f,
                             0f
                         ),
                         FPoint(
-                            100f,
-                            20f
-                        ),
-                        FPoint(
-                            60f,
-                            20f
-                        ),
-                        FPoint(
-                            60f,
-                            100f
-                        ),
-                        FPoint(
-                            40f,
-                            100f
-                        ),
-                        FPoint(
-                            40f,
-                            20f
+                            180f,
+                            80f
                         ),
                         FPoint(
                             0f,
-                            20f
+                            80f
                         )
                     )
                 )
@@ -11777,21 +11761,21 @@ internal object ReferenceImportedFontEngine {
                         SatinRow(
                             FPoint(
                                 0f,
-                                4f
+                                12f
                             ),
                             FPoint(
-                                32f,
-                                4f
+                                40f,
+                                12f
                             )
                         ),
                         SatinRow(
                             FPoint(
                                 0f,
-                                12f
+                                68f
                             ),
                             FPoint(
-                                32f,
-                                12f
+                                40f,
+                                68f
                             )
                         )
                     )
@@ -11800,22 +11784,22 @@ internal object ReferenceImportedFontEngine {
                     mutableListOf(
                         SatinRow(
                             FPoint(
-                                68f,
-                                4f
+                                140f,
+                                12f
                             ),
                             FPoint(
-                                100f,
-                                4f
+                                180f,
+                                12f
                             )
                         ),
                         SatinRow(
                             FPoint(
-                                68f,
-                                12f
+                                140f,
+                                68f
                             ),
                             FPoint(
-                                100f,
-                                12f
+                                180f,
+                                68f
                             )
                         )
                     )
