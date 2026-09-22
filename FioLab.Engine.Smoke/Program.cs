@@ -155,5 +155,34 @@ for (var i = 1; i < holedTatami.Points.Count; i++)
     }
 }
 
+// Regression: a branched glyph must be digitized as independent local
+// branches. Treating the whole connected shape as one Tatami object is the
+// failure mode that produced the ladder/outline preview in Alliby.
+using var branched = new SKPath();
+branched.AddRect(new SKRect(46, 5, 66, 115));
+branched.AddRect(new SKRect(12, 5, 100, 25));
+
+var branchObjectIndex = 200;
+var branchObjects = engine.DigitizePath(
+    branched,
+    options,
+    ref branchObjectIndex);
+
+var satinBranchCount = branchObjects.Count(static item =>
+    item.Kind == EmbroideryObjectKind.Satin);
+
+if (satinBranchCount < 2)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: expected multiple Satin branches, got {satinBranchCount}.");
+}
+
+if (!branchObjects.Any(static item =>
+    item.Kind == EmbroideryObjectKind.Tatami))
+{
+    throw new InvalidOperationException(
+        "Smoke test: branched geometry did not emit a local Tatami junction patch.");
+}
+
 Console.WriteLine(
-    $"OK: {objects.Count} objects, {flattened.Count} points. Object completion invariant preserved. Tatami row continuity preserved.");
+    $"OK: {objects.Count} base objects, {flattened.Count} base points. Tatami row continuity preserved. Branch topology emitted {satinBranchCount} Satin branches.");
