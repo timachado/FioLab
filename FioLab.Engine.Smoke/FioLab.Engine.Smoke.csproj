@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../FioLab.Engine/FioLab.Engine.csproj" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.151.2" />
   </ItemGroup>
 </Project>
