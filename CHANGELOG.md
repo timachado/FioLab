@@ -8,7 +8,8 @@
 - As travessas Satin são abertas perpendicularmente ao caminho local do traço, evitando ligar bordas de ramos diferentes.
 - O pareamento direto de contornos deixa de ser o caminho principal e permanece apenas como fallback.
 - Áreas largas continuam usando Tatami denso; traços estreitos continuam usando Satin.
-- Mantidos underlay, compensação, ordem Visual/Continuidade, jumps/trims, bastidor e saída estrutural do último glifo.
+- A ordem padrão das fontes salvas passa a ser Continuidade, concluindo regiões conectadas antes de saltar; a opção Visual permanece disponível.
+- Mantidos underlay, compensação, jumps/trims, bastidor e saída estrutural do último glifo.
 - Adicionado teste de regressão para impedir leques abruptos no motor principal em bifurcações cursivas.
 - A arquitetura foi reimplementada de forma independente; o APK do Mão Design foi usado somente como referência de comportamento e separação entre app e motor de bordado.
 
