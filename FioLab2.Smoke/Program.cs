@@ -12,13 +12,14 @@ var options = new DigitizeOptions(
     IncludeUnderlay: false);
 
 RunStraight(engine, options);
+RunDiagonal(engine, options);
 RunBent(engine, options);
 RunTee(engine, options);
 RunLoop(engine, options);
 RunCompactFill(engine, options);
 
 Console.WriteLine(
-    "OK: FioLab V2 core passed straight, bend, T-junction, loop and compact-fill tests.");
+    "OK: FioLab V2 core passed straight, diagonal, bend, T-junction, loop and compact-fill tests.");
 
 static void RunStraight(
     FioLab2Engine engine,
@@ -58,6 +59,62 @@ static void RunStraight(
     AssertNoSelfCrossing(
         satin[0],
         "straight ribbon");
+}
+
+static void RunDiagonal(
+    FioLab2Engine engine,
+    DigitizeOptions options)
+{
+    using var source = new SKPath();
+
+    source.AddRect(
+        new SKRect(
+            56f,
+            12f,
+            80f,
+            158f));
+
+    using var path = new SKPath();
+
+    var rotation =
+        SKMatrix.CreateRotationDegrees(
+            31f,
+            68f,
+            85f);
+
+    source.Transform(
+        rotation,
+        path);
+
+    var objects =
+        Digitize(
+            engine,
+            path,
+            options);
+
+    var satin =
+        objects.Where(static item =>
+            item.Kind == EmbroideryKind.Satin)
+        .ToList();
+
+    Require(
+        satin.Count <= 2,
+        $"diagonal ribbon: raster staircase fragmented into {satin.Count} Satin objects.");
+
+    Require(
+        satin.Sum(static item => item.Points.Count) >= 20,
+        "diagonal ribbon: result became too sparse.");
+
+    foreach (var item in satin)
+    {
+        Require(
+            CountJumps(item) <= 2,
+            $"diagonal ribbon: object {item.Index} has {CountJumps(item)} jumps.");
+
+        AssertNoSelfCrossing(
+            item,
+            "diagonal ribbon");
+    }
 }
 
 static void RunBent(
