@@ -24,13 +24,14 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
- * Digitalizador de texto TTF/OTF baseado no mesmo pipeline funcional
- * observado no app de referência:
- * contorno do glifo -> polygonize -> scan spans em dois eixos ->
- * escolha da menor largura média -> colunas Satin -> divisão de
- * colunas largas -> underlay/locks -> pontos.
+ * Digitalizador de texto TTF/OTF com implementação própria.
  *
- * A implementação é própria e independente do código do app de referência.
+ * Caminho principal das fontes salvas:
+ * contorno vetorial do glifo -> pareamento das duas bordas do mesmo traço ->
+ * linhas locais de direção -> blocos Satin -> underlay/locks -> pontos.
+ *
+ * O motor raster/esqueleto legado permanece apenas como fallback para
+ * geometrias que não produzam pares vetoriais estáveis.
  */
 internal object ReferenceImportedFontEngine {
 
