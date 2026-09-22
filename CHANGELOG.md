@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.47.0
+
+### Novo motor de fontes salvas — blocos direcionais
+- Mudança estrutural no Satin de fontes TTF/OTF salvas: o FioLab deixa de tratar a letra como um único esqueleto com raios livres e passa a construir blocos direcionais independentes.
+- A arquitetura segue o comportamento público documentado do PE-DESIGN 11: texto convertido em pequenos blocos/regiões com múltiplas direções de costura, sem copiar código proprietário.
+- Cada bloco usa um campo de distância do próprio glifo para medir a espessura local do traço. As travessas Satin são limitadas por essa espessura e não podem atravessar outra perna da letra.
+- Regiões de bifurcação recebem uma zona de separação proporcional à largura local; cada ramo continua como um bloco próprio em vez de formar leques no nó de junção.
+- Curvas graduais permanecem contínuas, enquanto mudanças bruscas de direção, largura ou centro encerram o bloco e iniciam outro.
+- Mantidas as correções para pontos e acentos compactos, underlay, compensação de repuxo, auto-fit, início visual e exportação PES/DST/JEF.
+- As fontes FioLab internas não foram alteradas.
+- Adicionado teste de regressão em forma de T para garantir que uma junção de traços não gere travessa atravessando a barra inteira.
+- A descrição da tela de fontes salvas agora identifica o Satin em blocos direcionais.
+
 ## 0.46.18
 
 ### Fontes salvas — correção de geometria Satin
