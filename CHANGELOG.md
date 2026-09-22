@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.1
+
+### Fechamento do preenchimento Tatami
+- Reduzido o espaçamento máximo entre linhas de preenchimento para 0,30 mm.
+- Adicionada sobreposição lateral controlada de 0,12 mm nas bordas do Tatami.
+- Os pontos internos passam a usar defasagem de 50% entre linhas consecutivas, evitando canais visuais alinhados.
+- As linhas Tatami são alinhadas antes da interpolação para reduzir cruzamentos e clareiras em curvas.
+- Mantidos Satin para traços estreitos, underlay, ordem de costura, jumps/trims e término estrutural do último glifo.
+- Reforçado o teste de cobertura para exigir densificação real nas áreas largas.
+
 ## 0.50.0
 
 ### Motor por objetos — Satin + Tatami
