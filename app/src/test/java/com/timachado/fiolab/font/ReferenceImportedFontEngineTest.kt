@@ -338,7 +338,7 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
-    fun edgeRunUnderlayAddsSingleOutAndBackPass() {
+    fun regionUnderlayAddsSingleSparsePass() {
         val without =
             ReferenceImportedFontEngine
                 .debugReferencePath(
@@ -609,6 +609,70 @@ class ReferenceImportedFontEngineTest {
                 0f &&
                 maxGap <=
                     6.2f
+        )
+    }
+
+
+    @Test
+    fun visualStartPrefersTopLeftLikePedesignOrder() {
+        val start =
+            ReferenceImportedFontEngine
+                .debugGlyphVisualStart(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            20f to 0f,
+                            20f to 100f,
+                            0f to 100f
+                        )
+                )
+
+        assertEquals(
+            0f,
+            start!!.first,
+            0.001f
+        )
+
+        assertEquals(
+            "Para o mesmo X mais à esquerda, o início deve preferir o ponto visual superior.",
+            100f,
+            start.second,
+            0.001f
+        )
+    }
+
+    @Test
+    fun regionUnderlayDoesNotTraceBothEdgesBeforeMainSatin() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        true
+                )
+
+        val firstJumpIndex =
+            points.indexOfFirst {
+                it.command ==
+                    StitchCommand.JUMP
+            }
+
+        val firstStitch =
+            points
+                .drop(
+                    firstJumpIndex +
+                        1
+                )
+                .first {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+
+        assertTrue(
+            "O primeiro underlay deve entrar pela região do bloco, não percorrer toda a mesma borda.",
+            firstStitch.xUnits >=
+                15
         )
     }
 
