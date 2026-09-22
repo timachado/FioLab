@@ -13,6 +13,28 @@ enum class TextStitchStyle(
     SATIN("Satin")
 }
 
+enum class ImportedFontDigitizingMode(
+    val displayName: String
+) {
+    PROFESSIONAL_BLOCKS(
+        "Blocos profissionais"
+    ),
+    COMPATIBILITY(
+        "Compatibilidade"
+    )
+}
+
+enum class ImportedFontSewingOrder(
+    val displayName: String
+) {
+    VISUAL(
+        "Visual"
+    ),
+    CONTINUITY(
+        "Continuidade"
+    )
+}
+
 enum class FontCategory(
     val displayName: String
 ) {
@@ -102,6 +124,10 @@ data class TextMatrixOptions(
     val satinPullCompensationMm: Float = 0.2f,
     val satinShortStitches: Boolean = true,
     val satinUnderlayMode: SatinUnderlayMode = SatinUnderlayMode.BOTH,
+    val importedFontDigitizingMode: ImportedFontDigitizingMode =
+        ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS,
+    val importedFontSewingOrder: ImportedFontSewingOrder =
+        ImportedFontSewingOrder.VISUAL,
     val specialStitchMode: SpecialStitchMode? = null,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
