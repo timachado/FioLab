@@ -6926,6 +6926,8 @@ internal object ReferenceImportedFontEngine {
                     emitRegionZigzagUnderlay(
                         column =
                             column,
+                        polygons =
+                            polygons,
                         densityMm =
                             densityMm
                     )
@@ -7211,6 +7213,7 @@ internal object ReferenceImportedFontEngine {
 
         private fun emitRegionZigzagUnderlay(
             column: SatinColumn,
+            polygons: List<Polygon>,
             densityMm: Float
         ) {
             val rows =
@@ -7228,15 +7231,14 @@ internal object ReferenceImportedFontEngine {
                     10f
 
             /*
-             * Camada única de underlay de região: amostragem espaçada do
-             * mesmo bloco direcional, alternando as duas bordas. Isso evita
-             * que a simulação comece contornando a letra inteira.
+             * O underlay continua espaçado em regiões retas, mas em curvas
+             * fechadas não pode "cortar caminho" pelo vazado da letra.
              *
-             * Aproximadamente 2 mm entre seções de underlay para densidade
-             * normal de Satin; o Satin principal faz o retorno cobrindo o
-             * bloco com a densidade final.
+             * Para cada avanço tentamos primeiro o passo espaçado desejado.
+             * Se a ligação sair do glifo, reduzimos progressivamente o passo
+             * até encontrar uma conexão totalmente escondida dentro do traço.
              */
-            val step =
+            val desiredStep =
                 max(
                     2,
                     (
@@ -7248,53 +7250,151 @@ internal object ReferenceImportedFontEngine {
                         ).roundToInt()
                 )
 
-            val indices =
-                mutableListOf<Int>()
-
-            var index =
+            var rowIndex =
                 0
 
+            var currentPoint =
+                rows.first().a
+
+            var preferA =
+                false
+
+            stitchTo(
+                currentPoint
+            )
+
             while (
-                index <
-                    rows.size
-            ) {
-                indices +=
-                    index
-
-                index +=
-                    step
-            }
-
-            if (
-                indices.lastOrNull() !=
+                rowIndex <
                     rows.lastIndex
             ) {
-                indices +=
-                    rows.lastIndex
-            }
+                var candidateIndex =
+                    minOf(
+                        rows.lastIndex,
+                        rowIndex +
+                            desiredStep
+                    )
 
-            var useA =
-                true
+                var selectedIndex =
+                    -1
 
-            indices.forEach {
-                    rowIndex ->
-                val row =
-                    rows[
+                var selectedPoint:
+                    FPoint? =
+                    null
+
+                var selectedSideIsA =
+                    preferA
+
+                while (
+                    candidateIndex >
                         rowIndex
-                    ]
+                ) {
+                    val row =
+                        rows[
+                            candidateIndex
+                        ]
+
+                    val preferred =
+                        if (
+                            preferA
+                        ) {
+                            row.a
+                        } else {
+                            row.b
+                        }
+
+                    val alternate =
+                        if (
+                            preferA
+                        ) {
+                            row.b
+                        } else {
+                            row.a
+                        }
+
+                    val preferredInside =
+                        segmentInsideGlyph(
+                            from =
+                                currentPoint,
+                            to =
+                                preferred,
+                            polygons =
+                                polygons,
+                            sampleUnits =
+                                ROUTING_SAMPLE_UNITS
+                        )
+
+                    val alternateInside =
+                        segmentInsideGlyph(
+                            from =
+                                currentPoint,
+                            to =
+                                alternate,
+                            polygons =
+                                polygons,
+                            sampleUnits =
+                                ROUTING_SAMPLE_UNITS
+                        )
+
+                    when {
+                        preferredInside -> {
+                            selectedIndex =
+                                candidateIndex
+
+                            selectedPoint =
+                                preferred
+
+                            selectedSideIsA =
+                                preferA
+                        }
+
+                        alternateInside -> {
+                            selectedIndex =
+                                candidateIndex
+
+                            selectedPoint =
+                                alternate
+
+                            selectedSideIsA =
+                                !preferA
+                        }
+                    }
+
+                    if (
+                        selectedPoint !=
+                            null
+                    ) {
+                        break
+                    }
+
+                    candidateIndex -=
+                        1
+                }
+
+                if (
+                    selectedPoint ==
+                        null
+                ) {
+                    /*
+                     * A geometria ficou tão fechada que nem a próxima seção
+                     * possui ligação interna segura. Não desenhamos uma
+                     * diagonal visível pelo buraco: encerramos esta camada e
+                     * deixamos o Satin principal continuar o bloco.
+                     */
+                    break
+                }
 
                 stitchTo(
-                    if (
-                        useA
-                    ) {
-                        row.a
-                    } else {
-                        row.b
-                    }
+                    selectedPoint
                 )
 
-                useA =
-                    !useA
+                currentPoint =
+                    selectedPoint
+
+                rowIndex =
+                    selectedIndex
+
+                preferA =
+                    !selectedSideIsA
             }
         }
 
