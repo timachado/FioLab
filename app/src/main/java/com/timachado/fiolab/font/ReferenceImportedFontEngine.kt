@@ -2050,19 +2050,58 @@ internal object ReferenceImportedFontEngine {
         )
     }
 
+    private fun pointCoveredBySatinSweep(
+        point: FPoint,
+        column: SatinColumn,
+        edgeToleranceUnits: Float
+    ): Boolean {
+        if (
+            column.rows.any {
+                pointToRowDistance(
+                    point =
+                        point,
+                    row =
+                        it
+                ) <=
+                    edgeToleranceUnits
+            }
+        ) {
+            return true
+        }
+
+        return column.rows
+            .zipWithNext()
+            .any {
+                    pair ->
+                val sweep =
+                    Polygon(
+                        listOf(
+                            pair.first.a,
+                            pair.first.b,
+                            pair.second.b,
+                            pair.second.a
+                        )
+                    )
+
+                pointInsidePolygonAdaptive(
+                    point =
+                        point,
+                    polygon =
+                        sweep
+                )
+            }
+    }
+
     private fun buildCoverageRepairColumns(
         polygons: List<Polygon>,
         primary: List<SatinColumn>,
         densityMm: Float,
         pullCompensationMm: Float
     ): List<SatinColumn> {
-        val primaryRows =
-            primary.flatMap {
-                it.rows
-            }
-
         if (
-            primaryRows.isEmpty()
+            primary.none {
+                it.rows.isNotEmpty()
+            }
         ) {
             return emptyList()
         }
@@ -2126,13 +2165,16 @@ internal object ReferenceImportedFontEngine {
                         row
                     )
 
-                val nearest =
-                    primaryRows.minOf {
-                        pointToRowDistance(
+                val covered =
+                    primary.any {
+                            column ->
+                        pointCoveredBySatinSweep(
                             point =
                                 center,
-                            row =
-                                it
+                            column =
+                                column,
+                            edgeToleranceUnits =
+                                maxGapUnits
                         )
                     }
 
@@ -2143,8 +2185,7 @@ internal object ReferenceImportedFontEngine {
                     )
 
                 val needsRepair =
-                    nearest >
-                        maxGapUnits &&
+                    !covered &&
                         localWidth <=
                             maxRepairWidthUnits *
                                 1.05f
