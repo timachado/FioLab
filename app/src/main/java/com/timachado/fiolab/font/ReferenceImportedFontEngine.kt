@@ -8,6 +8,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryBounds
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryPoint
 import com.timachado.fiolab.core.embroidery.EmbroideryStressPolicy
+import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
@@ -19,6 +20,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
@@ -151,6 +153,190 @@ internal object ReferenceImportedFontEngine {
     private data class GlyphPath(
         val path: Path
     )
+
+    fun fitHeightToHoopFast(
+        font: ImportedFont,
+        sourceText: String,
+        spacingMm: Float,
+        hoop: HoopProfile,
+        minHeightMm: Float = 4f,
+        maxHeightMm: Float = 60f
+    ): Result<Float> =
+        runCatching {
+            require(
+                minHeightMm > 0f &&
+                    maxHeightMm >=
+                        minHeightMm
+            ) {
+                "Intervalo de altura inválido."
+            }
+
+            val text =
+                sourceText
+                    .trim()
+                    .take(24)
+
+            require(
+                text.isNotBlank()
+            ) {
+                "Digite um nome."
+            }
+
+            val typeface =
+                ImportedFontStore
+                    .loadTypeface(
+                        font
+                    )
+                    .getOrThrow()
+
+            val paint =
+                Paint(
+                    Paint.ANTI_ALIAS_FLAG
+                ).apply {
+                    this.typeface =
+                        typeface
+                    style =
+                        Paint.Style.FILL
+                }
+
+            fun measure(
+                heightMm: Float
+            ): RectF {
+                val targetHeightUnits =
+                    heightMm *
+                        10f
+
+                paint.textSize =
+                    resolveFontSizeForCapHeight(
+                        paint,
+                        targetHeightUnits
+                    )
+
+                val renderableText =
+                    resolveText(
+                        paint =
+                            paint,
+                        font =
+                            font,
+                        text =
+                            text
+                    )
+
+                val spacingUnits =
+                    targetHeightUnits *
+                        LETTER_SPACING_FACTOR +
+                        spacingMm *
+                            10f
+
+                val glyphPaths =
+                    extractGlyphPaths(
+                        paint =
+                            paint,
+                        text =
+                            renderableText,
+                        spacingUnits =
+                            spacingUnits
+                    )
+
+                require(
+                    glyphPaths.isNotEmpty()
+                ) {
+                    "A fonte não gerou glifos bordáveis."
+                }
+
+                return unionBounds(
+                    glyphPaths
+                )
+            }
+
+            /*
+             * Medimos somente os contornos TTF/OTF. Isso evita executar
+             * rasterização, thinning e geração Satin várias vezes durante
+             * o auto-fit. A margem de 2% absorve compensação de repuxo e
+             * pequenos pontos que ultrapassem o contorno visual.
+             */
+            val targetWidthUnits =
+                hoop.usableWidthMm *
+                    10f *
+                    0.98f
+
+            val targetHeightUnits =
+                hoop.usableHeightMm *
+                    10f *
+                    0.98f
+
+            fun fits(
+                heightMm: Float
+            ): Boolean {
+                val bounds =
+                    measure(
+                        heightMm
+                    )
+
+                return bounds.width() <=
+                    targetWidthUnits &&
+                    bounds.height() <=
+                        targetHeightUnits
+            }
+
+            require(
+                fits(
+                    minHeightMm
+                )
+            ) {
+                "O texto não cabe na área segura do bastidor " +
+                    hoop.displayName +
+                    " nem no tamanho mínimo."
+            }
+
+            if (
+                fits(
+                    maxHeightMm
+                )
+            ) {
+                return@runCatching maxHeightMm
+            }
+
+            var low =
+                minHeightMm
+
+            var high =
+                maxHeightMm
+
+            repeat(
+                12
+            ) {
+                val candidate =
+                    (
+                        low +
+                            high
+                        ) /
+                        2f
+
+                if (
+                    fits(
+                        candidate
+                    )
+                ) {
+                    low =
+                        candidate
+                } else {
+                    high =
+                        candidate
+                }
+            }
+
+            (
+                floor(
+                    low *
+                        10f
+                ) /
+                    10f
+                ).coerceIn(
+                minHeightMm,
+                maxHeightMm
+            )
+        }
 
     fun generate(
         font: ImportedFont,
