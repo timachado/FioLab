@@ -1083,17 +1083,18 @@ internal object ReferenceImportedFontEngine {
         }
 
         /*
-         * Path/contour order from TTF/OTF is an implementation detail and
-         * does not describe the visual beginning of a letter. For machine
-         * embroidery we anchor the first Satin region at the left edge of
-         * the glyph; for equal X, prefer the lower point in the Cartesian
-         * coordinate system so script/cursive entry strokes start at the
-         * natural lower-left side.
+         * PE-DESIGN-like deterministic entry:
+         * process the first visible section from left to right and, for
+         * equivalent X, from top to bottom. In our Cartesian glyph space,
+         * larger Y is visually higher, so the tie-breaker is descending Y.
+         *
+         * The previous lower-left preference is visible in the simulator
+         * as the needle entering the bottom flourish of cursive capitals.
          */
         return points.minWithOrNull(
             compareBy<FPoint> {
                 it.x
-            }.thenBy {
+            }.thenByDescending {
                 it.y
             }
         )
@@ -6798,7 +6799,7 @@ internal object ReferenceImportedFontEngine {
                 if (
                     includeUnderlay
                 ) {
-                    emitEdgeRunUnderlay(
+                    emitRegionZigzagUnderlay(
                         column =
                             column,
                         densityMm =
@@ -7084,7 +7085,7 @@ internal object ReferenceImportedFontEngine {
                         .toMutableList()
             )
 
-        private fun emitEdgeRunUnderlay(
+        private fun emitRegionZigzagUnderlay(
             column: SatinColumn,
             densityMm: Float
         ) {
@@ -7102,12 +7103,24 @@ internal object ReferenceImportedFontEngine {
                 densityMm *
                     10f
 
+            /*
+             * Camada única de underlay de região: amostragem espaçada do
+             * mesmo bloco direcional, alternando as duas bordas. Isso evita
+             * que a simulação comece contornando a letra inteira.
+             *
+             * Aproximadamente 2 mm entre seções de underlay para densidade
+             * normal de Satin; o Satin principal faz o retorno cobrindo o
+             * bloco com a densidade final.
+             */
             val step =
                 max(
-                    1,
+                    2,
                     (
                         20f /
                             pitchUnits
+                                .coerceAtLeast(
+                                    1f
+                                )
                         ).roundToInt()
                 )
 
@@ -7136,54 +7149,98 @@ internal object ReferenceImportedFontEngine {
                     rows.lastIndex
             }
 
-            // Ida: uma borda da coluna.
+            var useA =
+                true
+
             indices.forEach {
                     rowIndex ->
-                stitchTo(
+                val row =
                     rows[
                         rowIndex
-                    ].a
-                )
-            }
+                    ]
 
-            // Cruza somente no final.
-            stitchTo(
-                rows
-                    .last()
-                    .b
-            )
-
-            // Volta: a outra borda, uma única vez.
-            for (
-                reverseIndex in
-                    indices.size -
-                        2 downTo
-                        0
-            ) {
                 stitchTo(
-                    rows[
-                        indices[
-                            reverseIndex
-                        ]
-                    ].b
+                    if (
+                        useA
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
                 )
+
+                useA =
+                    !useA
             }
         }
 
         private fun emitSatinColumn(
             column: SatinColumn
         ) {
-            val rows =
+            val sourceRows =
                 column.rows
 
             if (
-                rows.isEmpty()
+                sourceRows.isEmpty()
             ) {
                 return
             }
 
             val before =
                 current
+
+            val rows =
+                if (
+                    before ==
+                        null ||
+                    sourceRows.size <
+                        2
+                ) {
+                    sourceRows
+                } else {
+                    val first =
+                        sourceRows.first()
+
+                    val last =
+                        sourceRows.last()
+
+                    val firstDistance =
+                        minOf(
+                            distance(
+                                before,
+                                first.a
+                            ),
+                            distance(
+                                before,
+                                first.b
+                            )
+                        )
+
+                    val lastDistance =
+                        minOf(
+                            distance(
+                                before,
+                                last.a
+                            ),
+                            distance(
+                                before,
+                                last.b
+                            )
+                        )
+
+                    if (
+                        lastDistance <
+                            firstDistance
+                    ) {
+                        sourceRows
+                            .asReversed()
+                    } else {
+                        sourceRows
+                    }
+                }
+
+            val start =
+                rows.first()
 
             var nextIsA =
                 if (
@@ -7194,12 +7251,12 @@ internal object ReferenceImportedFontEngine {
                 } else {
                     distance(
                         before,
-                        rows.first().a
+                        start.a
                     ) >=
                         distance(
                             before,
-                            rows.first().b
-                        )
+                        start.b
+                    )
                 }
 
             rows.forEach {
