@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.13-debug.apk
-          zip -9 FioLab-0.46.13-debug.zip FioLab-0.46.13-debug.apk
-          sha256sum FioLab-0.46.13-debug.apk FioLab-0.46.13-debug.zip > FioLab-0.46.13-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.46.14-debug.apk
+          zip -9 FioLab-0.46.14-debug.zip FioLab-0.46.14-debug.apk
+          sha256sum FioLab-0.46.14-debug.apk FioLab-0.46.14-debug.zip > FioLab-0.46.14-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.46.13-downloads
+          name: FioLab-0.46.14-downloads
           path: |
-            FioLab-0.46.13-debug.apk
-            FioLab-0.46.13-debug.zip
-            FioLab-0.46.13-SHA256.txt
+            FioLab-0.46.14-debug.apk
+            FioLab-0.46.14-debug.zip
+            FioLab-0.46.14-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.46.13 >/dev/null 2>&1; then
-            gh release upload v0.46.13               FioLab-0.46.13-debug.apk               FioLab-0.46.13-debug.zip               FioLab-0.46.13-SHA256.txt               --clobber
+          if gh release view v0.46.14 >/dev/null 2>&1; then
+            gh release upload v0.46.14               FioLab-0.46.14-debug.apk               FioLab-0.46.14-debug.zip               FioLab-0.46.14-SHA256.txt               --clobber
           else
-            gh release create v0.46.13               FioLab-0.46.13-debug.apk               FioLab-0.46.13-debug.zip               FioLab-0.46.13-SHA256.txt               --target main               --title "FioLab 0.46.13"               --notes "FioLab 0.46.13: mantém o Satin adaptativo por eixo medial e elimina o ANR da tela Criar Nome movendo a geração para background e reduzindo as tentativas do auto-fit."
+            gh release create v0.46.14               FioLab-0.46.14-debug.apk               FioLab-0.46.14-debug.zip               FioLab-0.46.14-SHA256.txt               --target main               --title "FioLab 0.46.14"               --notes "FioLab 0.46.14: mantém o Satin adaptativo por eixo medial, mede o auto-fit pela geometria TTF/OTF e digitaliza o Satin pesado apenas uma vez no tamanho final."
           fi
