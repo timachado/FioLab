@@ -48,7 +48,6 @@ jobs:
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Install MAUI Android workload
-        shell: bash
         run: dotnet workload install maui-android
 
       - name: Restore V2 engine
@@ -61,9 +60,7 @@ jobs:
         run: dotnet restore FioLab2.Maui/FioLab2.Maui.csproj
 
       - name: Build V2 installable APK
-        shell: bash
-        run: |
-          dotnet build FioLab2.Maui/FioLab2.Maui.csproj             -f net10.0-android             -c Debug             -p:AndroidPackageFormats=apk             -p:EmbedAssembliesIntoApk=true
+        run: dotnet build FioLab2.Maui/FioLab2.Maui.csproj -f net10.0-android -c Debug -p:AndroidPackageFormats=apk -p:EmbedAssembliesIntoApk=true
 
       - name: Collect V2 APK
         shell: bash
@@ -95,7 +92,19 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            bash -lc 'set -e; adb install -r out-v2/FioLab-V2-2.0.0-alpha.1-debug.apk; adb logcat -c; adb shell monkey -p com.timachado.fiolab.v2 -c android.intent.category.LAUNCHER 1; sleep 8; PID="$(adb shell pidof com.timachado.fiolab.v2 | tr -d "")"; if [ -z "$PID" ]; then echo "FioLab V2 morreu durante a inicializacao."; adb logcat -b crash -d || true; adb logcat -d -v threadtime | grep -E "com\.timachado\.fiolab\.v2|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc" || true; exit 1; fi; echo "FioLab V2 permaneceu aberto. PID=$PID"'
+            set -e
+            adb install -r out-v2/FioLab-V2-2.0.0-alpha.1-debug.apk
+            adb logcat -c
+            adb shell monkey -p com.timachado.fiolab.v2 -c android.intent.category.LAUNCHER 1
+            sleep 8
+            PID="$(adb shell pidof com.timachado.fiolab.v2 | sed 's/[[:space:]]//g')"
+            if [ -z "$PID" ]; then
+              echo "FioLab V2 morreu durante a inicializacao."
+              adb logcat -b crash -d || true
+              adb logcat -d -v threadtime | grep -E 'com\.timachado\.fiolab\.v2|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc' || true
+              exit 1
+            fi
+            echo "FioLab V2 permaneceu aberto. PID=$PID"
 
       - name: Upload V2 APK
         uses: actions/upload-artifact@v4
