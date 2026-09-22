@@ -277,7 +277,87 @@ if (crossingSatin != 2 || crossingObjects.Count != 2)
         $"{crossingObjects.Count} objects / {crossingSatin} Satin.");
 }
 
+// Regression: a simple bent Satin stroke must never generate an internal
+// bow-tie/X from rail swapping at the bend.
+using var bentStroke = new SKPath();
+bentStroke.AddRect(new SKRect(18f, 18f, 38f, 105f));
+bentStroke.AddRect(new SKRect(18f, 85f, 105f, 105f));
+
+var bentObjectIndex = 500;
+var bentObjects = engine.DigitizePath(
+    bentStroke,
+    options,
+    ref bentObjectIndex);
+
+foreach (var satin in bentObjects.Where(static item =>
+    item.Kind == EmbroideryObjectKind.Satin))
+{
+    var segments = new List<(StitchPoint A, StitchPoint B)>();
+
+    for (var i = 1; i < satin.Points.Count; i++)
+    {
+        var a = satin.Points[i - 1];
+        var b = satin.Points[i];
+
+        if (
+            b.Command != StitchCommand.Stitch ||
+            a.ObjectIndex != b.ObjectIndex)
+        {
+            continue;
+        }
+
+        segments.Add((a, b));
+    }
+
+    for (var i = 0; i < segments.Count; i++)
+    {
+        for (var j = i + 2; j < segments.Count; j++)
+        {
+            if (j == i + 1)
+            {
+                continue;
+            }
+
+            if (SegmentsIntersect(
+                segments[i].A,
+                segments[i].B,
+                segments[j].A,
+                segments[j].B))
+            {
+                throw new InvalidOperationException(
+                    $"Smoke test: Satin self-crossed in simple bend: " +
+                    $"segment {i} intersects {j}.");
+            }
+        }
+    }
+}
+
 Console.WriteLine(
     $"OK: {objects.Count} base objects, {flattened.Count} base points. " +
     $"Branch topology emitted {satinBranchCount} Satin branches without junction patches. " +
-    $"Compact ornaments fill as Tatami and 4-way crossings pair twice.");
+    $"Compact ornaments fill as Tatami, 4-way crossings pair twice, and bent Satin has no rail crossover.");
+
+static bool SegmentsIntersect(
+    StitchPoint a,
+    StitchPoint b,
+    StitchPoint c,
+    StitchPoint d)
+{
+    static float Cross(
+        StitchPoint p,
+        StitchPoint q,
+        StitchPoint r) =>
+        (q.X - p.X) * (r.Y - p.Y) -
+        (q.Y - p.Y) * (r.X - p.X);
+
+    var ab1 = Cross(a, b, c);
+    var ab2 = Cross(a, b, d);
+    var cd1 = Cross(c, d, a);
+    var cd2 = Cross(c, d, b);
+
+    const float epsilon = 0.001f;
+
+    return
+        ab1 * ab2 < -epsilon &&
+        cd1 * cd2 < -epsilon;
+}
