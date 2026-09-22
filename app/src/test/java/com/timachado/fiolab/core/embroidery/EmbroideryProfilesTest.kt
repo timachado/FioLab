@@ -153,4 +153,138 @@ class EmbroideryProfilesTest {
             design.fabricProfile
         )
     }
+
+    @Test
+    fun viewerChooses130x180ForUploadedBookmarkDimensions() {
+        val design =
+            importedDesign(
+                widthUnits =
+                    702,
+                heightUnits =
+                    1281
+            )
+
+        assertEquals(
+            HoopProfile.H130X180,
+            HoopValidator
+                .recommendedForViewer(
+                    design
+                )
+        )
+
+        val fit =
+            HoopValidator
+                .validateForViewer(
+                    design,
+                    HoopProfile.H130X180
+                )
+
+        assertTrue(
+            fit.fits
+        )
+
+        assertTrue(
+            fit.rotated90
+        )
+    }
+
+    @Test
+    fun viewerChooses140x200ForUploadedMariaDimensions() {
+        val design =
+            importedDesign(
+                widthUnits =
+                    692,
+                heightUnits =
+                    1784
+            )
+
+        assertEquals(
+            HoopProfile.H140X200,
+            HoopValidator
+                .recommendedForViewer(
+                    design
+                )
+        )
+
+        assertTrue(
+            HoopValidator
+                .validateForViewer(
+                    design,
+                    HoopProfile.H140X200
+                )
+                .fits
+        )
+    }
+
+    private fun importedDesign(
+        widthUnits: Int,
+        heightUnits: Int
+    ): EmbroideryDesign =
+        EmbroideryDesign(
+            fileName =
+                "referencia.pes",
+            format =
+                "PES",
+            label =
+                "referencia",
+            points =
+                listOf(
+                    EmbroideryPoint(
+                        xUnits =
+                            0,
+                        yUnits =
+                            0,
+                        command =
+                            StitchCommand.STITCH,
+                        colorIndex =
+                            0
+                    ),
+                    EmbroideryPoint(
+                        xUnits =
+                            widthUnits,
+                        yUnits =
+                            heightUnits,
+                        command =
+                            StitchCommand.STITCH,
+                        colorIndex =
+                            0
+                    ),
+                    EmbroideryPoint(
+                        xUnits =
+                            widthUnits,
+                        yUnits =
+                            heightUnits,
+                        command =
+                            StitchCommand.END,
+                        colorIndex =
+                            0
+                    )
+                ),
+            bounds =
+                EmbroideryBounds(
+                    minXUnits =
+                        0,
+                    maxXUnits =
+                        widthUnits,
+                    minYUnits =
+                        0,
+                    maxYUnits =
+                        heightUnits
+                ),
+            stitchCount =
+                2,
+            jumpCount =
+                0,
+            colorChanges =
+                0,
+            endFound =
+                true,
+            sourceBytes =
+                byteArrayOf(
+                    1
+                ),
+            sourceYAxisDown =
+                true
+        )
+
 }
