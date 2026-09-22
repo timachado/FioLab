@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.52.2
+
+### Satin até a borda real
+- Corrigido o caso observado em vídeo em que a passada Satin parava no meio do traço e mudava de trajetória.
+- O eixo medial continua definindo centro e direção local, mas deixa de limitar artificialmente o comprimento lateral da travessa.
+- Cada travessa Satin agora procura a primeira borda real do glifo nos dois lados antes de seguir para a próxima amostra.
+- O limite físico máximo de largura do Satin continua ativo; áreas largas permanecem tratadas pelo motor de preenchimento apropriado.
+- Mantidos junções sem Satin radial, anti-leque acumulado, auditoria de cobertura, underlay, bastidor e saída estrutural final.
+- Adicionado teste com raio medial propositalmente subestimado que exige que a travessa alcance a largura real da máscara.
+
 ## 0.52.1
 
 ### Junções sem Satin radial
