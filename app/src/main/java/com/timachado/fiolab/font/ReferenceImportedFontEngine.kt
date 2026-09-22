@@ -10,6 +10,8 @@ import com.timachado.fiolab.core.embroidery.EmbroideryPoint
 import com.timachado.fiolab.core.embroidery.EmbroideryStressPolicy
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.HoopValidator
+import com.timachado.fiolab.core.embroidery.ImportedFontDigitizingMode
+import com.timachado.fiolab.core.embroidery.ImportedFontSewingOrder
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.StitchCommand
@@ -564,7 +566,9 @@ internal object ReferenceImportedFontEngine {
                             maxSatinWidthMm =
                                 maxSatinWidthMm,
                             pullCompensationMm =
-                                pullMm
+                                pullMm,
+                            digitizingMode =
+                                options.importedFontDigitizingMode
                         )
 
                     emitter.emitGlyph(
@@ -582,7 +586,10 @@ internal object ReferenceImportedFontEngine {
                                 SatinUnderlayMode
                                     .NONE,
                         densityMm =
-                            densityMm
+                            densityMm,
+                        strictVisualOrder =
+                            options.importedFontSewingOrder ==
+                                ImportedFontSewingOrder.VISUAL
                     )
                 }
 
@@ -1321,7 +1328,9 @@ internal object ReferenceImportedFontEngine {
         polygons: List<Polygon>,
         densityMm: Float,
         maxSatinWidthMm: Float,
-        pullCompensationMm: Float
+        pullCompensationMm: Float,
+        digitizingMode: ImportedFontDigitizingMode =
+            ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
     ): List<SatinColumn> {
         if (
             polygons.isEmpty()
@@ -1347,11 +1356,30 @@ internal object ReferenceImportedFontEngine {
             return contourPaired
         }
 
+        if (
+            digitizingMode ==
+                ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
+        ) {
+            /*
+             * No modo profissional não voltamos ao esqueleto raster.
+             * Se o pareamento vetorial não for suficiente, usamos somente
+             * a varredura por eixo como fallback geométrico previsível.
+             */
+            return sampleColumnsByAxis(
+                polygons =
+                    polygons,
+                densityMm =
+                    densityMm,
+                maxSatinWidthMm =
+                    maxSatinWidthMm,
+                pullCompensationMm =
+                    pullCompensationMm
+            )
+        }
+
         /*
-         * Fallback de compatibilidade: somente fontes/geometrias que não
-         * forneçam pares de borda estáveis entram no motor adaptativo antigo.
-         * A direção principal das fontes salvas passa a nascer do contorno
-         * vetorial TTF/OTF, não do esqueleto raster.
+         * Compatibilidade mantém o motor adaptativo legado para fontes que
+         * dependiam do eixo medial nas versões anteriores.
          */
         val adaptive =
             buildAdaptiveSatinBlocks(
@@ -6781,7 +6809,9 @@ internal object ReferenceImportedFontEngine {
             polygons: List<Polygon>,
             startHint: FPoint?,
             includeUnderlay: Boolean,
-            densityMm: Float
+            densityMm: Float,
+            strictVisualOrder: Boolean =
+                false
         ) {
             val remaining =
                 standardSewingOrder(
@@ -6841,6 +6871,7 @@ internal object ReferenceImportedFontEngine {
                  */
                 val connected =
                     if (
+                        !strictVisualOrder &&
                         !firstColumn &&
                         current !=
                             null
