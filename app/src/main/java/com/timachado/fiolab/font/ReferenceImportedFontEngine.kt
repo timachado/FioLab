@@ -7229,13 +7229,13 @@ internal object ReferenceImportedFontEngine {
                 return@forEach
             }
 
+            /*
+             * O eixo medial define centro e direção; a largura real vem
+             * sempre da borda física do glifo. Limitar a busca pelo raio
+             * local fazia a travessa parar no meio do traço.
+             */
             val localRayLimit =
-                minOf(
-                    maxRayUnits,
-                    localRadius *
-                        BLOCK_RADIUS_CAP_FACTOR +
-                        raster.step
-                )
+                maxRayUnits
 
             val positive =
                 rayToRasterBoundary(
@@ -7274,23 +7274,15 @@ internal object ReferenceImportedFontEngine {
                 return@forEach
             }
 
-            val cappedPositive =
-                minOf(
-                    positive,
-                    localRadius *
-                        BLOCK_RADIUS_CAP_FACTOR
-                )
+            val fullPositive =
+                positive
 
-            val cappedNegative =
-                minOf(
-                    negative,
-                    localRadius *
-                        BLOCK_RADIUS_CAP_FACTOR
-                )
+            val fullNegative =
+                negative
 
             val rawWidth =
-                cappedPositive +
-                    cappedNegative
+                fullPositive +
+                    fullNegative
 
             if (
                 rawWidth >
@@ -7310,13 +7302,13 @@ internal object ReferenceImportedFontEngine {
                             center.x -
                                 normal.x *
                                     (
-                                        cappedNegative +
+                                        fullNegative +
                                             pullUnits
                                         ),
                             center.y -
                                 normal.y *
                                     (
-                                        cappedNegative +
+                                        fullNegative +
                                             pullUnits
                                         )
                         ),
@@ -7325,13 +7317,13 @@ internal object ReferenceImportedFontEngine {
                             center.x +
                                 normal.x *
                                     (
-                                        cappedPositive +
+                                        fullPositive +
                                             pullUnits
                                         ),
                             center.y +
                                 normal.y *
                                     (
-                                        cappedPositive +
+                                        fullPositive +
                                             pullUnits
                                         )
                         )
@@ -11916,6 +11908,103 @@ internal object ReferenceImportedFontEngine {
                         row.a.y
                 )
             }
+
+    internal fun debugSatinReachesTrueRasterBoundary():
+        Float {
+        val width =
+            50
+
+        val height =
+            80
+
+        val mask =
+            BooleanArray(
+                width *
+                    height
+            )
+
+        for (
+            y in
+                5 until 75
+        ) {
+            for (
+                x in
+                    5 until 45
+            ) {
+                mask[
+                    y *
+                        width +
+                        x
+                ] =
+                    true
+            }
+        }
+
+        val raster =
+            RasterGlyph(
+                originX =
+                    0f,
+                originY =
+                    0f,
+                step =
+                    1f,
+                width =
+                    width,
+                height =
+                    height,
+                mask =
+                    mask
+            )
+
+        val path =
+            (
+                10 until 70
+            )
+                .map {
+                        y ->
+                    y *
+                        width +
+                        25
+                }
+
+        val distanceField =
+            FloatArray(
+                width *
+                    height
+            ) {
+                5f
+            }
+
+        val columns =
+            satinColumnsFromSkeletonPath(
+                path =
+                    path,
+                raster =
+                    raster,
+                distanceField =
+                    distanceField,
+                pitchUnits =
+                    4f,
+                maxRayUnits =
+                    100f,
+                maxSatinWidthUnits =
+                    70f,
+                pullUnits =
+                    0f
+            )
+
+        return columns
+            .flatMap {
+                it.rows
+            }
+            .maxOfOrNull {
+                distance(
+                    it.a,
+                    it.b
+                )
+            }
+            ?: 0f
+    }
 
     internal fun debugAccumulatedFanBlockCount():
         Int {
