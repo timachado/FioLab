@@ -92,19 +92,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            set -e
-            adb install -r out-v2/FioLab-V2-2.0.0-alpha.1-debug.apk
-            adb logcat -c
-            adb shell monkey -p com.timachado.fiolab.v2 -c android.intent.category.LAUNCHER 1
-            sleep 8
-            PID="$(adb shell pidof com.timachado.fiolab.v2 | sed 's/[[:space:]]//g')"
-            if [ -z "$PID" ]; then
-              echo "FioLab V2 morreu durante a inicializacao."
-              adb logcat -b crash -d || true
-              adb logcat -d -v threadtime | grep -E 'com\.timachado\.fiolab\.v2|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc' || true
-              exit 1
-            fi
-            echo "FioLab V2 permaneceu aberto. PID=$PID"
+            bash -lc 'set -e; adb install -r out-v2/FioLab-V2-2.0.0-alpha.1-debug.apk; adb logcat -c; adb shell monkey -p com.timachado.fiolab.v2 -c android.intent.category.LAUNCHER 1; sleep 8; PID="$(adb shell pidof com.timachado.fiolab.v2 | xargs)"; if [ -z "$PID" ]; then echo "FioLab V2 morreu durante a inicializacao."; adb logcat -b crash -d || true; adb logcat -d -v threadtime | grep -E "com\\.timachado\\.fiolab\\.v2|AndroidRuntime|FATAL EXCEPTION|dotnet|mono|SkiaSharp|libc" || true; exit 1; fi; echo "FioLab V2 permaneceu aberto. PID=$PID"'
 
       - name: Upload V2 APK
         uses: actions/upload-artifact@v4
