@@ -8415,7 +8415,7 @@ internal object ReferenceImportedFontEngine {
                 ),
             startHint =
                 FPoint(
-                    90f,
+                    0f,
                     10f
                 ),
             includeUnderlay =
