@@ -370,6 +370,53 @@ internal object ReferenceImportedFontEngine {
         return result
     }
 
+    private fun cleanAlignRowToRails(
+        previous: SatinRow?,
+        candidate: SatinRow
+    ): SatinRow {
+        if (
+            previous ==
+                null
+        ) {
+            return candidate
+        }
+
+        val direct =
+            distance(
+                previous.a,
+                candidate.a
+            ) +
+                distance(
+                    previous.b,
+                    candidate.b
+                )
+
+        val swapped =
+            distance(
+                previous.a,
+                candidate.b
+            ) +
+                distance(
+                    previous.b,
+                    candidate.a
+                )
+
+        return if (
+            swapped +
+                0.01f <
+                direct
+        ) {
+            SatinRow(
+                a =
+                    candidate.b,
+                b =
+                    candidate.a
+            )
+        } else {
+            candidate
+        }
+    }
+
     private fun cleanObjectsFromSkeletonPath(
         pathIndices: List<Int>,
         raster: RasterGlyph,
@@ -462,6 +509,10 @@ internal object ReferenceImportedFontEngine {
             FPoint? =
             null
 
+        var previousRow:
+            SatinRow? =
+            null
+
         fun flush() {
             if (
                 rowCenters.size >=
@@ -498,6 +549,9 @@ internal object ReferenceImportedFontEngine {
                 null
 
             previousCenter =
+                null
+
+            previousRow =
                 null
         }
 
@@ -636,24 +690,29 @@ internal object ReferenceImportedFontEngine {
                 )
 
             val row =
-                SatinRow(
-                    a =
-                        FPoint(
-                            rawA.x -
-                                normal.x *
-                                    pullUnits,
-                            rawA.y -
-                                normal.y *
-                                    pullUnits
-                        ),
-                    b =
-                        FPoint(
-                            rawB.x +
-                                normal.x *
-                                    pullUnits,
-                            rawB.y +
-                                normal.y *
-                                    pullUnits
+                cleanAlignRowToRails(
+                    previous =
+                        previousRow,
+                    candidate =
+                        SatinRow(
+                            a =
+                                FPoint(
+                                    rawA.x -
+                                        normal.x *
+                                            pullUnits,
+                                    rawA.y -
+                                        normal.y *
+                                            pullUnits
+                                ),
+                            b =
+                                FPoint(
+                                    rawB.x +
+                                        normal.x *
+                                            pullUnits,
+                                    rawB.y +
+                                        normal.y *
+                                            pullUnits
+                                )
                         )
                 )
 
@@ -683,11 +742,14 @@ internal object ReferenceImportedFontEngine {
                 ) {
                     1f
                 } else {
-                    abs(
+                    (
                         oldDirection.x *
                             direction.x +
                             oldDirection.y *
                                 direction.y
+                        ).coerceIn(
+                        -1f,
+                        1f
                     )
                 }
 
@@ -761,6 +823,9 @@ internal object ReferenceImportedFontEngine {
 
             previousCenter =
                 center
+
+            previousRow =
+                row
         }
 
         flush()
@@ -887,27 +952,117 @@ internal object ReferenceImportedFontEngine {
                 raster
             )
 
+        val pitchUnits =
+            (
+                densityMm *
+                    10f
+                ).coerceIn(
+                2.5f,
+                6f
+            )
+
+        val pullUnits =
+            pullMm
+                .coerceIn(
+                    0f,
+                    0.5f
+                ) *
+                10f
+
         val objects =
-            traceSkeletonPaths(
+            splitSkeletonComponents(
                 raster =
                     raster,
                 skeleton =
                     skeleton
             )
                 .flatMap {
-                        path ->
-                    cleanObjectsFromSkeletonPath(
-                        pathIndices =
-                            path,
-                        raster =
-                            raster,
-                        polygons =
-                            polygons,
-                        densityMm =
-                            densityMm,
-                        pullMm =
-                            pullMm
-                    )
+                        component ->
+                    val compact =
+                        compactComponentColumn(
+                            raster =
+                                raster,
+                            skeletonComponent =
+                                component,
+                            pitchUnits =
+                                pitchUnits,
+                            maxWidthUnits =
+                                CLEAN_MAX_SATIN_WIDTH_MM *
+                                    10f,
+                            pullUnits =
+                                pullUnits
+                        )
+
+                    if (
+                        compact !=
+                            null
+                    ) {
+                        val widths =
+                            compact.rows.map {
+                                distance(
+                                    it.a,
+                                    it.b
+                                )
+                            }
+
+                        val medianWidth =
+                            widths
+                                .sorted()[
+                                    widths.size /
+                                        2
+                                ]
+
+                        listOf(
+                            CleanObject(
+                                kind =
+                                    cleanObjectKind(
+                                        medianWidth
+                                    ),
+                                rows =
+                                    compact.rows,
+                                path =
+                                    compact.rows.map {
+                                        cleanRowCenter(
+                                            it
+                                        )
+                                    }
+                            )
+                        )
+                    } else {
+                        val componentMask =
+                            BooleanArray(
+                                skeleton.size
+                            )
+
+                        component.forEach {
+                            componentMask[
+                                it
+                            ] =
+                                true
+                        }
+
+                        traceSkeletonPaths(
+                            raster =
+                                raster,
+                            skeleton =
+                                componentMask
+                        )
+                            .flatMap {
+                                    path ->
+                                cleanObjectsFromSkeletonPath(
+                                    pathIndices =
+                                        path,
+                                    raster =
+                                        raster,
+                                    polygons =
+                                        polygons,
+                                    densityMm =
+                                        densityMm,
+                                    pullMm =
+                                        pullMm
+                                )
+                            }
+                    }
                 }
                 .filter {
                     it.path.size >=
@@ -1900,6 +2055,50 @@ internal object ReferenceImportedFontEngine {
             current =
                 point
         }
+    }
+
+    internal fun debugCleanRailAlignment():
+        List<Float> {
+        val previous =
+            SatinRow(
+                a =
+                    FPoint(
+                        0f,
+                        0f
+                    ),
+                b =
+                    FPoint(
+                        40f,
+                        0f
+                    )
+            )
+
+        val flipped =
+            SatinRow(
+                a =
+                    FPoint(
+                        40f,
+                        4f
+                    ),
+                b =
+                    FPoint(
+                        0f,
+                        4f
+                    )
+            )
+
+        val aligned =
+            cleanAlignRowToRails(
+                previous =
+                    previous,
+                candidate =
+                    flipped
+            )
+
+        return listOf(
+            aligned.a.x,
+            aligned.b.x
+        )
     }
 
     internal fun debugCleanSatinRailXs():
