@@ -517,4 +517,55 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun primarySavedFontEngineChangesDirectionWithoutSkeleton() {
+        val vectors =
+            ReferenceImportedFontEngine
+                .debugPrimaryRowVectors(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            22f to 0f,
+                            22f to 78f,
+                            82f to 78f,
+                            82f to 100f,
+                            0f to 100f
+                        )
+                )
+
+        assertTrue(
+            "O motor principal de fontes salvas deve gerar travessas vetoriais.",
+            vectors.isNotEmpty()
+        )
+
+        assertTrue(
+            "O braço vertical precisa de travessas horizontais.",
+            vectors.any {
+                    vector ->
+                kotlin.math.abs(
+                    vector.first
+                ) >
+                    kotlin.math.abs(
+                        vector.second
+                    ) *
+                        1.4f
+            }
+        )
+
+        assertTrue(
+            "O braço horizontal precisa de travessas verticais.",
+            vectors.any {
+                    vector ->
+                kotlin.math.abs(
+                    vector.second
+                ) >
+                    kotlin.math.abs(
+                        vector.first
+                    ) *
+                        1.4f
+            }
+        )
+    }
+
 }
