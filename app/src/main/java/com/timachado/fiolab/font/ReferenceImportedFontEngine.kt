@@ -2092,6 +2092,57 @@ internal object ReferenceImportedFontEngine {
             }
     }
 
+    private fun pointToGlyphBoundaryDistance(
+        point: FPoint,
+        polygons: List<Polygon>
+    ): Float {
+        var best =
+            Float.MAX_VALUE
+
+        polygons.forEach {
+                polygon ->
+            val points =
+                polygon.points
+
+            if (
+                points.size <
+                    2
+            ) {
+                return@forEach
+            }
+
+            var previous =
+                points.last()
+
+            points.forEach {
+                    current ->
+                val row =
+                    SatinRow(
+                        a =
+                            previous,
+                        b =
+                            current
+                    )
+
+                best =
+                    minOf(
+                        best,
+                        pointToRowDistance(
+                            point =
+                                point,
+                            row =
+                                row
+                        )
+                    )
+
+                previous =
+                    current
+            }
+        }
+
+        return best
+    }
+
     private fun buildCoverageRepairColumns(
         polygons: List<Polygon>,
         primary: List<SatinColumn>,
@@ -2184,8 +2235,19 @@ internal object ReferenceImportedFontEngine {
                         row.b
                     )
 
+                val boundaryDistance =
+                    pointToGlyphBoundaryDistance(
+                        point =
+                            center,
+                        polygons =
+                            polygons
+                    )
+
                 val needsRepair =
                     !covered &&
+                        boundaryDistance >
+                            maxGapUnits *
+                                1.10f &&
                         localWidth <=
                             maxRepairWidthUnits *
                                 1.05f
