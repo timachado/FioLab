@@ -697,4 +697,5 @@ class ReferenceImportedFontEngineTest {
                 80
         )
     }
-\n}
+
+}
