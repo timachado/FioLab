@@ -1230,6 +1230,15 @@ internal object ReferenceImportedFontEngine {
     private const val ADAPTIVE_RAY_STEP_UNITS =
         0.75f
 
+    private const val COMPACT_COMPONENT_MAX_WIDTH_FACTOR =
+        0.58f
+
+    private const val JUNCTION_TRIM_MIN_CELLS =
+        2
+
+    private const val ADAPTIVE_MAX_RAW_WIDTH_FACTOR =
+        1.20f
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1422,24 +1431,6 @@ internal object ReferenceImportedFontEngine {
                 raster
             )
 
-        val paths =
-            traceSkeletonPaths(
-                raster =
-                    raster,
-                skeleton =
-                    skeleton
-            )
-                .filter {
-                    it.size >=
-                        3
-                }
-
-        if (
-            paths.isEmpty()
-        ) {
-            return emptyList()
-        }
-
         val maxWidthUnits =
             maxSatinWidthMm *
                 10f
@@ -1448,35 +1439,104 @@ internal object ReferenceImportedFontEngine {
             pullCompensationMm *
                 10f
 
+        /*
+         * Processamos cada componente desconectado separadamente.
+         * Isso é importante para pontos/acentos: um ponto do "i" não deve
+         * virar uma estrela de pequenos ramos do esqueleto.
+         */
         val rawColumns =
-            paths.mapNotNull {
-                    path ->
-                satinColumnFromSkeletonPath(
-                    path =
-                        path,
-                    raster =
-                        raster,
-                    polygons =
-                        polygons,
-                    pitchUnits =
-                        pitchUnits,
-                    maxRayUnits =
-                        max(
-                            maxWidthUnits *
-                                4f,
-                            max(
-                                widthUnits,
-                                heightUnits
-                            ) *
-                                1.1f
-                        ),
-                    pullUnits =
-                        pullUnits
-                )
-            }
-                .filter {
-                    it.rows.size >=
-                        2
+            splitSkeletonComponents(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            )
+                .flatMap {
+                        component ->
+                    val compact =
+                        compactComponentColumn(
+                            raster =
+                                raster,
+                            skeletonComponent =
+                                component,
+                            pitchUnits =
+                                pitchUnits,
+                            maxWidthUnits =
+                                maxWidthUnits,
+                            pullUnits =
+                                pullUnits
+                        )
+
+                    if (
+                        compact !=
+                            null
+                    ) {
+                        listOf(
+                            compact
+                        )
+                    } else {
+                        val componentSkeleton =
+                            BooleanArray(
+                                skeleton.size
+                            )
+
+                        component.forEach {
+                                index ->
+                            componentSkeleton[
+                                index
+                            ] =
+                                true
+                        }
+
+                        traceSkeletonPaths(
+                            raster =
+                                raster,
+                            skeleton =
+                                componentSkeleton
+                        )
+                            .mapNotNull {
+                                    path ->
+                                prepareAdaptiveSkeletonPath(
+                                    path =
+                                        path,
+                                    raster =
+                                        raster,
+                                    skeleton =
+                                        componentSkeleton,
+                                    pitchUnits =
+                                        pitchUnits
+                                )
+                            }
+                            .mapNotNull {
+                                    path ->
+                                satinColumnFromSkeletonPath(
+                                    path =
+                                        path,
+                                    raster =
+                                        raster,
+                                    pitchUnits =
+                                        pitchUnits,
+                                    maxRayUnits =
+                                        max(
+                                            maxWidthUnits *
+                                                2f,
+                                            max(
+                                                widthUnits,
+                                                heightUnits
+                                            ) *
+                                                0.8f
+                                        ),
+                                    maxSatinWidthUnits =
+                                        maxWidthUnits,
+                                    pullUnits =
+                                        pullUnits
+                                )
+                            }
+                            .filter {
+                                it.rows.size >=
+                                    2
+                            }
+                    }
                 }
 
         if (
@@ -2345,6 +2405,662 @@ internal object ReferenceImportedFontEngine {
                 )
     }
 
+    private fun splitSkeletonComponents(
+        raster: RasterGlyph,
+        skeleton: BooleanArray
+    ): List<List<Int>> {
+        val visited =
+            BooleanArray(
+                skeleton.size
+            )
+
+        val result =
+            mutableListOf<
+                List<Int>
+            >()
+
+        skeleton.indices.forEach {
+                seed ->
+            if (
+                !skeleton[
+                    seed
+                ] ||
+                visited[
+                    seed
+                ]
+            ) {
+                return@forEach
+            }
+
+            val queue =
+                java.util.ArrayDeque<Int>()
+
+            val component =
+                mutableListOf<Int>()
+
+            queue.add(
+                seed
+            )
+
+            visited[
+                seed
+            ] =
+                true
+
+            while (
+                queue.isNotEmpty()
+            ) {
+                val current =
+                    queue.removeFirst()
+
+                component +=
+                    current
+
+                skeletonNeighbors(
+                    index =
+                        current,
+                    raster =
+                        raster,
+                    skeleton =
+                        skeleton
+                ).forEach {
+                        neighbor ->
+                    if (
+                        !visited[
+                            neighbor
+                        ]
+                    ) {
+                        visited[
+                            neighbor
+                        ] =
+                            true
+
+                        queue.add(
+                            neighbor
+                        )
+                    }
+                }
+            }
+
+            if (
+                component.isNotEmpty()
+            ) {
+                result +=
+                    component
+            }
+        }
+
+        return result
+    }
+
+    private fun filledComponentFromSeed(
+        raster: RasterGlyph,
+        seed: Int
+    ): List<Int> {
+        if (
+            seed !in
+                raster.mask.indices ||
+            !raster.mask[
+                seed
+            ]
+        ) {
+            return emptyList()
+        }
+
+        val visited =
+            BooleanArray(
+                raster.mask.size
+            )
+
+        val queue =
+            java.util.ArrayDeque<Int>()
+
+        val component =
+            mutableListOf<Int>()
+
+        queue.add(
+            seed
+        )
+
+        visited[
+            seed
+        ] =
+            true
+
+        while (
+            queue.isNotEmpty()
+        ) {
+            val current =
+                queue.removeFirst()
+
+            component +=
+                current
+
+            val x =
+                current %
+                    raster.width
+
+            val y =
+                current /
+                    raster.width
+
+            val candidates =
+                intArrayOf(
+                    x -
+                        1,
+                    y,
+                    x +
+                        1,
+                    y,
+                    x,
+                    y -
+                        1,
+                    x,
+                    y +
+                        1
+                )
+
+            var offset =
+                0
+
+            while (
+                offset <
+                    candidates.size
+            ) {
+                val nx =
+                    candidates[
+                        offset
+                    ]
+
+                val ny =
+                    candidates[
+                        offset +
+                            1
+                    ]
+
+                offset +=
+                    2
+
+                if (
+                    nx !in
+                        0 until raster.width ||
+                    ny !in
+                        0 until raster.height
+                ) {
+                    continue
+                }
+
+                val neighbor =
+                    ny *
+                        raster.width +
+                        nx
+
+                if (
+                    raster.mask[
+                        neighbor
+                    ] &&
+                    !visited[
+                        neighbor
+                    ]
+                ) {
+                    visited[
+                        neighbor
+                    ] =
+                        true
+
+                    queue.add(
+                        neighbor
+                    )
+                }
+            }
+        }
+
+        return component
+    }
+
+    private fun compactComponentColumn(
+        raster: RasterGlyph,
+        skeletonComponent: List<Int>,
+        pitchUnits: Float,
+        maxWidthUnits: Float,
+        pullUnits: Float
+    ): SatinColumn? {
+        val seed =
+            skeletonComponent
+                .firstOrNull()
+                ?: return null
+
+        val filled =
+            filledComponentFromSeed(
+                raster =
+                    raster,
+                seed =
+                    seed
+            )
+
+        if (
+            filled.isEmpty()
+        ) {
+            return null
+        }
+
+        val xs =
+            filled.map {
+                it %
+                    raster.width
+            }
+
+        val ys =
+            filled.map {
+                it /
+                    raster.width
+            }
+
+        val minX =
+            xs.minOrNull()
+                ?: return null
+
+        val maxX =
+            xs.maxOrNull()
+                ?: return null
+
+        val minY =
+            ys.minOrNull()
+                ?: return null
+
+        val maxY =
+            ys.maxOrNull()
+                ?: return null
+
+        val widthUnits =
+            (
+                maxX -
+                    minX +
+                    1
+                ) *
+                raster.step
+
+        val heightUnits =
+            (
+                maxY -
+                    minY +
+                    1
+                ) *
+                raster.step
+
+        if (
+            max(
+                widthUnits,
+                heightUnits
+            ) >
+                maxWidthUnits *
+                    COMPACT_COMPONENT_MAX_WIDTH_FACTOR
+        ) {
+            return null
+        }
+
+        val filledSet =
+            filled.toHashSet()
+
+        val progressAlongX =
+            widthUnits >=
+                heightUnits
+
+        val pitchCells =
+            max(
+                1,
+                (
+                    pitchUnits /
+                        raster.step
+                    ).roundToInt()
+            )
+
+        val rows =
+            mutableListOf<
+                SatinRow
+            >()
+
+        if (
+            progressAlongX
+        ) {
+            var x =
+                minX
+
+            while (
+                x <=
+                    maxX
+            ) {
+                val cross =
+                    (
+                        minY..maxY
+                    ).filter {
+                            y ->
+                        y *
+                            raster.width +
+                            x in
+                            filledSet
+                    }
+
+                if (
+                    cross.isNotEmpty()
+                ) {
+                    var contiguous =
+                        true
+
+                    for (
+                        index in
+                            1 until cross.size
+                    ) {
+                        if (
+                            cross[
+                                index
+                            ] -
+                                cross[
+                                    index -
+                                        1
+                                ] >
+                                1
+                        ) {
+                            contiguous =
+                                false
+                            break
+                        }
+                    }
+
+                    if (
+                        !contiguous
+                    ) {
+                        return null
+                    }
+
+                    val a =
+                        raster.center(
+                            cross.first() *
+                                raster.width +
+                                x
+                        )
+
+                    val b =
+                        raster.center(
+                            cross.last() *
+                                raster.width +
+                                x
+                        )
+
+                    rows +=
+                        SatinRow(
+                            a =
+                                FPoint(
+                                    a.x,
+                                    a.y -
+                                        pullUnits
+                                ),
+                            b =
+                                FPoint(
+                                    b.x,
+                                    b.y +
+                                        pullUnits
+                                )
+                        )
+                }
+
+                x +=
+                    pitchCells
+            }
+        } else {
+            var y =
+                minY
+
+            while (
+                y <=
+                    maxY
+            ) {
+                val cross =
+                    (
+                        minX..maxX
+                    ).filter {
+                            x ->
+                        y *
+                            raster.width +
+                            x in
+                            filledSet
+                    }
+
+                if (
+                    cross.isNotEmpty()
+                ) {
+                    var contiguous =
+                        true
+
+                    for (
+                        index in
+                            1 until cross.size
+                    ) {
+                        if (
+                            cross[
+                                index
+                            ] -
+                                cross[
+                                    index -
+                                        1
+                                ] >
+                                1
+                        ) {
+                            contiguous =
+                                false
+                            break
+                        }
+                    }
+
+                    if (
+                        !contiguous
+                    ) {
+                        return null
+                    }
+
+                    val a =
+                        raster.center(
+                            y *
+                                raster.width +
+                                cross.first()
+                        )
+
+                    val b =
+                        raster.center(
+                            y *
+                                raster.width +
+                                cross.last()
+                        )
+
+                    rows +=
+                        SatinRow(
+                            a =
+                                FPoint(
+                                    a.x -
+                                        pullUnits,
+                                    a.y
+                                ),
+                            b =
+                                FPoint(
+                                    b.x +
+                                        pullUnits,
+                                    b.y
+                                )
+                        )
+                }
+
+                y +=
+                    pitchCells
+            }
+        }
+
+        if (
+            rows.size <
+                2
+        ) {
+            return null
+        }
+
+        return SatinColumn(
+            rows =
+                rows
+        )
+    }
+
+    private fun prepareAdaptiveSkeletonPath(
+        path: List<Int>,
+        raster: RasterGlyph,
+        skeleton: BooleanArray,
+        pitchUnits: Float
+    ): List<Int>? {
+        if (
+            path.size <
+                3
+        ) {
+            return null
+        }
+
+        var start =
+            0
+
+        var end =
+            path.lastIndex
+
+        val trimCells =
+            max(
+                JUNCTION_TRIM_MIN_CELLS,
+                ceil(
+                    (
+                        pitchUnits /
+                            raster.step
+                        ).toDouble()
+                )
+                    .toInt()
+                    .coerceAtMost(
+                        4
+                    )
+            )
+
+        val firstDegree =
+            skeletonNeighbors(
+                index =
+                    path.first(),
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            ).size
+
+        val lastDegree =
+            skeletonNeighbors(
+                index =
+                    path.last(),
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            ).size
+
+        if (
+            firstDegree >=
+                3
+        ) {
+            start +=
+                trimCells
+        }
+
+        if (
+            lastDegree >=
+                3
+        ) {
+            end -=
+                trimCells
+        }
+
+        if (
+            end -
+                start <
+                2
+        ) {
+            return null
+        }
+
+        return path.subList(
+            start,
+            end +
+                1
+        )
+    }
+
+    private fun smoothCenterline(
+        source: List<FPoint>,
+        radius: Int = 2,
+        passes: Int = 2
+    ): List<FPoint> {
+        var current =
+            source
+
+        repeat(
+            passes
+        ) {
+            current =
+                current.mapIndexed {
+                        index,
+                        point ->
+                    if (
+                        index ==
+                            0 ||
+                        index ==
+                            current.lastIndex
+                    ) {
+                        point
+                    } else {
+                        val start =
+                            (
+                                index -
+                                    radius
+                                ).coerceAtLeast(
+                                0
+                            )
+
+                        val end =
+                            (
+                                index +
+                                    radius
+                                ).coerceAtMost(
+                                current.lastIndex
+                            )
+
+                        val window =
+                            current.subList(
+                                start,
+                                end +
+                                    1
+                            )
+
+                        FPoint(
+                            x =
+                                window
+                                    .map {
+                                        it.x
+                                    }
+                                    .average()
+                                    .toFloat(),
+                            y =
+                                window
+                                    .map {
+                                        it.y
+                                    }
+                                    .average()
+                                    .toFloat()
+                        )
+                    }
+                }
+        }
+
+        return current
+    }
+
     private fun traceSkeletonPaths(
         raster: RasterGlyph,
         skeleton: BooleanArray
@@ -2584,9 +3300,9 @@ internal object ReferenceImportedFontEngine {
     private fun satinColumnFromSkeletonPath(
         path: List<Int>,
         raster: RasterGlyph,
-        polygons: List<Polygon>,
         pitchUnits: Float,
         maxRayUnits: Float,
+        maxSatinWidthUnits: Float,
         pullUnits: Float
     ): SatinColumn? {
         if (
@@ -2597,11 +3313,13 @@ internal object ReferenceImportedFontEngine {
         }
 
         val centers =
-            path.map {
-                raster.center(
-                    it
-                )
-            }
+            smoothCenterline(
+                path.map {
+                    raster.center(
+                        it
+                    )
+                }
+            )
 
         val sampledIndices =
             mutableListOf<Int>()
@@ -2754,6 +3472,24 @@ internal object ReferenceImportedFontEngine {
                     0.25f ||
                 negative <=
                     0.25f
+            ) {
+                return@forEach
+            }
+
+            val rawWidth =
+                positive +
+                    negative
+
+            /*
+             * Uma travessa muito mais larga que a largura Satin permitida
+             * normalmente indica que o raio passou por uma bifurcação e
+             * alcançou a borda de outro traço. É exatamente o padrão em
+             * leque visto na simulação do "Maria".
+             */
+            if (
+                rawWidth >
+                    maxSatinWidthUnits *
+                        ADAPTIVE_MAX_RAW_WIDTH_FACTOR
             ) {
                 return@forEach
             }
