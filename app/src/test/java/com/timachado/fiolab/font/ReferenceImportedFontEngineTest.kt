@@ -466,7 +466,7 @@ class ReferenceImportedFontEngineTest {
     fun directionalBlocksKeepJunctionWidthLocal() {
         val widths =
             ReferenceImportedFontEngine
-                .debugColumnWidths(
+                .debugAdaptiveColumnWidths(
                     polygon =
                         listOf(
                             0f to 0f,
