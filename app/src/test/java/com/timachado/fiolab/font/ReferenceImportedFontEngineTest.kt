@@ -568,4 +568,30 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun vectorSatinDensifiesLargeRowGaps() {
+        val maxGap =
+            ReferenceImportedFontEngine
+                .debugPrimaryMaxCenterGap(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            22f to 0f,
+                            22f to 78f,
+                            82f to 78f,
+                            82f to 100f,
+                            0f to 100f
+                        ),
+                    densityMm =
+                        0.4f
+                )
+
+        assertTrue(
+            "As linhas Satin vetoriais não devem deixar lacunas grandes entre seções consecutivas.",
+            maxGap <=
+                6.2f
+        )
+    }
+
 }
