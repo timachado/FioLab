@@ -347,8 +347,31 @@ public sealed class SkiaEmbroideryEngine
             component,
             skeleton);
 
-        var junctionCenters = FindMaskRegionCenters(
+        var rawJunctionCenters = FindMaskRegionCenters(
             rawJunctionMask,
+            component.CanvasWidth,
+            component.CanvasHeight);
+
+        // Raster thinning creates tiny one/two-pixel spurs on curves.
+        // Those pixels used to be interpreted as real 3-way junctions and
+        // fragmented one physical stroke into many embroidery objects.
+        // A junction is now accepted only when at least three skeleton arms
+        // remain visible for a meaningful physical distance.
+        var armProbeRadius = MathF.Max(
+            6f,
+            options.DensityPx * raster.Scale * 1.75f);
+
+        var junctionCenters = rawJunctionCenters
+            .Where(center =>
+                CountRobustSkeletonArms(
+                    skeleton,
+                    component,
+                    center,
+                    armProbeRadius) >= 3)
+            .ToList();
+
+        var stableJunctionMask = BuildPointMask(
+            junctionCenters,
             component.CanvasWidth,
             component.CanvasHeight);
 
@@ -358,14 +381,21 @@ public sealed class SkiaEmbroideryEngine
                 options.DensityPx * raster.Scale * 0.75f));
 
         var blocked = DilateMask(
-            rawJunctionMask,
+            stableJunctionMask,
             component,
             blockRadius);
 
+        var minimumBranchPixels = Math.Max(
+            6,
+            (int)MathF.Round(
+                options.DensityPx * raster.Scale * 1.25f));
+
         var branchPaths = TraceSkeletonBranches(
-            skeleton,
-            blocked,
-            component);
+                skeleton,
+                blocked,
+                component)
+            .Where(path => path.Count >= minimumBranchPixels)
+            .ToList();
 
         if (branchPaths.Count == 0)
         {
@@ -771,6 +801,152 @@ public sealed class SkiaEmbroideryEngine
         }
 
         return result;
+    }
+
+    private static bool[] BuildPointMask(
+        IReadOnlyList<PixelPoint> centers,
+        int width,
+        int height)
+    {
+        var result = new bool[width * height];
+
+        foreach (var center in centers)
+        {
+            var x = Math.Clamp(
+                (int)MathF.Round(center.X),
+                0,
+                width - 1);
+
+            var y = Math.Clamp(
+                (int)MathF.Round(center.Y),
+                0,
+                height - 1);
+
+            result[y * width + x] = true;
+        }
+
+        return result;
+    }
+
+    private static int CountRobustSkeletonArms(
+        bool[] skeleton,
+        Component component,
+        PixelPoint center,
+        float outerRadius)
+    {
+        var width = component.CanvasWidth;
+        var height = component.CanvasHeight;
+        var innerRadius = MathF.Max(
+            1.75f,
+            outerRadius * 0.28f);
+
+        var innerSquared = innerRadius * innerRadius;
+        var outerSquared = outerRadius * outerRadius;
+
+        var local = new bool[skeleton.Length];
+
+        var minX = Math.Max(
+            0,
+            (int)MathF.Floor(center.X - outerRadius - 1f));
+
+        var maxX = Math.Min(
+            width - 1,
+            (int)MathF.Ceiling(center.X + outerRadius + 1f));
+
+        var minY = Math.Max(
+            0,
+            (int)MathF.Floor(center.Y - outerRadius - 1f));
+
+        var maxY = Math.Min(
+            height - 1,
+            (int)MathF.Ceiling(center.Y + outerRadius + 1f));
+
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                var index = y * width + x;
+
+                if (!skeleton[index])
+                {
+                    continue;
+                }
+
+                var dx = x - center.X;
+                var dy = y - center.Y;
+                var distanceSquared = dx * dx + dy * dy;
+
+                if (
+                    distanceSquared <= innerSquared ||
+                    distanceSquared > outerSquared)
+                {
+                    continue;
+                }
+
+                local[index] = true;
+            }
+        }
+
+        var visited = new bool[skeleton.Length];
+        var robustArms = 0;
+
+        for (var seed = 0; seed < local.Length; seed++)
+        {
+            if (!local[seed] || visited[seed])
+            {
+                continue;
+            }
+
+            var queue = new Queue<int>();
+            queue.Enqueue(seed);
+            visited[seed] = true;
+
+            var touchesInner = false;
+            var touchesOuter = false;
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                var x = current % width;
+                var y = current / width;
+
+                var dx = x - center.X;
+                var dy = y - center.Y;
+                var distance = MathF.Sqrt(dx * dx + dy * dy);
+
+                if (distance <= innerRadius + 1.5f)
+                {
+                    touchesInner = true;
+                }
+
+                if (distance >= outerRadius - 1.5f)
+                {
+                    touchesOuter = true;
+                }
+
+                foreach (var next in NeighborIndices8(
+                    x,
+                    y,
+                    width,
+                    height))
+                {
+                    if (!local[next] || visited[next])
+                    {
+                        continue;
+                    }
+
+                    visited[next] = true;
+                    queue.Enqueue(next);
+                }
+            }
+
+            if (touchesInner && touchesOuter)
+            {
+                robustArms++;
+            }
+        }
+
+        return robustArms;
     }
 
     private static bool[] DilateMask(
