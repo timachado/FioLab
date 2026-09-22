@@ -4237,30 +4237,17 @@ internal object ReferenceImportedFontEngine {
                                         2
                                 }
 
-                        val junctionColumns =
-                            junctionCenters
-                                .mapNotNull {
-                                        junction ->
-                                    buildJunctionSatinBlock(
-                                        junction =
-                                            junction,
-                                        raster =
-                                            raster,
-                                        skeleton =
-                                            componentSkeleton,
-                                        distanceField =
-                                            distanceField,
-                                        pitchUnits =
-                                            pitchUnits,
-                                        maxSatinWidthUnits =
-                                            maxWidthUnits,
-                                        pullUnits =
-                                            pullUnits
-                                    )
-                                }
-
-                        branchColumns +
-                            junctionColumns
+                        /*
+                         * Não criamos mais um bloco Satin dedicado para a
+                         * junção. Esse "tampão" podia escolher uma direção
+                         * média entre vários ramos e abrir em leque.
+                         *
+                         * Os ramos permanecem independentes. Qualquer miolo
+                         * realmente descoberto é tratado depois pela
+                         * auditoria de cobertura, que gera apenas reparos
+                         * locais.
+                         */
+                        branchColumns
                     }
                 }
 
