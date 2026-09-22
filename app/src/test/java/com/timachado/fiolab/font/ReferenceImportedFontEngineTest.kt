@@ -238,7 +238,7 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
-    fun firstSatinRegionStartsAtLeftEdgeEvenWhenHintIsMisleading() {
+    fun firstSatinRegionStartsAtLeftEdgeForVisualHint() {
         val points =
             ReferenceImportedFontEngine
                 .debugVisualStartPath()
@@ -256,7 +256,7 @@ class ReferenceImportedFontEngineTest {
         )
 
         assertTrue(
-            "O primeiro ponto deve começar na região esquerda da letra.",
+            "Com um início visual à esquerda, o primeiro ponto deve entrar na região esquerda da letra.",
             first.xUnits <=
                 20
         )
