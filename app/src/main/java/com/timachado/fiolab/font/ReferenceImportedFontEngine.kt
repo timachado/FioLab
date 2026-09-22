@@ -29,11 +29,13 @@ import kotlin.math.roundToInt
  * Digitalizador de texto TTF/OTF com implementação própria.
  *
  * Caminho principal das fontes salvas:
- * contorno vetorial do glifo -> pareamento das duas bordas do mesmo traço ->
- * linhas locais de direção -> blocos Satin -> underlay/locks -> pontos.
+ * contorno vetorial do glifo -> máscara geométrica -> eixo medial do traço ->
+ * separação de ramos/junções -> linhas locais perpendiculares -> objetos
+ * Satin/Tatami -> underlay/locks -> pontos.
  *
- * O motor raster/esqueleto legado permanece apenas como fallback para
- * geometrias que não produzam pares vetoriais estáveis.
+ * O pareamento direto de contornos permanece apenas como fallback. Isso
+ * evita que letras cursivas com bifurcações unam bordas de traços diferentes
+ * e formem leques diagonais no interior do glifo.
  */
 internal object ReferenceImportedFontEngine {
 
@@ -1991,8 +1993,21 @@ internal object ReferenceImportedFontEngine {
             digitizingMode ==
                 ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
         ) {
-            val geometry =
-                buildProfessionalGeometry(
+            /*
+             * Motor principal por eixo medial:
+             * 1) rasteriza somente a área do glifo;
+             * 2) extrai o centro físico de cada traço;
+             * 3) separa bifurcações em blocos independentes;
+             * 4) abre as travessas perpendicularmente ao caminho local.
+             *
+             * O pareamento direto de contorno era visualmente atraente em
+             * hastes simples, mas podia ligar bordas pertencentes a ramos
+             * diferentes em M, N, r e curvas cursivas. Ele fica agora só
+             * como fallback quando o eixo medial não produzir geometria
+             * utilizável.
+             */
+            val centerline =
+                buildAdaptiveSatinBlocks(
                     polygons =
                         polygons,
                     densityMm =
@@ -2003,52 +2018,28 @@ internal object ReferenceImportedFontEngine {
                         pullCompensationMm
                 )
 
-            val baseColumns =
-                if (
-                    contourPaired.isNotEmpty()
-                ) {
-                    contourPaired
-                } else {
-                    /*
-                     * O fallback por eixo preserva a geometria principal.
-                     * Depois ele passa pelo mesmo pós-processamento local
-                     * para substituir pontos/acentos compactos sem perder
-                     * hastes não compactas do glifo.
-                     */
-                    sampleColumnsByAxis(
-                        polygons =
-                            polygons,
-                        densityMm =
-                            densityMm,
-                        maxSatinWidthMm =
-                            maxSatinWidthMm,
-                        pullCompensationMm =
-                            pullCompensationMm
-                    )
-                }
-
             if (
-                geometry !=
-                    null
+                centerline.isNotEmpty()
             ) {
-                val processed =
-                    clampProfessionalColumns(
-                        columns =
-                            baseColumns,
-                        geometry =
-                            geometry,
-                        maxSatinWidthMm =
-                            maxSatinWidthMm
-                    )
-
-                if (
-                    processed.isNotEmpty()
-                ) {
-                    return processed
-                }
+                return centerline
             }
 
-            return baseColumns
+            if (
+                contourPaired.isNotEmpty()
+            ) {
+                return contourPaired
+            }
+
+            return sampleColumnsByAxis(
+                polygons =
+                    polygons,
+                densityMm =
+                    densityMm,
+                maxSatinWidthMm =
+                    maxSatinWidthMm,
+                pullCompensationMm =
+                    pullCompensationMm
+            )
         }
 
         if (
@@ -11410,6 +11401,92 @@ internal object ReferenceImportedFontEngine {
                         row.a.y
                 )
             }
+
+    internal fun debugPrimaryMaxTurnDegrees(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): Float {
+        var maximum =
+            0f
+
+        sampleColumns(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f,
+            digitizingMode =
+                ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
+        )
+            .forEach {
+                    column ->
+                column.rows
+                    .zipWithNext()
+                    .forEach {
+                            pair ->
+                        val first =
+                            normalize(
+                                FPoint(
+                                    pair.first.b.x -
+                                        pair.first.a.x,
+                                    pair.first.b.y -
+                                        pair.first.a.y
+                                )
+                            )
+
+                        val second =
+                            normalize(
+                                FPoint(
+                                    pair.second.b.x -
+                                        pair.second.a.x,
+                                    pair.second.b.y -
+                                        pair.second.a.y
+                                )
+                            )
+
+                        val dot =
+                            kotlin.math.abs(
+                                first.x *
+                                    second.x +
+                                    first.y *
+                                        second.y
+                            )
+                                .coerceIn(
+                                    -1f,
+                                    1f
+                                )
+
+                        maximum =
+                            max(
+                                maximum,
+                                Math.toDegrees(
+                                    kotlin.math.acos(
+                                        dot.toDouble()
+                                    )
+                                )
+                                    .toFloat()
+                            )
+                    }
+            }
+
+        return maximum
+    }
 
     internal fun debugPrimaryMaxCenterGap(
         polygon:
