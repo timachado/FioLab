@@ -8664,7 +8664,9 @@ internal object ReferenceImportedFontEngine {
         }
 
         private fun emitSatinColumn(
-            column: SatinColumn
+            column: SatinColumn,
+            endHint: FPoint? =
+                null
         ) {
             val sourceRows =
                 column.rows
@@ -8680,6 +8682,51 @@ internal object ReferenceImportedFontEngine {
 
             val rows =
                 if (
+                    endHint !=
+                        null &&
+                    sourceRows.size >=
+                        2
+                ) {
+                    val normalLast =
+                        sourceRows.last()
+
+                    val reversedLast =
+                        sourceRows.first()
+
+                    val normalExitDistance =
+                        minOf(
+                            distance(
+                                endHint,
+                                normalLast.a
+                            ),
+                            distance(
+                                endHint,
+                                normalLast.b
+                            )
+                        )
+
+                    val reversedExitDistance =
+                        minOf(
+                            distance(
+                                endHint,
+                                reversedLast.a
+                            ),
+                            distance(
+                                endHint,
+                                reversedLast.b
+                            )
+                        )
+
+                    if (
+                        reversedExitDistance <
+                            normalExitDistance
+                    ) {
+                        sourceRows
+                            .asReversed()
+                    } else {
+                        sourceRows
+                    }
+                } else if (
                     before ==
                         null ||
                     sourceRows.size <
@@ -8733,6 +8780,41 @@ internal object ReferenceImportedFontEngine {
 
             var nextIsA =
                 if (
+                    endHint !=
+                        null
+                ) {
+                    val oddRowCount =
+                        rows.size %
+                            2 ==
+                            1
+
+                    val endIfStartA =
+                        if (
+                            oddRowCount
+                        ) {
+                            rows.last().a
+                        } else {
+                            rows.last().b
+                        }
+
+                    val endIfStartB =
+                        if (
+                            oddRowCount
+                        ) {
+                            rows.last().b
+                        } else {
+                            rows.last().a
+                        }
+
+                    distance(
+                        endHint,
+                        endIfStartA
+                    ) <=
+                        distance(
+                            endHint,
+                            endIfStartB
+                        )
+                } else if (
                     before ==
                         null
                 ) {
@@ -8744,7 +8826,7 @@ internal object ReferenceImportedFontEngine {
                     ) >=
                         distance(
                             before,
-                        start.b
+                            start.b
                     )
                 }
 
