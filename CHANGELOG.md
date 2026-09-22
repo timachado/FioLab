@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.50.0
+
+### Motor por objetos — Satin + Tatami
+- O caminho principal das fontes TTF/OTF salvas passa a trabalhar por objetos bordáveis.
+- Traços estreitos continuam em Satin.
+- Regiões acima do limite físico de 7 mm deixam de ser divididas em travessas Satin longas e passam a receber preenchimento Tatami.
+- O Tatami alterna o sentido de costura por linha e limita o avanço principal a aproximadamente 2,5 mm.
+- O underlay seguro, a ordem Visual/Continuidade, jumps/trims, bastidor, compensação e a saída estrutural do último glifo permanecem preservados.
+- A prévia continua usando os mesmos pontos que serão exportados para a máquina.
+- O modo padrão das fontes salvas passa a aparecer como "Objetos inteligentes".
+- Adicionado teste automático para impedir que uma área larga volte a ser tratada como uma única travessa Satin.
+
 ## 0.49.2
 
 ### Ordem final e saída estrutural do último glifo
