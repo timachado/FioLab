@@ -248,6 +248,13 @@ if (
         $"{string.Join(",", compactObjects.Select(static item => item.Kind))}.");
 }
 
+if (compactObjects[0].Points.Count < 12)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: compact ornament fill is too coarse: " +
+        $"{compactObjects[0].Points.Count} points.");
+}
+
 // Regression: a four-way crossing represents two physical stroke
 // continuations. Pair both through-directions at the same junction.
 using var crossing = new SKPath();
