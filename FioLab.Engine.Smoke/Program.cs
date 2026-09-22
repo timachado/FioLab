@@ -78,5 +78,82 @@ if (satin is not null)
     }
 }
 
+// Regression: a Tatami scan row may contain more than one span (for
+// example around a hole). Every span on that row must keep the same
+// travel direction, and the empty gap must be crossed with needle-up.
+using var holed = new SKPath
+{
+    FillType = SKPathFillType.EvenOdd
+};
+
+holed.AddRect(new SKRect(0, 0, 120, 120));
+holed.AddRect(new SKRect(40, 40, 80, 80));
+
+var holeObjectIndex = 100;
+var holedObjects = engine.DigitizePath(
+    holed,
+    options,
+    ref holeObjectIndex);
+
+var holedTatami = holedObjects
+    .FirstOrDefault(static item =>
+        item.Kind == EmbroideryObjectKind.Tatami);
+
+if (holedTatami is null)
+{
+    throw new InvalidOperationException(
+        "Smoke test: holed object did not produce Tatami.");
+}
+
+var directionByRow = new Dictionary<int, int>();
+
+for (var i = 1; i < holedTatami.Points.Count; i++)
+{
+    var previous = holedTatami.Points[i - 1];
+    var current = holedTatami.Points[i];
+
+    if (
+        current.Command != StitchCommand.Stitch ||
+        previous.ObjectIndex != current.ObjectIndex)
+    {
+        continue;
+    }
+
+    var dx = current.X - previous.X;
+    var dy = current.Y - previous.Y;
+
+    if (MathF.Abs(dy) > 0.01f || MathF.Abs(dx) <= 0.01f)
+    {
+        continue;
+    }
+
+    var rowKey = (int)MathF.Round(current.Y * 10f);
+    var direction = Math.Sign(dx);
+
+    if (
+        directionByRow.TryGetValue(rowKey, out var existingDirection) &&
+        existingDirection != direction)
+    {
+        throw new InvalidOperationException(
+            "Smoke test: Tatami reversed direction before completing the scan row.");
+    }
+
+    directionByRow[rowKey] = direction;
+
+    var minX = MathF.Min(previous.X, current.X);
+    var maxX = MathF.Max(previous.X, current.X);
+    var rowY = (previous.Y + current.Y) / 2f;
+
+    if (
+        rowY > 40f &&
+        rowY < 80f &&
+        minX < 40f &&
+        maxX > 80f)
+    {
+        throw new InvalidOperationException(
+            "Smoke test: Tatami stitched across an empty internal gap.");
+    }
+}
+
 Console.WriteLine(
-    $"OK: {objects.Count} objects, {flattened.Count} points. Object completion invariant preserved.");
+    $"OK: {objects.Count} objects, {flattened.Count} points. Object completion invariant preserved. Tatami row continuity preserved.");
