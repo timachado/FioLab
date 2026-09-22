@@ -1006,7 +1006,7 @@ fun CreateNameScreen(
                             }
 
                             Text(
-                                "Motor de colunas Satin: preserva o contorno da TTF/OTF, escolhe automaticamente o melhor eixo de varredura e divide apenas colunas fisicamente largas.",
+                                "Satin adaptativo: acompanha a direção de cada traço da TTF/OTF, muda o ângulo dentro da própria letra e preserva o contorno visual.",
                                 color =
                                     FioTextMuted,
                                 fontSize =
