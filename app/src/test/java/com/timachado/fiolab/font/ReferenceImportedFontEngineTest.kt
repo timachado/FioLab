@@ -427,7 +427,8 @@ class ReferenceImportedFontEngineTest {
                 )
 
         assertEquals(
-            "Uma haste e um ponto destacado devem gerar duas colunas, sem transformar o ponto em vários ramos radiais.",
+            "Uma haste e um ponto destacado devem gerar duas colunas, sem transformar o ponto em vários ramos radiais. Contagem real: " +
+                count,
             2,
             count
         )
