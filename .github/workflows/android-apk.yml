@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.49.2-debug.apk
-          zip -9 FioLab-0.49.2-debug.zip FioLab-0.49.2-debug.apk
-          sha256sum FioLab-0.49.2-debug.apk FioLab-0.49.2-debug.zip > FioLab-0.49.2-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.50.0-debug.apk
+          zip -9 FioLab-0.50.0-debug.zip FioLab-0.50.0-debug.apk
+          sha256sum FioLab-0.50.0-debug.apk FioLab-0.50.0-debug.zip > FioLab-0.50.0-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.49.2-downloads
+          name: FioLab-0.50.0-downloads
           path: |
-            FioLab-0.49.2-debug.apk
-            FioLab-0.49.2-debug.zip
-            FioLab-0.49.2-SHA256.txt
+            FioLab-0.50.0-debug.apk
+            FioLab-0.50.0-debug.zip
+            FioLab-0.50.0-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.49.2 >/dev/null 2>&1; then
-            gh release upload v0.49.2               FioLab-0.49.2-debug.apk               FioLab-0.49.2-debug.zip               FioLab-0.49.2-SHA256.txt               --clobber
+          if gh release view v0.50.0 >/dev/null 2>&1; then
+            gh release upload v0.50.0               FioLab-0.50.0-debug.apk               FioLab-0.50.0-debug.zip               FioLab-0.50.0-SHA256.txt               --clobber
           else
-            gh release create v0.49.2               FioLab-0.49.2-debug.apk               FioLab-0.49.2-debug.zip               FioLab-0.49.2-SHA256.txt               --target main               --title "FioLab 0.49.2"               --notes "FioLab 0.49.2: consolida a Digitalização por Blocos, preserva o início visual correto, mantém o fechamento seguro de microvazios e força o último glifo a encerrar em uma região estrutural — no a final, a costura termina na perninha e não no floreio fino."
+            gh release create v0.50.0               FioLab-0.50.0-debug.apk               FioLab-0.50.0-debug.zip               FioLab-0.50.0-SHA256.txt               --target main               --title "FioLab 0.50.0"               --notes "FioLab 0.50.0: novo motor por objetos para fontes salvas. Traços estreitos usam Satin; áreas largas passam para Tatami com comprimento controlado, mantendo underlay, ordem visual, jumps/trims e saída estrutural final."
           fi
