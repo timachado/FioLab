@@ -9662,6 +9662,135 @@ internal object ReferenceImportedFontEngine {
             )
         }
 
+    internal fun debugTerminalStructuralLegPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<EmbroideryPoint>()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        fun column(
+            left: Float,
+            bottom: Float,
+            rowsCount: Int
+        ): SatinColumn {
+            val rows =
+                mutableListOf<SatinRow>()
+
+            for (
+                index in
+                    0 until rowsCount
+            ) {
+                val y =
+                    bottom +
+                        index *
+                            4f
+
+                rows +=
+                    SatinRow(
+                        a =
+                            FPoint(
+                                left,
+                                y
+                            ),
+                        b =
+                            FPoint(
+                                left +
+                                    12f,
+                                y
+                            )
+                    )
+            }
+
+            return SatinColumn(
+                rows
+            )
+        }
+
+        val body =
+            column(
+                left =
+                    45f,
+                bottom =
+                    10f,
+                rowsCount =
+                    8
+            )
+
+        val structuralLeg =
+            column(
+                left =
+                    76f,
+                bottom =
+                    4f,
+                rowsCount =
+                    9
+            )
+
+        val thinFlourish =
+            column(
+                left =
+                    100f,
+                bottom =
+                    2f,
+                rowsCount =
+                    2
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    body,
+                    thinFlourish,
+                    structuralLeg
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                40f,
+                                0f
+                            ),
+                            FPoint(
+                                116f,
+                                0f
+                            ),
+                            FPoint(
+                                116f,
+                                45f
+                            ),
+                            FPoint(
+                                40f,
+                                45f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    45f,
+                    40f
+                ),
+            includeUnderlay =
+                false,
+            densityMm =
+                0.4f,
+            strictVisualOrder =
+                true,
+            endHint =
+                FPoint(
+                    82f,
+                    6f
+                )
+        )
+
+        return output
+    }
+
     internal fun debugFirstVisualBlockPath():
         List<EmbroideryPoint> {
         val output =
