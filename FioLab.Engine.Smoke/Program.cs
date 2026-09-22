@@ -289,15 +289,15 @@ var bentObjects = engine.DigitizePath(
     options,
     ref bentObjectIndex);
 
-foreach (var satin in bentObjects.Where(static item =>
+foreach (var bentSatinObject in bentObjects.Where(static item =>
     item.Kind == EmbroideryObjectKind.Satin))
 {
     var segments = new List<(StitchPoint A, StitchPoint B)>();
 
-    for (var i = 1; i < satin.Points.Count; i++)
+    for (var i = 1; i < bentSatinObject.Points.Count; i++)
     {
-        var a = satin.Points[i - 1];
-        var b = satin.Points[i];
+        var a = bentSatinObject.Points[i - 1];
+        var b = bentSatinObject.Points[i];
 
         if (
             b.Command != StitchCommand.Stitch ||
