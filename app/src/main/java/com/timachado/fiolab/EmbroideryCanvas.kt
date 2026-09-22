@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.HoopProfile
+import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.ui.theme.FioGold
 
@@ -113,7 +114,10 @@ fun EmbroideryCanvas(
 
             if (hoop != null) {
                 drawHoopPreview(
-                    hoop = hoop,
+                    hoop =
+                        hoop,
+                    design =
+                        design,
                     realistic =
                         true
                 )
@@ -137,17 +141,27 @@ fun EmbroideryCanvas(
 
 private fun DrawScope.drawHoopPreview(
     hoop: HoopProfile,
+    design: EmbroideryDesign,
     realistic: Boolean
 ) {
     val padding =
         36.dp.toPx()
 
+    val fit =
+        HoopValidator
+            .validateForViewer(
+                design =
+                    design,
+                hoop =
+                    hoop
+            )
+
     val hoopWidthUnits =
-        hoop.widthMm *
+        fit.frameWidthMm *
             10f
 
     val hoopHeightUnits =
-        hoop.heightMm *
+        fit.frameHeightMm *
             10f
 
     val scale =
@@ -444,21 +458,44 @@ private fun DrawScope.drawDesign(
     val padding =
         36.dp.toPx()
 
+    val viewerFit =
+        hoop?.let {
+            HoopValidator
+                .validateForViewer(
+                    design =
+                        design,
+                    hoop =
+                        it
+                )
+        }
+
+    /*
+     * A escala precisa mostrar o quadro inteiro E a matriz inteira.
+     * Antes, quando uma matriz era maior que o bastidor selecionado,
+     * usávamos apenas o tamanho do bastidor e o bordado era recortado
+     * na tela, parecendo estar "aberto errado".
+     */
     val frameWidthUnits =
-        hoop
-            ?.let {
-                it.widthMm *
+        maxOf(
+            widthUnits.toFloat(),
+            viewerFit
+                ?.frameWidthMm
+                ?.times(
                     10f
-            }
-            ?: widthUnits.toFloat()
+                )
+                ?: widthUnits.toFloat()
+        )
 
     val frameHeightUnits =
-        hoop
-            ?.let {
-                it.heightMm *
+        maxOf(
+            heightUnits.toFloat(),
+            viewerFit
+                ?.frameHeightMm
+                ?.times(
                     10f
-            }
-            ?: heightUnits.toFloat()
+                )
+                ?: heightUnits.toFloat()
+        )
 
     val baseScale =
         minOf(
