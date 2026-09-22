@@ -4093,7 +4093,7 @@ internal object ReferenceImportedFontEngine {
                             center.y -
                                 normal.y *
                                     (
-                                        negative +
+                                        cappedNegative +
                                             pullUnits
                                         )
                         ),
@@ -4108,7 +4108,7 @@ internal object ReferenceImportedFontEngine {
                             center.y +
                                 normal.y *
                                     (
-                                        positive +
+                                        cappedPositive +
                                             pullUnits
                                         )
                         )
