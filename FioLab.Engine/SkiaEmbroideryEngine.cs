@@ -1557,10 +1557,13 @@ public sealed class SkiaEmbroideryEngine
 
             var crosses = false;
 
-            // Ignore the immediately previous row. It is allowed to meet the
-            // current row at a tight corner; it must not intersect older rows.
+            // Satin cross-sections may touch at a tight corner, but they
+            // must never properly cross — not even the immediately previous
+            // section. Proper intersection excludes endpoint touching, so
+            // checking every accepted row removes the bow-tie/X without
+            // rejecting normal continuity.
             for (var index = 0;
-                 index < accepted.Count - 1;
+                 index < accepted.Count;
                  index++)
             {
                 var older = accepted[index];
