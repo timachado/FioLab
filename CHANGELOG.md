@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.47.1
+
+### Junções sem buracos nas fontes salvas
+- Corrigidos os vazios visíveis na simulação da 0.47.0, principalmente nas junções do "M" e nas ligações cursivas.
+- O motor continua separando os ramos para evitar leques, mas agora cria um bloco Satin dedicado para cobrir a região central que havia sido removida.
+- Pixels de bifurcação próximos são agrupados em um único centro de junção, evitando vários blocos sobrepostos no mesmo nó.
+- A direção do bloco de junção é calculada a partir dos ramos vizinhos, priorizando o par com continuidade mais natural.
+- O preenchimento da junção respeita a largura máxima Satin e a área real da máscara, sem atravessar a letra inteira.
+- Mantidos o campo de distância local, blocos de ramo, componentes compactos, underlay, compensação de repuxo, auto-fit e exportação PES/DST/JEF.
+- As fontes FioLab internas continuam sem alteração.
+- Adicionado teste de regressão que exige cobertura Satin no centro de uma junção em T.
+
 ## 0.47.0
 
 ### Novo motor de fontes salvas — blocos direcionais
