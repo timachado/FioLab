@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.15
+
+### Otimização estrutural do Satin adaptativo
+- Corrigida a espera prolongada em "Gerando prévia…" que ainda podia ocorrer na 0.46.14 com fontes TTF/OTF detalhadas.
+- A rasterização do glifo deixou de testar cada célula contra todos os polígonos. Agora usa preenchimento por scanline com regra par/ímpar, preservando contornos e vazados com custo muito menor.
+- O thinning do eixo medial deixou de varrer toda a grade em cada uma das passagens. Agora mantém uma fronteira ativa e reavalia somente pixels de borda afetados pelas remoções.
+- A busca das bordas Satin ao longo de cada normal passa a caminhar pela máscara raster em O(1) por passo; o contorno vetorial é consultado apenas no refinamento final da borda.
+- Mantido o Satin adaptativo com múltiplas direções, underlay, compensação de repuxo, limite de largura, roteamento por continuidade e início visual.
+- Mantido o auto-fit rápido da 0.46.14, que mede a TTF/OTF antes de executar a digitalização pesada uma única vez.
+- Nenhum retorno ao motor antigo de eixo único foi realizado.
+
 ## 0.46.14
 
 ### Auto-fit rápido sem repetir digitalização Satin
