@@ -463,6 +463,28 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun cleanEngineKeepsPhysicalRailIdentityWhenNormalFlips() {
+        val rails =
+            ReferenceImportedFontEngine
+                .debugCleanRailAlignment()
+
+        assertEquals(
+            "A borda A deve continuar no mesmo lado físico mesmo quando a normal calculada inverter.",
+            0f,
+            rails[0],
+            0.01f
+        )
+
+        assertEquals(
+            "A borda B deve continuar no mesmo lado físico mesmo quando a normal calculada inverter.",
+            40f,
+            rails[1],
+            0.01f
+        )
+    }
+
+
+    @Test
     fun cleanEngineSatinAlternatesOnlyBetweenRealRails() {
         val xs =
             ReferenceImportedFontEngine
