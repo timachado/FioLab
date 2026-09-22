@@ -95,22 +95,14 @@ var holedObjects = engine.DigitizePath(
     options,
     ref holeObjectIndex);
 
-var holedTatami = holedObjects
-    .FirstOrDefault(static item =>
-        item.Kind == EmbroideryObjectKind.Tatami);
+var holedPoints = holedObjects
+    .SelectMany(static item => item.Points)
+    .ToList();
 
-if (holedTatami is null)
+for (var i = 1; i < holedPoints.Count; i++)
 {
-    throw new InvalidOperationException(
-        "Smoke test: holed object did not produce Tatami.");
-}
-
-var directionByRow = new Dictionary<int, int>();
-
-for (var i = 1; i < holedTatami.Points.Count; i++)
-{
-    var previous = holedTatami.Points[i - 1];
-    var current = holedTatami.Points[i];
+    var previous = holedPoints[i - 1];
+    var current = holedPoints[i];
 
     if (
         current.Command != StitchCommand.Stitch ||
@@ -119,39 +111,73 @@ for (var i = 1; i < holedTatami.Points.Count; i++)
         continue;
     }
 
-    var dx = current.X - previous.X;
-    var dy = current.Y - previous.Y;
+    // No real stitch may cross the empty 40..80 square. This invariant is
+    // valid whether the topology engine chooses Satin around the ring or
+    // Tatami for a wider object.
+    var samplesInsideHole = 0;
 
-    if (MathF.Abs(dy) > 0.01f || MathF.Abs(dx) <= 0.01f)
+    for (var sample = 1; sample < 20; sample++)
     {
-        continue;
+        var ratio = sample / 20f;
+        var x = previous.X + (current.X - previous.X) * ratio;
+        var y = previous.Y + (current.Y - previous.Y) * ratio;
+
+        if (
+            x > 40f &&
+            x < 80f &&
+            y > 40f &&
+            y < 80f)
+        {
+            samplesInsideHole++;
+        }
     }
 
-    var rowKey = (int)MathF.Round(current.Y * 10f);
-    var direction = Math.Sign(dx);
-
-    if (
-        directionByRow.TryGetValue(rowKey, out var existingDirection) &&
-        existingDirection != direction)
+    if (samplesInsideHole > 0)
     {
         throw new InvalidOperationException(
-            "Smoke test: Tatami reversed direction before completing the scan row.");
+            "Smoke test: embroidery stitched across an empty internal gap.");
     }
+}
 
-    directionByRow[rowKey] = direction;
+var holedTatami = holedObjects.FirstOrDefault(
+    static item => item.Kind == EmbroideryObjectKind.Tatami);
 
-    var minX = MathF.Min(previous.X, current.X);
-    var maxX = MathF.Max(previous.X, current.X);
-    var rowY = (previous.Y + current.Y) / 2f;
+if (holedTatami is not null)
+{
+    var directionByRow = new Dictionary<int, int>();
 
-    if (
-        rowY > 40f &&
-        rowY < 80f &&
-        minX < 40f &&
-        maxX > 80f)
+    for (var i = 1; i < holedTatami.Points.Count; i++)
     {
-        throw new InvalidOperationException(
-            "Smoke test: Tatami stitched across an empty internal gap.");
+        var previous = holedTatami.Points[i - 1];
+        var current = holedTatami.Points[i];
+
+        if (
+            current.Command != StitchCommand.Stitch ||
+            previous.ObjectIndex != current.ObjectIndex)
+        {
+            continue;
+        }
+
+        var dx = current.X - previous.X;
+        var dy = current.Y - previous.Y;
+
+        if (MathF.Abs(dy) > 0.01f || MathF.Abs(dx) <= 0.01f)
+        {
+            continue;
+        }
+
+        var rowKey = (int)MathF.Round(current.Y * 10f);
+        var direction = Math.Sign(dx);
+
+        if (
+            directionByRow.TryGetValue(rowKey, out var existingDirection) &&
+            existingDirection != direction)
+        {
+            throw new InvalidOperationException(
+                "Smoke test: Tatami reversed direction before completing the scan row.");
+        }
+
+        directionByRow[rowKey] = direction;
     }
 }
 
