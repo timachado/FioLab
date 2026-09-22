@@ -698,4 +698,14 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun curvedUnderlayNeverCutsAcrossGlyphHole() {
+        assertTrue(
+            "O underlay em curva deve reduzir o passo automaticamente e nunca atravessar o vazado da letra.",
+            ReferenceImportedFontEngine
+                .debugCurvedUnderlayAllSegmentsInside()
+        )
+    }
+
 }
