@@ -17,7 +17,7 @@ enum class ImportedFontDigitizingMode(
     val displayName: String
 ) {
     PROFESSIONAL_BLOCKS(
-        "Blocos profissionais"
+        "Objetos inteligentes"
     ),
     COMPATIBILITY(
         "Compatibilidade"
