@@ -456,6 +456,34 @@ public sealed class SkiaEmbroideryEngine
             return [];
         }
 
+        var mergeRadius = MathF.Max(
+            7f,
+            options.DensityPx * raster.Scale * 2.15f);
+
+        // Tiny candidates touching a real junction are normally raster
+        // spurs, not independent physical strokes. Drop them before routing.
+        prepared = prepared
+            .Where(candidate =>
+                !IsMicroBranchNearJunction(
+                    candidate,
+                    junctionCenters,
+                    mergeRadius))
+            .ToList();
+
+        if (prepared.Count == 0)
+        {
+            return [];
+        }
+
+        // At a 3-way meeting, continue the two most collinear branches as
+        // one physical embroidery object. The side branch remains separate.
+        // This mirrors how a digitizer follows the main stroke through a
+        // junction instead of creating a new object for every graph edge.
+        prepared = MergeThroughJunctions(
+            prepared,
+            junctionCenters,
+            mergeRadius);
+
         // Stable, deterministic order inside a glyph. Each branch is fully
         // completed before the next one begins.
         prepared = prepared
@@ -499,53 +527,9 @@ public sealed class SkiaEmbroideryEngine
             });
         }
 
-        // Junctions are deliberately NOT radial satin. A small local Tatami
-        // patch closes the meeting area between branches without creating
-        // the fan-shaped diagonals visible in the previous preview.
-        if (junctionCenters.Count > 0)
-        {
-            var patchMask = BuildJunctionPatchMask(
-                component,
-                junctionCenters,
-                raster,
-                options);
-
-            var patches = FindComponents(
-                patchMask,
-                component.CanvasWidth,
-                component.CanvasHeight);
-
-            var patchOptions = options with
-            {
-                IncludeUnderlay = false,
-                TatamiDensityPx = MathF.Max(
-                    2.8f,
-                    options.TatamiDensityPx)
-            };
-
-            foreach (var patch in patches)
-            {
-                var objectIndex = nextObjectIndex++;
-
-                var points = BuildTatami(
-                    patch,
-                    raster,
-                    objectIndex,
-                    patchOptions);
-
-                if (points.Count < 2)
-                {
-                    continue;
-                }
-
-                result.Add(new EmbroideryObject
-                {
-                    Index = objectIndex,
-                    Kind = EmbroideryObjectKind.Tatami,
-                    Points = points
-                });
-            }
-        }
+        // Narrow script junctions are intentionally not emitted as separate
+        // Tatami objects. The main Satin continuation covers the meeting
+        // area and avoids the small boxes/triangles seen in the preview.
 
         return result;
     }
@@ -1575,6 +1559,283 @@ public sealed class SkiaEmbroideryEngine
                 maxSegmentLength / raster.Scale);
         }
     }
+
+    private static bool IsMicroBranchNearJunction(
+        TopologyCandidate candidate,
+        IReadOnlyList<PixelPoint> junctions,
+        float radius)
+    {
+        if (candidate.Centers.Count > 3 || junctions.Count == 0)
+        {
+            return false;
+        }
+
+        var start = candidate.Centers[0];
+        var end = candidate.Centers[^1];
+
+        return junctions.Any(junction =>
+            Distance(start, junction) <= radius * 1.15f ||
+            Distance(end, junction) <= radius * 1.15f);
+    }
+
+    private static List<TopologyCandidate> MergeThroughJunctions(
+        List<TopologyCandidate> source,
+        IReadOnlyList<PixelPoint> junctions,
+        float radius)
+    {
+        var candidates = source.ToList();
+
+        foreach (var junction in junctions)
+        {
+            var endpoints = new List<CandidateEndpoint>();
+
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                var candidate = candidates[index];
+
+                if (candidate.Centers.Count < 2)
+                {
+                    continue;
+                }
+
+                AddEndpoint(index, atStart: true);
+                AddEndpoint(index, atStart: false);
+
+                continue;
+
+                void AddEndpoint(
+                    int candidateIndex,
+                    bool atStart)
+                {
+                    var current = candidates[candidateIndex];
+                    var endpoint = atStart
+                        ? current.Centers[0]
+                        : current.Centers[^1];
+
+                    if (Distance(endpoint, junction) > radius)
+                    {
+                        return;
+                    }
+
+                    var adjacent = atStart
+                        ? current.Centers[1]
+                        : current.Centers[^2];
+
+                    var direction = NormalizeVector(
+                        adjacent.X - endpoint.X,
+                        adjacent.Y - endpoint.Y);
+
+                    endpoints.Add(new CandidateEndpoint(
+                        candidateIndex,
+                        atStart,
+                        endpoint,
+                        direction.X,
+                        direction.Y));
+                }
+            }
+
+            CandidatePair? best = null;
+
+            for (var a = 0; a < endpoints.Count; a++)
+            {
+                for (var b = a + 1; b < endpoints.Count; b++)
+                {
+                    var first = endpoints[a];
+                    var second = endpoints[b];
+
+                    if (first.CandidateIndex == second.CandidateIndex)
+                    {
+                        continue;
+                    }
+
+                    var firstCandidate = candidates[first.CandidateIndex];
+                    var secondCandidate = candidates[second.CandidateIndex];
+
+                    if (firstCandidate.Kind != secondCandidate.Kind)
+                    {
+                        continue;
+                    }
+
+                    var dot =
+                        first.DirectionX * second.DirectionX +
+                        first.DirectionY * second.DirectionY;
+
+                    // Opposite outward tangents mean one continuous stroke
+                    // passing through the junction.
+                    if (dot > -0.55f)
+                    {
+                        continue;
+                    }
+
+                    var score =
+                        dot +
+                        0.025f *
+                        (
+                            Distance(first.Point, junction) +
+                            Distance(second.Point, junction)
+                        );
+
+                    if (best is null || score < best.Value.Score)
+                    {
+                        best = new CandidatePair(
+                            first,
+                            second,
+                            score);
+                    }
+                }
+            }
+
+            if (best is null)
+            {
+                continue;
+            }
+
+            var pair = best.Value;
+            var firstIndex = pair.First.CandidateIndex;
+            var secondIndex = pair.Second.CandidateIndex;
+
+            var firstCandidate = OrientCandidateToJunctionEnd(
+                candidates[firstIndex],
+                pair.First.AtStart);
+
+            var secondCandidate = OrientCandidateFromJunctionStart(
+                candidates[secondIndex],
+                pair.Second.AtStart);
+
+            var mergedCenters = new List<PixelPoint>(
+                firstCandidate.Centers.Count +
+                secondCandidate.Centers.Count + 1);
+
+            mergedCenters.AddRange(firstCandidate.Centers);
+
+            if (
+                Distance(mergedCenters[^1], junction) >
+                    0.75f &&
+                Distance(junction, secondCandidate.Centers[0]) >
+                    0.75f)
+            {
+                mergedCenters.Add(junction);
+            }
+
+            mergedCenters.AddRange(secondCandidate.Centers);
+
+            var mergedRows = new List<SatinRow>(
+                firstCandidate.Rows.Count +
+                secondCandidate.Rows.Count);
+
+            mergedRows.AddRange(firstCandidate.Rows);
+            mergedRows.AddRange(secondCandidate.Rows);
+            mergedRows = AlignSatinRows(mergedRows);
+
+            var merged = new TopologyCandidate(
+                firstCandidate.Kind,
+                mergedRows,
+                mergedCenters);
+
+            var high = Math.Max(firstIndex, secondIndex);
+            var low = Math.Min(firstIndex, secondIndex);
+
+            candidates.RemoveAt(high);
+            candidates.RemoveAt(low);
+            candidates.Add(merged);
+        }
+
+        return candidates;
+    }
+
+    private static TopologyCandidate OrientCandidateToJunctionEnd(
+        TopologyCandidate candidate,
+        bool junctionAtStart) =>
+        junctionAtStart
+            ? ReverseTopologyCandidate(candidate)
+            : candidate;
+
+    private static TopologyCandidate OrientCandidateFromJunctionStart(
+        TopologyCandidate candidate,
+        bool junctionAtStart) =>
+        junctionAtStart
+            ? candidate
+            : ReverseTopologyCandidate(candidate);
+
+    private static TopologyCandidate ReverseTopologyCandidate(
+        TopologyCandidate candidate)
+    {
+        var centers = candidate.Centers
+            .AsEnumerable()
+            .Reverse()
+            .ToList();
+
+        var rows = candidate.Rows
+            .AsEnumerable()
+            .Reverse()
+            .ToList();
+
+        return new TopologyCandidate(
+            candidate.Kind,
+            AlignSatinRows(rows),
+            centers);
+    }
+
+    private static List<SatinRow> AlignSatinRows(
+        IReadOnlyList<SatinRow> source)
+    {
+        var result = new List<SatinRow>(source.Count);
+        SatinRow? previous = null;
+
+        foreach (var raw in source)
+        {
+            var current = raw;
+
+            if (previous is not null)
+            {
+                var direct =
+                    Distance(previous.Value.A, current.A) +
+                    Distance(previous.Value.B, current.B);
+
+                var swapped =
+                    Distance(previous.Value.A, current.B) +
+                    Distance(previous.Value.B, current.A);
+
+                if (swapped < direct)
+                {
+                    current = new SatinRow(
+                        current.B,
+                        current.A);
+                }
+            }
+
+            result.Add(current);
+            previous = current;
+        }
+
+        return result;
+    }
+
+    private static (float X, float Y) NormalizeVector(
+        float x,
+        float y)
+    {
+        var length = MathF.Sqrt(x * x + y * y);
+
+        if (length < 0.0001f)
+        {
+            return (0f, 0f);
+        }
+
+        return (x / length, y / length);
+    }
+
+    private readonly record struct CandidateEndpoint(
+        int CandidateIndex,
+        bool AtStart,
+        PixelPoint Point,
+        float DirectionX,
+        float DirectionY);
+
+    private readonly record struct CandidatePair(
+        CandidateEndpoint First,
+        CandidateEndpoint Second,
+        float Score);
 
     private static bool[] BuildJunctionPatchMask(
         Component component,
