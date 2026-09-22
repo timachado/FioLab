@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 
 namespace FioLab.Maui;
@@ -13,9 +12,6 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseSkiaSharp();
 
-#if DEBUG
-        builder.Logging.AddDebug();
-#endif
 
         return builder.Build();
     }
