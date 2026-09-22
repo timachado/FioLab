@@ -1284,12 +1284,22 @@ internal object ReferenceImportedFontEngine {
         val maxY: Float
     ) {
         fun contains(
-            point: FPoint
+            point: FPoint,
+            margin: Float =
+                0f
         ): Boolean =
-            point.x in
-                minX..maxX &&
-                point.y in
-                    minY..maxY
+            point.x >=
+                minX -
+                    margin &&
+                point.x <=
+                    maxX +
+                        margin &&
+                point.y >=
+                    minY -
+                        margin &&
+                point.y <=
+                    maxY +
+                        margin
     }
 
     private data class ProfessionalGeometry(
@@ -1622,30 +1632,31 @@ internal object ReferenceImportedFontEngine {
         val filtered =
             columns.filterNot {
                     column ->
-                val center =
-                    column.rows
-                        .firstOrNull()
-                        ?.let {
-                                row ->
-                            FPoint(
-                                (
-                                    row.a.x +
-                                        row.b.x
-                                    ) /
-                                    2f,
-                                (
-                                    row.a.y +
-                                        row.b.y
-                                    ) /
-                                    2f
-                            )
-                        }
-                        ?: return@filterNot false
+                column.rows.any {
+                        row ->
+                    val center =
+                        FPoint(
+                            (
+                                row.a.x +
+                                    row.b.x
+                                ) /
+                                2f,
+                            (
+                                row.a.y +
+                                    row.b.y
+                                ) /
+                                2f
+                        )
 
-                geometry.compactRegions.any {
-                    it.contains(
-                        center
-                    )
+                    geometry.compactRegions.any {
+                        it.contains(
+                            point =
+                                center,
+                            margin =
+                                geometry.raster.step *
+                                    2.5f
+                        )
+                    }
                 }
             }
 
