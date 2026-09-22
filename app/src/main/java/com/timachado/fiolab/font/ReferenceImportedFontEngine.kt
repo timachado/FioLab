@@ -1083,15 +1083,48 @@ internal object ReferenceImportedFontEngine {
         }
 
         /*
-         * PE-DESIGN-like deterministic entry:
-         * process the first visible section from left to right and, for
-         * equivalent X, from top to bottom. In our Cartesian glyph space,
-         * larger Y is visually higher, so the tie-breaker is descending Y.
+         * Em letras cursivas, o ponto geometricamente mais à esquerda pode
+         * ser um floreio inferior. Para o início visual, consideramos a
+         * metade superior do glifo e, dentro dela, pegamos o ponto mais à
+         * esquerda; em empate, o mais alto.
          *
-         * The previous lower-left preference is visible in the simulator
-         * as the needle entering the bottom flourish of cursive capitals.
+         * Isso mantém a leitura esquerda -> direita / cima -> baixo sem
+         * deixar um swash inferior "roubar" o primeiro bloco da letra.
          */
-        return points.minWithOrNull(
+        val minY =
+            points.minOf {
+                it.y
+            }
+
+        val maxY =
+            points.maxOf {
+                it.y
+            }
+
+        val upperThreshold =
+            minY +
+                (
+                    maxY -
+                        minY
+                    ) *
+                    0.52f
+
+        val upperPoints =
+            points.filter {
+                it.y >=
+                    upperThreshold
+            }
+
+        val candidates =
+            if (
+                upperPoints.isNotEmpty()
+            ) {
+                upperPoints
+            } else {
+                points
+            }
+
+        return candidates.minWithOrNull(
             compareBy<FPoint> {
                 it.x
             }.thenByDescending {
@@ -6677,6 +6710,72 @@ internal object ReferenceImportedFontEngine {
             val entryDistance: Float
         )
 
+        private fun firstVisualChoice(
+            columns: List<SatinColumn>,
+            startHint: FPoint?
+        ): RoutedChoice? {
+            val anchor =
+                startHint
+                    ?: return null
+
+            var best:
+                RoutedChoice? =
+                null
+
+            columns.forEachIndexed {
+                    index,
+                    column ->
+                orientationCandidates(
+                    column
+                ).forEach {
+                        candidate ->
+                    val entry =
+                        candidate.rows
+                            .firstOrNull()
+                            ?.a
+                            ?: return@forEach
+
+                    val entryDistance =
+                        distance(
+                            anchor,
+                            entry
+                        )
+
+                    val previous =
+                        best
+
+                    if (
+                        previous ==
+                            null ||
+                        entryDistance <
+                            previous.entryDistance -
+                                0.001f ||
+                        (
+                            kotlin.math.abs(
+                                entryDistance -
+                                    previous.entryDistance
+                            ) <=
+                                0.001f &&
+                            index <
+                                previous.index
+                        )
+                    ) {
+                        best =
+                            RoutedChoice(
+                                index =
+                                    index,
+                                oriented =
+                                    candidate,
+                                entryDistance =
+                                    entryDistance
+                            )
+                    }
+                }
+            }
+
+            return best
+        }
+
         fun emitGlyph(
             columns: List<SatinColumn>,
             polygons: List<Polygon>,
@@ -6758,28 +6857,53 @@ internal object ReferenceImportedFontEngine {
                         null
                     }
 
-                val column =
+                val firstVisual =
                     if (
-                        connected !=
-                            null
+                        firstColumn
                     ) {
-                        remaining.removeAt(
-                            connected.index
+                        firstVisualChoice(
+                            columns =
+                                remaining,
+                            startHint =
+                                startHint
                         )
-
-                        connected.oriented
                     } else {
-                        val original =
+                        null
+                    }
+
+                val column =
+                    when {
+                        firstVisual !=
+                            null -> {
                             remaining.removeAt(
-                                0
+                                firstVisual.index
                             )
 
-                        closestOrientation(
-                            column =
-                                original,
-                            anchor =
-                                anchor
-                        ).oriented
+                            firstVisual.oriented
+                        }
+
+                        connected !=
+                            null -> {
+                            remaining.removeAt(
+                                connected.index
+                            )
+
+                            connected.oriented
+                        }
+
+                        else -> {
+                            val original =
+                                remaining.removeAt(
+                                    0
+                                )
+
+                            closestOrientation(
+                                column =
+                                    original,
+                                anchor =
+                                    anchor
+                            ).oriented
+                        }
                     }
 
                 val entry =
