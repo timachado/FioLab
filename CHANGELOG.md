@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.60.0
+
+### Motor V2 — reconstrução do digitalizador de fontes
+- O caminho padrão das fontes TTF/OTF salvas deixa de usar o pipeline acumulado da série 0.52.x.
+- Criado um motor V2 isolado que primeiro decompõe o glifo em objetos bordáveis e só depois escolhe o tipo de ponto.
+- Running é usado para detalhes abaixo do limite físico mínimo.
+- Satin é usado somente quando o objeto possui duas bordas reais válidas e largura segura.
+- Tatami é usado quando a largura ultrapassa o limite seguro do Satin.
+- O eixo central serve somente para direção e sequência; ele não limita mais a largura da passada.
+- Cada passada Satin termina em uma das duas bordas reais e alterna trilho a trilho, sem pontos intermediários artificiais.
+- Underlay, densidade, comprimento de ponto e pull compensation passam a ser aplicados por objeto.
+- A sequência conclui um objeto antes de escolher o próximo, usando conexão escondida somente quando o trajeto permanece dentro do glifo.
+- A prévia e a matriz continuam usando exatamente a mesma lista de pontos.
+- A arquitetura foi implementada de forma independente. O Mão Design 18.1.2 foi usado somente como referência de comportamento observável: tipos Running/Satin/Tatami, densidade, stitch length, underlay, pull compensation, detalhe mínimo e sequência.
+- Adicionado teste de regressão que exige alternância Satin exclusivamente entre os dois trilhos reais.
+
 ## 0.52.2
 
 ### Satin até a borda real
