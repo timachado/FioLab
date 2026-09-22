@@ -10159,6 +10159,70 @@ internal object ReferenceImportedFontEngine {
         return maximum
     }
 
+    internal fun debugContourEndCapCount():
+        Int {
+        val polygon =
+            Polygon(
+                listOf(
+                    FPoint(
+                        0f,
+                        0f
+                    ),
+                    FPoint(
+                        40f,
+                        0f
+                    ),
+                    FPoint(
+                        40f,
+                        80f
+                    ),
+                    FPoint(
+                        0f,
+                        80f
+                    )
+                )
+            )
+
+        val rows =
+            listOf(
+                SatinRow(
+                    a =
+                        FPoint(
+                            8f,
+                            24f
+                        ),
+                    b =
+                        FPoint(
+                            32f,
+                            24f
+                        )
+                ),
+                SatinRow(
+                    a =
+                        FPoint(
+                            8f,
+                            48f
+                        ),
+                    b =
+                        FPoint(
+                            32f,
+                            48f
+                        )
+                )
+            )
+
+        return addContourEndCaps(
+            rows =
+                rows,
+            polygons =
+                listOf(
+                    polygon
+                ),
+            pitchUnits =
+                4f
+        ).size
+    }
+
     internal fun debugPrimaryRowVectors(
         polygon:
             List<Pair<Float, Float>>,
