@@ -227,5 +227,50 @@ if (branchObjects.Count > 3)
         $"Smoke test: branched geometry fragmented into {branchObjects.Count} objects.");
 }
 
+// Regression: a compact detached ornament (such as Alliby's heart
+// above the i) is an area fill, not a medial-axis branch graph.
+using var compactOrnament = new SKPath();
+compactOrnament.AddCircle(60f, 60f, 14f);
+
+var compactObjectIndex = 300;
+var compactObjects = engine.DigitizePath(
+    compactOrnament,
+    options,
+    ref compactObjectIndex);
+
+if (
+    compactObjects.Count != 1 ||
+    compactObjects[0].Kind != EmbroideryObjectKind.Tatami)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: compact ornament should be one Tatami object, got " +
+        $"{compactObjects.Count} objects / " +
+        $"{string.Join(",", compactObjects.Select(static item => item.Kind))}.");
+}
+
+// Regression: a four-way crossing represents two physical stroke
+// continuations. Pair both through-directions at the same junction.
+using var crossing = new SKPath();
+crossing.AddRect(new SKRect(50f, 5f, 70f, 115f));
+crossing.AddRect(new SKRect(5f, 50f, 115f, 70f));
+
+var crossingObjectIndex = 400;
+var crossingObjects = engine.DigitizePath(
+    crossing,
+    options,
+    ref crossingObjectIndex);
+
+var crossingSatin = crossingObjects.Count(static item =>
+    item.Kind == EmbroideryObjectKind.Satin);
+
+if (crossingSatin != 2 || crossingObjects.Count != 2)
+{
+    throw new InvalidOperationException(
+        $"Smoke test: four-way crossing should resolve to 2 Satin continuations, got " +
+        $"{crossingObjects.Count} objects / {crossingSatin} Satin.");
+}
+
 Console.WriteLine(
-    $"OK: {objects.Count} base objects, {flattened.Count} base points. Branch topology emitted {satinBranchCount} Satin branches without junction patches.");
+    $"OK: {objects.Count} base objects, {flattened.Count} base points. " +
+    $"Branch topology emitted {satinBranchCount} Satin branches without junction patches. " +
+    $"Compact ornaments fill as Tatami and 4-way crossings pair twice.");
