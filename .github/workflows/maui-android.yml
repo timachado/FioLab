@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: fiolab-maui-android
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
