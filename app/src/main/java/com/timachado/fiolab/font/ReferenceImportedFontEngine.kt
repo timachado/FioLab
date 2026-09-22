@@ -1855,15 +1855,38 @@ internal object ReferenceImportedFontEngine {
                         pullCompensationMm
                 )
 
+            val baseColumns =
+                if (
+                    contourPaired.isNotEmpty()
+                ) {
+                    contourPaired
+                } else {
+                    /*
+                     * O fallback por eixo preserva a geometria principal.
+                     * Depois ele passa pelo mesmo pós-processamento local
+                     * para substituir pontos/acentos compactos sem perder
+                     * hastes não compactas do glifo.
+                     */
+                    sampleColumnsByAxis(
+                        polygons =
+                            polygons,
+                        densityMm =
+                            densityMm,
+                        maxSatinWidthMm =
+                            maxSatinWidthMm,
+                        pullCompensationMm =
+                            pullCompensationMm
+                    )
+                }
+
             if (
-                contourPaired.isNotEmpty() &&
                 geometry !=
                     null
             ) {
                 val processed =
                     clampProfessionalColumns(
                         columns =
-                            contourPaired,
+                            baseColumns,
                         geometry =
                             geometry,
                         maxSatinWidthMm =
@@ -1877,35 +1900,7 @@ internal object ReferenceImportedFontEngine {
                 }
             }
 
-            if (
-                geometry !=
-                    null &&
-                geometry.compactRegions
-                    .isNotEmpty()
-            ) {
-                return standardSewingOrder(
-                    geometry.compactRegions
-                        .map {
-                            it.column
-                        }
-                )
-            }
-
-            /*
-             * Sem pares vetoriais estáveis, mantemos um fallback geométrico
-             * previsível por eixo. O esqueleto raster não define a direção
-             * principal no modo profissional.
-             */
-            return sampleColumnsByAxis(
-                polygons =
-                    polygons,
-                densityMm =
-                    densityMm,
-                maxSatinWidthMm =
-                    maxSatinWidthMm,
-                pullCompensationMm =
-                    pullCompensationMm
-            )
+            return baseColumns
         }
 
         if (
