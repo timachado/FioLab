@@ -463,6 +463,20 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun coverageAuditRepairsUncoveredInternalAreas() {
+        val repairedRows =
+            ReferenceImportedFontEngine
+                .debugCoverageRepairCount()
+
+        assertTrue(
+            "A auditoria de cobertura deve criar blocos locais quando a geometria principal deixa uma região interna sem travessas.",
+            repairedRows >
+                0
+        )
+    }
+
+
+    @Test
     fun primaryEngineDoesNotCreateAbruptFanAtBranch() {
         val maxTurn =
             ReferenceImportedFontEngine
