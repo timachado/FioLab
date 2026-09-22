@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.60.0-debug.apk
-          zip -9 FioLab-0.60.0-debug.zip FioLab-0.60.0-debug.apk
-          sha256sum FioLab-0.60.0-debug.apk FioLab-0.60.0-debug.zip > FioLab-0.60.0-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.60.1-debug.apk
+          zip -9 FioLab-0.60.1-debug.zip FioLab-0.60.1-debug.apk
+          sha256sum FioLab-0.60.1-debug.apk FioLab-0.60.1-debug.zip > FioLab-0.60.1-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.60.0-downloads
+          name: FioLab-0.60.1-downloads
           path: |
-            FioLab-0.60.0-debug.apk
-            FioLab-0.60.0-debug.zip
-            FioLab-0.60.0-SHA256.txt
+            FioLab-0.60.1-debug.apk
+            FioLab-0.60.1-debug.zip
+            FioLab-0.60.1-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.60.0 >/dev/null 2>&1; then
-            gh release upload v0.60.0               FioLab-0.60.0-debug.apk               FioLab-0.60.0-debug.zip               FioLab-0.60.0-SHA256.txt               --clobber
+          if gh release view v0.60.1 >/dev/null 2>&1; then
+            gh release upload v0.60.1               FioLab-0.60.1-debug.apk               FioLab-0.60.1-debug.zip               FioLab-0.60.1-SHA256.txt               --clobber
           else
-            gh release create v0.60.0               FioLab-0.60.0-debug.apk               FioLab-0.60.0-debug.zip               FioLab-0.60.0-SHA256.txt               --target main               --title "FioLab 0.60.0"               --notes "FioLab 0.60.0: motor V2 refeito para fontes salvas. Geometria é classificada em Running, Satin e Tatami; Satin só usa bordas reais e alterna de trilho a trilho, com underlay, densidade, comprimento e compensação aplicados por objeto."
+            gh release create v0.60.1               FioLab-0.60.1-debug.apk               FioLab-0.60.1-debug.zip               FioLab-0.60.1-SHA256.txt               --target main               --title "FioLab 0.60.1"               --notes "FioLab 0.60.1: estabiliza a identidade física dos dois trilhos Satin quando a normal local inverte em curvas e trata pontos/corações compactos com colunas regulares, sem mini-esqueleto ramificado."
           fi
