@@ -433,4 +433,31 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun branchJunctionDoesNotCreateAbruptSatinFan() {
+        val maxTurn =
+            ReferenceImportedFontEngine
+                .debugAdaptiveMaxTurnDegrees(
+                    polygon =
+                        listOf(
+                            40f to 0f,
+                            60f to 0f,
+                            60f to 45f,
+                            98f to 84f,
+                            84f to 100f,
+                            51f to 66f,
+                            18f to 100f,
+                            4f to 86f,
+                            40f to 49f
+                        )
+                )
+
+        assertTrue(
+            "Uma bifurcação não pode criar mudança instantânea em leque dentro da mesma coluna Satin.",
+            maxTurn <=
+                53f
+        )
+    }
+
 }
