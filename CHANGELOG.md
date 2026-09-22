@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.61.0
+
+### V2 calibrado com a topologia real da Alliby
+- A fonte Alliby Regular enviada pelo usuário foi usada localmente para analisar o caso real do nome "Maria" sem redistribuir o arquivo da fonte.
+- O M da Alliby possui múltiplas zonas de junção entre laço e hastes; essas zonas deixam de participar diretamente do traçado dos ramos.
+- O motor V2 detecta as junções do esqueleto, abre uma pequena zona neutra e traça cada ramo de forma independente.
+- Cada ramo mantém seus próprios trilhos Satin e sua própria direção local.
+- O miolo da junção recebe um patch Tatami curto e local, alinhado ao eixo dominante, em vez de Satin radial.
+- Componentes compactos continuam usando colunas regulares.
+- Mantidos Running/Satin/Tatami automáticos, underlay, compensação, sequência por objetos e exportação.
+- Adicionado teste de regressão que exige ramos independentes e patch Tatami na bifurcação.
+
 ## 0.60.1
 
 ### Trilhos Satin estáveis em curvas
