@@ -193,7 +193,7 @@ object TextHoopAutoFit {
                                 lowFill +
                                     0.0001f
                         ) {
-                            (
+                            val interpolated =
                                 lowHeight +
                                     (
                                         1f -
@@ -207,13 +207,42 @@ object TextHoopAutoFit {
                                         upperFill -
                                             lowFill
                                         )
+
+                            val gap =
+                                highHeight -
+                                    lowHeight
+
+                            val margin =
+                                kotlin.math.min(
+                                    0.02f,
+                                    gap /
+                                        4f
                                 )
-                                .coerceIn(
+
+                            val minimumCandidate =
+                                lowHeight +
+                                    margin
+
+                            val maximumCandidate =
+                                highHeight -
+                                    margin
+
+                            if (
+                                maximumCandidate >
+                                    minimumCandidate
+                            ) {
+                                interpolated
+                                    .coerceIn(
+                                        minimumCandidate,
+                                        maximumCandidate
+                                    )
+                            } else {
+                                (
                                     lowHeight +
-                                        0.05f,
-                                    highHeight -
-                                        0.05f
-                                )
+                                        highHeight
+                                    ) /
+                                    2f
+                            }
                         } else {
                             (
                                 lowHeight +
