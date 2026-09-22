@@ -591,7 +591,7 @@ public sealed class SkiaEmbroideryEngine
                     component,
                     raster,
                     options,
-                    resample: false);
+                    resample: true);
 
                 return rebuiltRows.Count >= 2
                     ? new TopologyCandidate(
@@ -1413,6 +1413,11 @@ public sealed class SkiaEmbroideryEngine
             ? ResampleCenterline(source, pitch)
             : source.ToList();
 
+        centers = SmoothCenterline(
+            centers,
+            component,
+            passes: 2);
+
         if (centers.Count < 2)
         {
             return [];
@@ -1420,6 +1425,7 @@ public sealed class SkiaEmbroideryEngine
 
         var rows = new List<SatinRow>();
         SatinRow? previousRow = null;
+        PixelPoint? previousNormal = null;
 
         var maxRay = MathF.Sqrt(
             component.Width * component.Width +
@@ -1455,6 +1461,17 @@ public sealed class SkiaEmbroideryEngine
 
             var nx = -ty;
             var ny = tx;
+
+            if (previousNormal is not null)
+            {
+                var clamped = ClampNormalTurn(
+                    previousNormal.Value,
+                    new PixelPoint(nx, ny),
+                    maximumRadians: MathF.PI * 0.20f);
+
+                nx = clamped.X;
+                ny = clamped.Y;
+            }
 
             var positive = RayDistanceInside(
                 component,
@@ -1511,9 +1528,128 @@ public sealed class SkiaEmbroideryEngine
 
             rows.Add(candidate);
             previousRow = candidate;
+
+            var rowVector = NormalizeVector(
+                candidate.B.X - candidate.A.X,
+                candidate.B.Y - candidate.A.Y);
+
+            previousNormal = new PixelPoint(
+                rowVector.X,
+                rowVector.Y);
         }
 
         return rows;
+    }
+
+    private static List<PixelPoint> SmoothCenterline(
+        IReadOnlyList<PixelPoint> source,
+        Component component,
+        int passes)
+    {
+        if (source.Count < 3 || passes <= 0)
+        {
+            return source.ToList();
+        }
+
+        var current = source.ToList();
+
+        for (var pass = 0; pass < passes; pass++)
+        {
+            var next = new List<PixelPoint>(current.Count)
+            {
+                current[0]
+            };
+
+            for (var index = 1;
+                 index < current.Count - 1;
+                 index++)
+            {
+                var previous = current[index - 1];
+                var point = current[index];
+                var following = current[index + 1];
+
+                var smoothed = new PixelPoint(
+                    (
+                        previous.X +
+                        point.X * 2f +
+                        following.X
+                    ) / 4f,
+                    (
+                        previous.Y +
+                        point.Y * 2f +
+                        following.Y
+                    ) / 4f);
+
+                var x = (int)MathF.Round(smoothed.X);
+                var y = (int)MathF.Round(smoothed.Y);
+
+                next.Add(
+                    component.Contains(x, y)
+                        ? smoothed
+                        : point);
+            }
+
+            next.Add(current[^1]);
+            current = next;
+        }
+
+        return current;
+    }
+
+    private static PixelPoint ClampNormalTurn(
+        PixelPoint previous,
+        PixelPoint current,
+        float maximumRadians)
+    {
+        var previousVector = NormalizeVector(
+            previous.X,
+            previous.Y);
+
+        var currentVector = NormalizeVector(
+            current.X,
+            current.Y);
+
+        var dot =
+            previousVector.X * currentVector.X +
+            previousVector.Y * currentVector.Y;
+
+        if (dot < 0f)
+        {
+            currentVector = (
+                -currentVector.X,
+                -currentVector.Y);
+
+            dot = -dot;
+        }
+
+        dot = Math.Clamp(dot, -1f, 1f);
+
+        var angle = MathF.Acos(dot);
+
+        if (angle <= maximumRadians)
+        {
+            return new PixelPoint(
+                currentVector.X,
+                currentVector.Y);
+        }
+
+        var cross =
+            previousVector.X * currentVector.Y -
+            previousVector.Y * currentVector.X;
+
+        var signedAngle =
+            cross >= 0f
+                ? maximumRadians
+                : -maximumRadians;
+
+        var cosine = MathF.Cos(signedAngle);
+        var sine = MathF.Sin(signedAngle);
+
+        return new PixelPoint(
+            previousVector.X * cosine -
+            previousVector.Y * sine,
+            previousVector.X * sine +
+            previousVector.Y * cosine);
     }
 
     private static bool TryFitSatinRowWithoutSelfCrossing(
@@ -1738,6 +1874,9 @@ public sealed class SkiaEmbroideryEngine
                 options.StitchLengthPx * raster.Scale);
         }
 
+        var coverBars =
+            new List<(PixelPoint A, PixelPoint B)>();
+
         var coverSegments =
             new List<(PixelPoint A, PixelPoint B)>();
 
@@ -1748,22 +1887,70 @@ public sealed class SkiaEmbroideryEngine
         {
             if (!TryFitCoverRowAgainstSegments(
                 rawRow,
-                emittedRowIndex,
-                coverSegments,
+                coverBars,
                 out var row))
             {
                 continue;
             }
 
-            var start =
+            var preferredStart =
                 emittedRowIndex % 2 == 0
                     ? row.A
                     : row.B;
 
-            var end =
+            var preferredEnd =
                 emittedRowIndex % 2 == 0
                     ? row.B
                     : row.A;
+
+            var alternateStart = preferredEnd;
+            var alternateEnd = preferredStart;
+
+            var start = preferredStart;
+            var end = preferredEnd;
+            var connectorIsStitch = false;
+
+            if (previousEnd is not null)
+            {
+                var preferredValid = IsSafeSatinConnector(
+                    previousEnd.Value,
+                    preferredStart,
+                    component,
+                    coverSegments);
+
+                var alternateValid = IsSafeSatinConnector(
+                    previousEnd.Value,
+                    alternateStart,
+                    component,
+                    coverSegments);
+
+                if (!preferredValid && alternateValid)
+                {
+                    start = alternateStart;
+                    end = alternateEnd;
+                    connectorIsStitch = true;
+                }
+                else if (preferredValid)
+                {
+                    connectorIsStitch = true;
+                }
+                else
+                {
+                    var preferredDistance = Distance(
+                        previousEnd.Value,
+                        preferredStart);
+
+                    var alternateDistance = Distance(
+                        previousEnd.Value,
+                        alternateStart);
+
+                    if (alternateDistance < preferredDistance)
+                    {
+                        start = alternateStart;
+                        end = alternateEnd;
+                    }
+                }
+            }
 
             var startWorld = raster.ToWorld(
                 start.X,
@@ -1773,23 +1960,9 @@ public sealed class SkiaEmbroideryEngine
                 end.X,
                 end.Y);
 
-            var connectorInside =
-                previousEnd is not null &&
-                SegmentInsideComponent(
-                    component,
-                    previousEnd.Value,
-                    start);
-
-            var connectorCrosses =
-                previousEnd is not null &&
-                SegmentCrossesAny(
-                    previousEnd.Value,
-                    start,
-                    coverSegments);
-
             var startCommand =
-                connectorInside &&
-                !connectorCrosses
+                previousEnd is not null &&
+                connectorIsStitch
                     ? StitchCommand.Stitch
                     : StitchCommand.Jump;
 
@@ -1813,6 +1986,9 @@ public sealed class SkiaEmbroideryEngine
                 StitchCommand.Stitch,
                 objectIndex));
 
+            coverBars.Add(
+                (start, end));
+
             coverSegments.Add(
                 (start, end));
 
@@ -1823,10 +1999,23 @@ public sealed class SkiaEmbroideryEngine
         return points;
     }
 
+    private static bool IsSafeSatinConnector(
+        PixelPoint from,
+        PixelPoint to,
+        Component component,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> priorSegments) =>
+        SegmentInsideComponent(
+            component,
+            from,
+            to) &&
+        !SegmentCrossesAny(
+            from,
+            to,
+            priorSegments);
+
     private static bool TryFitCoverRowAgainstSegments(
         SatinRow source,
-        int emittedRowIndex,
-        IReadOnlyList<(PixelPoint A, PixelPoint B)> priorSegments,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> priorBars,
         out SatinRow fitted)
     {
         var center = new PixelPoint(
@@ -1836,13 +2025,11 @@ public sealed class SkiaEmbroideryEngine
         ReadOnlySpan<float> scales =
         [
             1.00f,
-            0.90f,
-            0.80f,
-            0.70f,
-            0.60f,
-            0.50f,
-            0.42f,
-            0.35f
+            0.92f,
+            0.84f,
+            0.76f,
+            0.68f,
+            0.60f
         ];
 
         foreach (var scale in scales)
@@ -1861,20 +2048,10 @@ public sealed class SkiaEmbroideryEngine
                         center.Y +
                         (source.B.Y - center.Y) * scale));
 
-            var start =
-                emittedRowIndex % 2 == 0
-                    ? candidate.A
-                    : candidate.B;
-
-            var end =
-                emittedRowIndex % 2 == 0
-                    ? candidate.B
-                    : candidate.A;
-
             if (SegmentCrossesAny(
-                start,
-                end,
-                priorSegments))
+                candidate.A,
+                candidate.B,
+                priorBars))
             {
                 continue;
             }
