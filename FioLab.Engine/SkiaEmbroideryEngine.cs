@@ -439,15 +439,24 @@ public sealed class SkiaEmbroideryEngine
                     armProbeRadius) >= 3)
             .ToList();
 
-        var stableJunctionMask = BuildPointMask(
-            junctionCenters,
-            component.CanvasWidth,
-            component.CanvasHeight);
-
         var blockRadius = Math.Max(
             2,
             (int)MathF.Round(
                 options.DensityPx * raster.Scale * 0.75f));
+
+        // One physical script crossing can be represented by several tiny
+        // junction islands after raster thinning. If they are kept
+        // separately, the short connector between them becomes a false
+        // embroidery object (the small X/diamond visible on Alliby 'a').
+        // Collapse nearby junction islands before cutting the skeleton.
+        junctionCenters = MergeNearbyJunctionCenters(
+            junctionCenters,
+            blockRadius * 1.20f);
+
+        var stableJunctionMask = BuildPointMask(
+            junctionCenters,
+            component.CanvasWidth,
+            component.CanvasHeight);
 
         var blocked = DilateMask(
             stableJunctionMask,
@@ -859,6 +868,62 @@ public sealed class SkiaEmbroideryEngine
                     sumX / count,
                     sumY / count));
             }
+        }
+
+        return result;
+    }
+
+    private static List<PixelPoint> MergeNearbyJunctionCenters(
+        IReadOnlyList<PixelPoint> source,
+        float radius)
+    {
+        if (source.Count <= 1)
+        {
+            return source.ToList();
+        }
+
+        var remaining = new HashSet<int>(
+            Enumerable.Range(0, source.Count));
+
+        var result = new List<PixelPoint>();
+
+        while (remaining.Count > 0)
+        {
+            var seed = remaining.First();
+            var queue = new Queue<int>();
+            var cluster = new List<int>();
+
+            queue.Enqueue(seed);
+            remaining.Remove(seed);
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                cluster.Add(current);
+
+                var neighbors = remaining
+                    .Where(index =>
+                        Distance(
+                            source[current],
+                            source[index]) <= radius)
+                    .ToList();
+
+                foreach (var neighbor in neighbors)
+                {
+                    remaining.Remove(neighbor);
+                    queue.Enqueue(neighbor);
+                }
+            }
+
+            var centerX = cluster.Average(index =>
+                source[index].X);
+
+            var centerY = cluster.Average(index =>
+                source[index].Y);
+
+            result.Add(new PixelPoint(
+                (float)centerX,
+                (float)centerY));
         }
 
         return result;
