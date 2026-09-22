@@ -359,18 +359,105 @@ internal static class CenterlineGraph
         int height,
         bool[] skeleton)
     {
+        // Topological 8-neighborhood without diagonal shortcuts.
+        //
+        // A rasterized curve frequently looks like a staircase. If a
+        // diagonal pixel is counted in addition to an orthogonal bridge,
+        // the middle stair pixel appears to have degree 3 or 4 and becomes
+        // a fake junction. That was the main source of the 129 objects seen
+        // in the Alliby "Maria" test.
+        //
+        // Keep a diagonal link only when neither orthogonal bridge exists.
         var result =
             new List<int>(8);
 
-        foreach (var neighbor in Geometry.Neighbors(
-            index,
-            width,
-            height))
+        var x = index % width;
+        var y = index / width;
+
+        static bool Inside(
+            int x,
+            int y,
+            int width,
+            int height) =>
+            x >= 0 &&
+            y >= 0 &&
+            x < width &&
+            y < height;
+
+        bool Has(
+            int px,
+            int py)
         {
-            if (skeleton[neighbor])
+            if (!Inside(
+                px,
+                py,
+                width,
+                height))
             {
-                result.Add(neighbor);
+                return false;
             }
+
+            return skeleton[
+                py * width + px];
+        }
+
+        ReadOnlySpan<(int X, int Y)> cardinals =
+        [
+            ( 0, -1),
+            ( 1,  0),
+            ( 0,  1),
+            (-1,  0)
+        ];
+
+        foreach (var offset in cardinals)
+        {
+            var nx = x + offset.X;
+            var ny = y + offset.Y;
+
+            if (Has(nx, ny))
+            {
+                result.Add(
+                    ny * width + nx);
+            }
+        }
+
+        ReadOnlySpan<(int X, int Y)> diagonals =
+        [
+            (-1, -1),
+            ( 1, -1),
+            ( 1,  1),
+            (-1,  1)
+        ];
+
+        foreach (var offset in diagonals)
+        {
+            var nx = x + offset.X;
+            var ny = y + offset.Y;
+
+            if (!Has(nx, ny))
+            {
+                continue;
+            }
+
+            var horizontalBridge =
+                Has(
+                    x + offset.X,
+                    y);
+
+            var verticalBridge =
+                Has(
+                    x,
+                    y + offset.Y);
+
+            if (
+                horizontalBridge ||
+                verticalBridge)
+            {
+                continue;
+            }
+
+            result.Add(
+                ny * width + nx);
         }
 
         return result;
