@@ -80,6 +80,24 @@ public sealed class SkiaEmbroideryEngine
 
         foreach (var component in components)
         {
+            // A glyph-sized bounding box is not a reliable embroidery
+            // classification. Script letters are often one connected shape
+            // made from several narrow branches plus small junctions. Try the
+            // medial-axis/topology route first and fall back to the original
+            // whole-component classifier only when no stable branches can be
+            // extracted.
+            var topologyObjects = BuildTopologyObjects(
+                component,
+                raster,
+                options,
+                ref nextObjectIndex);
+
+            if (topologyObjects.Count > 0)
+            {
+                result.AddRange(topologyObjects);
+                continue;
+            }
+
             var objectIndex = nextObjectIndex++;
             var kind = Classify(component, raster.Scale, options);
 
@@ -306,6 +324,1053 @@ public sealed class SkiaEmbroideryEngine
 
         return result;
     }
+
+    private static List<EmbroideryObject> BuildTopologyObjects(
+        Component component,
+        RasterGlyph raster,
+        DigitizeOptions options,
+        ref int nextObjectIndex)
+    {
+        if (component.Pixels.Count < 24)
+        {
+            return [];
+        }
+
+        var skeleton = ThinMask(component);
+
+        if (CountTrue(skeleton) < 4)
+        {
+            return [];
+        }
+
+        var rawJunctionMask = BuildRawJunctionMask(
+            component,
+            skeleton);
+
+        var junctionCenters = FindMaskRegionCenters(
+            rawJunctionMask,
+            component.CanvasWidth,
+            component.CanvasHeight);
+
+        var blockRadius = Math.Max(
+            2,
+            (int)MathF.Round(
+                options.DensityPx * raster.Scale * 0.75f));
+
+        var blocked = DilateMask(
+            rawJunctionMask,
+            component,
+            blockRadius);
+
+        var branchPaths = TraceSkeletonBranches(
+            skeleton,
+            blocked,
+            component);
+
+        if (branchPaths.Count == 0)
+        {
+            return [];
+        }
+
+        var prepared = new List<TopologyCandidate>();
+
+        foreach (var path in branchPaths)
+        {
+            var rows = BuildRowsFromSkeletonPath(
+                path,
+                component,
+                raster,
+                options);
+
+            if (rows.Count < 2)
+            {
+                continue;
+            }
+
+            var widths = rows
+                .Select(row =>
+                    Distance(row.A, row.B) / raster.Scale)
+                .OrderBy(static width => width)
+                .ToArray();
+
+            var medianWidth = widths[widths.Length / 2];
+
+            // If a branch is genuinely much wider than a valid satin
+            // column, the topology route is not appropriate for this
+            // component. Fall back to the whole-object Tatami classifier
+            // instead of emitting partial coverage.
+            if (medianWidth > options.MaxSatinWidthPx * 1.60f)
+            {
+                return [];
+            }
+
+            var centers = rows
+                .Select(static row => new PixelPoint(
+                    (row.A.X + row.B.X) / 2f,
+                    (row.A.Y + row.B.Y) / 2f))
+                .ToList();
+
+            var kind =
+                medianWidth <= options.RunningMaxWidthPx * 1.15f
+                    ? EmbroideryObjectKind.Running
+                    : EmbroideryObjectKind.Satin;
+
+            prepared.Add(new TopologyCandidate(
+                kind,
+                rows,
+                centers));
+        }
+
+        if (prepared.Count == 0)
+        {
+            return [];
+        }
+
+        // Stable, deterministic order inside a glyph. Each branch is fully
+        // completed before the next one begins.
+        prepared = prepared
+            .OrderBy(static candidate =>
+                candidate.Centers.Min(static point => point.X))
+            .ThenBy(static candidate =>
+                candidate.Centers.Min(static point => point.Y))
+            .ToList();
+
+        var result = new List<EmbroideryObject>();
+
+        foreach (var candidate in prepared)
+        {
+            var objectIndex = nextObjectIndex++;
+
+            var points =
+                candidate.Kind == EmbroideryObjectKind.Running
+                    ? BuildRunningFromCenterline(
+                        candidate.Centers,
+                        raster,
+                        objectIndex,
+                        options)
+                    : BuildSatinFromRows(
+                        candidate.Rows,
+                        raster,
+                        objectIndex,
+                        options);
+
+            if (points.Count < 2)
+            {
+                continue;
+            }
+
+            result.Add(new EmbroideryObject
+            {
+                Index = objectIndex,
+                Kind = candidate.Kind,
+                Points = points
+            });
+        }
+
+        // Junctions are deliberately NOT radial satin. A small local Tatami
+        // patch closes the meeting area between branches without creating
+        // the fan-shaped diagonals visible in the previous preview.
+        if (junctionCenters.Count > 0)
+        {
+            var patchMask = BuildJunctionPatchMask(
+                component,
+                junctionCenters,
+                raster,
+                options);
+
+            var patches = FindComponents(
+                patchMask,
+                component.CanvasWidth,
+                component.CanvasHeight);
+
+            var patchOptions = options with
+            {
+                IncludeUnderlay = false,
+                TatamiDensityPx = MathF.Max(
+                    2.8f,
+                    options.TatamiDensityPx)
+            };
+
+            foreach (var patch in patches)
+            {
+                var objectIndex = nextObjectIndex++;
+
+                var points = BuildTatami(
+                    patch,
+                    raster,
+                    objectIndex,
+                    patchOptions);
+
+                if (points.Count < 2)
+                {
+                    continue;
+                }
+
+                result.Add(new EmbroideryObject
+                {
+                    Index = objectIndex,
+                    Kind = EmbroideryObjectKind.Tatami,
+                    Points = points
+                });
+            }
+        }
+
+        return result;
+    }
+
+    private static bool[] ThinMask(
+        Component component)
+    {
+        var skeleton = new bool[component.Mask.Length];
+        Array.Copy(
+            component.Mask,
+            skeleton,
+            component.Mask.Length);
+
+        var width = component.CanvasWidth;
+        var height = component.CanvasHeight;
+        var changed = true;
+        var iterations = 0;
+        var toDelete = new List<int>();
+
+        while (changed && iterations < 256)
+        {
+            changed = false;
+            iterations++;
+
+            for (var phase = 0; phase < 2; phase++)
+            {
+                toDelete.Clear();
+
+                for (var y = Math.Max(1, component.MinY);
+                     y <= Math.Min(height - 2, component.MaxY);
+                     y++)
+                {
+                    for (var x = Math.Max(1, component.MinX);
+                         x <= Math.Min(width - 2, component.MaxX);
+                         x++)
+                    {
+                        var index = y * width + x;
+
+                        if (!skeleton[index])
+                        {
+                            continue;
+                        }
+
+                        var p2 = skeleton[(y - 1) * width + x];
+                        var p3 = skeleton[(y - 1) * width + x + 1];
+                        var p4 = skeleton[y * width + x + 1];
+                        var p5 = skeleton[(y + 1) * width + x + 1];
+                        var p6 = skeleton[(y + 1) * width + x];
+                        var p7 = skeleton[(y + 1) * width + x - 1];
+                        var p8 = skeleton[y * width + x - 1];
+                        var p9 = skeleton[(y - 1) * width + x - 1];
+
+                        var neighbors =
+                            BoolInt(p2) + BoolInt(p3) +
+                            BoolInt(p4) + BoolInt(p5) +
+                            BoolInt(p6) + BoolInt(p7) +
+                            BoolInt(p8) + BoolInt(p9);
+
+                        if (neighbors < 2 || neighbors > 6)
+                        {
+                            continue;
+                        }
+
+                        var transitions = CountTransitions(
+                            p2, p3, p4, p5,
+                            p6, p7, p8, p9);
+
+                        if (transitions != 1)
+                        {
+                            continue;
+                        }
+
+                        var keep =
+                            phase == 0
+                                ? p2 && p4 && p6 ||
+                                  p4 && p6 && p8
+                                : p2 && p4 && p8 ||
+                                  p2 && p6 && p8;
+
+                        if (!keep)
+                        {
+                            toDelete.Add(index);
+                        }
+                    }
+                }
+
+                if (toDelete.Count == 0)
+                {
+                    continue;
+                }
+
+                changed = true;
+
+                foreach (var index in toDelete)
+                {
+                    skeleton[index] = false;
+                }
+            }
+        }
+
+        return skeleton;
+    }
+
+    private static int BoolInt(bool value) =>
+        value ? 1 : 0;
+
+    private static int CountTransitions(
+        params bool[] neighbors)
+    {
+        var transitions = 0;
+
+        for (var i = 0; i < neighbors.Length; i++)
+        {
+            var current = neighbors[i];
+            var next = neighbors[(i + 1) % neighbors.Length];
+
+            if (!current && next)
+            {
+                transitions++;
+            }
+        }
+
+        return transitions;
+    }
+
+    private static int CountTrue(
+        bool[] mask)
+    {
+        var count = 0;
+
+        foreach (var value in mask)
+        {
+            if (value)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static bool[] BuildRawJunctionMask(
+        Component component,
+        bool[] skeleton)
+    {
+        var result = new bool[skeleton.Length];
+        var width = component.CanvasWidth;
+
+        for (var y = Math.Max(1, component.MinY);
+             y <= Math.Min(component.CanvasHeight - 2, component.MaxY);
+             y++)
+        {
+            for (var x = Math.Max(1, component.MinX);
+                 x <= Math.Min(width - 2, component.MaxX);
+                 x++)
+            {
+                var index = y * width + x;
+
+                if (!skeleton[index])
+                {
+                    continue;
+                }
+
+                var neighbors = GetNeighborFlags(
+                    skeleton,
+                    width,
+                    x,
+                    y);
+
+                // Counting connected neighbor groups instead of raw neighbor
+                // count avoids treating a diagonal stair-step as a branch.
+                if (CountTransitions(neighbors) >= 3)
+                {
+                    result[index] = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static bool[] GetNeighborFlags(
+        bool[] mask,
+        int width,
+        int x,
+        int y) =>
+    [
+        mask[(y - 1) * width + x],
+        mask[(y - 1) * width + x + 1],
+        mask[y * width + x + 1],
+        mask[(y + 1) * width + x + 1],
+        mask[(y + 1) * width + x],
+        mask[(y + 1) * width + x - 1],
+        mask[y * width + x - 1],
+        mask[(y - 1) * width + x - 1]
+    ];
+
+    private static List<PixelPoint> FindMaskRegionCenters(
+        bool[] mask,
+        int width,
+        int height)
+    {
+        var visited = new bool[mask.Length];
+        var result = new List<PixelPoint>();
+
+        for (var seed = 0; seed < mask.Length; seed++)
+        {
+            if (!mask[seed] || visited[seed])
+            {
+                continue;
+            }
+
+            var queue = new Queue<int>();
+            queue.Enqueue(seed);
+            visited[seed] = true;
+
+            var sumX = 0f;
+            var sumY = 0f;
+            var count = 0;
+
+            while (queue.Count > 0)
+            {
+                var index = queue.Dequeue();
+                var x = index % width;
+                var y = index / width;
+
+                sumX += x;
+                sumY += y;
+                count++;
+
+                foreach (var next in NeighborIndices8(
+                    x,
+                    y,
+                    width,
+                    height))
+                {
+                    if (!mask[next] || visited[next])
+                    {
+                        continue;
+                    }
+
+                    visited[next] = true;
+                    queue.Enqueue(next);
+                }
+            }
+
+            if (count > 0)
+            {
+                result.Add(new PixelPoint(
+                    sumX / count,
+                    sumY / count));
+            }
+        }
+
+        return result;
+    }
+
+    private static bool[] DilateMask(
+        bool[] source,
+        Component component,
+        int radius)
+    {
+        var result = new bool[source.Length];
+        var width = component.CanvasWidth;
+        var height = component.CanvasHeight;
+        var radiusSquared = radius * radius;
+
+        for (var y = component.MinY; y <= component.MaxY; y++)
+        {
+            for (var x = component.MinX; x <= component.MaxX; x++)
+            {
+                if (!source[y * width + x])
+                {
+                    continue;
+                }
+
+                for (var oy = -radius; oy <= radius; oy++)
+                {
+                    var ny = y + oy;
+
+                    if (ny < 0 || ny >= height)
+                    {
+                        continue;
+                    }
+
+                    for (var ox = -radius; ox <= radius; ox++)
+                    {
+                        if (ox * ox + oy * oy > radiusSquared)
+                        {
+                            continue;
+                        }
+
+                        var nx = x + ox;
+
+                        if (nx < 0 || nx >= width)
+                        {
+                            continue;
+                        }
+
+                        result[ny * width + nx] = true;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static List<List<int>> TraceSkeletonBranches(
+        bool[] skeleton,
+        bool[] blocked,
+        Component component)
+    {
+        var available = new bool[skeleton.Length];
+
+        foreach (var index in component.Pixels)
+        {
+            available[index] =
+                skeleton[index] &&
+                !blocked[index];
+        }
+
+        var width = component.CanvasWidth;
+        var height = component.CanvasHeight;
+        var visited = new bool[available.Length];
+        var paths = new List<List<int>>();
+
+        for (var seed = 0; seed < available.Length; seed++)
+        {
+            if (!available[seed] || visited[seed])
+            {
+                continue;
+            }
+
+            var queue = new Queue<int>();
+            var region = new List<int>();
+            queue.Enqueue(seed);
+            visited[seed] = true;
+
+            while (queue.Count > 0)
+            {
+                var index = queue.Dequeue();
+                region.Add(index);
+
+                var x = index % width;
+                var y = index / width;
+
+                foreach (var next in NeighborIndices8(
+                    x,
+                    y,
+                    width,
+                    height))
+                {
+                    if (!available[next] || visited[next])
+                    {
+                        continue;
+                    }
+
+                    visited[next] = true;
+                    queue.Enqueue(next);
+                }
+            }
+
+            paths.AddRange(OrderSkeletonRegion(
+                region,
+                width,
+                height));
+        }
+
+        return paths
+            .Where(static path => path.Count >= 3)
+            .ToList();
+    }
+
+    private static List<List<int>> OrderSkeletonRegion(
+        List<int> region,
+        int width,
+        int height)
+    {
+        var remaining = new HashSet<int>(region);
+        var result = new List<List<int>>();
+
+        while (remaining.Count > 0)
+        {
+            var start = remaining
+                .OrderBy(index =>
+                    CountNeighborsInSet(
+                        index,
+                        remaining,
+                        width,
+                        height))
+                .ThenBy(static index => index)
+                .First();
+
+            var path = new List<int>();
+            int? previous = null;
+            var current = start;
+
+            while (true)
+            {
+                path.Add(current);
+                remaining.Remove(current);
+
+                var x = current % width;
+                var y = current / width;
+
+                var candidates = NeighborIndices8(
+                        x,
+                        y,
+                        width,
+                        height)
+                    .Where(remaining.Contains)
+                    .ToList();
+
+                if (candidates.Count == 0)
+                {
+                    break;
+                }
+
+                int next;
+
+                if (previous is null || candidates.Count == 1)
+                {
+                    next = candidates[0];
+                }
+                else
+                {
+                    var px = previous.Value % width;
+                    var py = previous.Value / width;
+                    var vx = x - px;
+                    var vy = y - py;
+                    var vLength = MathF.Max(
+                        0.001f,
+                        MathF.Sqrt(vx * vx + vy * vy));
+
+                    next = candidates
+                        .OrderByDescending(candidate =>
+                        {
+                            var cx = candidate % width - x;
+                            var cy = candidate / width - y;
+                            var cLength = MathF.Max(
+                                0.001f,
+                                MathF.Sqrt(cx * cx + cy * cy));
+
+                            return
+                                (vx * cx + vy * cy) /
+                                (vLength * cLength);
+                        })
+                        .First();
+                }
+
+                previous = current;
+                current = next;
+            }
+
+            if (path.Count >= 3)
+            {
+                result.Add(path);
+            }
+        }
+
+        return result;
+    }
+
+    private static int CountNeighborsInSet(
+        int index,
+        HashSet<int> set,
+        int width,
+        int height)
+    {
+        var x = index % width;
+        var y = index / width;
+        var count = 0;
+
+        foreach (var next in NeighborIndices8(
+            x,
+            y,
+            width,
+            height))
+        {
+            if (set.Contains(next))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static IEnumerable<int> NeighborIndices8(
+        int x,
+        int y,
+        int width,
+        int height)
+    {
+        for (var oy = -1; oy <= 1; oy++)
+        {
+            for (var ox = -1; ox <= 1; ox++)
+            {
+                if (ox == 0 && oy == 0)
+                {
+                    continue;
+                }
+
+                var nx = x + ox;
+                var ny = y + oy;
+
+                if (
+                    nx < 0 ||
+                    ny < 0 ||
+                    nx >= width ||
+                    ny >= height)
+                {
+                    continue;
+                }
+
+                yield return ny * width + nx;
+            }
+        }
+    }
+
+    private static List<SatinRow> BuildRowsFromSkeletonPath(
+        IReadOnlyList<int> path,
+        Component component,
+        RasterGlyph raster,
+        DigitizeOptions options)
+    {
+        var width = component.CanvasWidth;
+        var raw = path
+            .Select(index => new PixelPoint(
+                index % width,
+                index / width))
+            .ToList();
+
+        var pitch = MathF.Max(
+            2f,
+            options.DensityPx * raster.Scale);
+
+        var centers = ResampleCenterline(
+            raw,
+            pitch);
+
+        if (centers.Count < 2)
+        {
+            return [];
+        }
+
+        var rows = new List<SatinRow>();
+        SatinRow? previousRow = null;
+        var maxRay = MathF.Sqrt(
+            component.Width * component.Width +
+            component.Height * component.Height) + 4f;
+
+        for (var i = 0; i < centers.Count; i++)
+        {
+            var before = centers[Math.Max(0, i - 1)];
+            var after = centers[Math.Min(centers.Count - 1, i + 1)];
+
+            var tx = after.X - before.X;
+            var ty = after.Y - before.Y;
+            var length = MathF.Sqrt(tx * tx + ty * ty);
+
+            if (length < 0.001f)
+            {
+                continue;
+            }
+
+            tx /= length;
+            ty /= length;
+
+            var nx = -ty;
+            var ny = tx;
+
+            var positive = RayDistanceInside(
+                component,
+                centers[i],
+                nx,
+                ny,
+                maxRay);
+
+            var negative = RayDistanceInside(
+                component,
+                centers[i],
+                -nx,
+                -ny,
+                maxRay);
+
+            if (positive < 0.75f || negative < 0.75f)
+            {
+                continue;
+            }
+
+            var candidate = new SatinRow(
+                new PixelPoint(
+                    centers[i].X - nx * negative,
+                    centers[i].Y - ny * negative),
+                new PixelPoint(
+                    centers[i].X + nx * positive,
+                    centers[i].Y + ny * positive));
+
+            if (!SegmentInsideComponent(
+                component,
+                candidate.A,
+                candidate.B))
+            {
+                continue;
+            }
+
+            if (previousRow is not null)
+            {
+                var direct =
+                    Distance(previousRow.Value.A, candidate.A) +
+                    Distance(previousRow.Value.B, candidate.B);
+
+                var swapped =
+                    Distance(previousRow.Value.A, candidate.B) +
+                    Distance(previousRow.Value.B, candidate.A);
+
+                if (swapped < direct)
+                {
+                    candidate = new SatinRow(
+                        candidate.B,
+                        candidate.A);
+                }
+            }
+
+            rows.Add(candidate);
+            previousRow = candidate;
+        }
+
+        return rows;
+    }
+
+    private static List<PixelPoint> ResampleCenterline(
+        IReadOnlyList<PixelPoint> source,
+        float pitch)
+    {
+        if (source.Count < 2)
+        {
+            return source.ToList();
+        }
+
+        var result = new List<PixelPoint>
+        {
+            source[0]
+        };
+
+        var last = source[0];
+
+        for (var i = 1; i < source.Count; i++)
+        {
+            var point = source[i];
+
+            if (Distance(last, point) < pitch)
+            {
+                continue;
+            }
+
+            result.Add(point);
+            last = point;
+        }
+
+        if (
+            Distance(result[^1], source[^1]) >
+            pitch * 0.35f)
+        {
+            result.Add(source[^1]);
+        }
+
+        return result;
+    }
+
+    private static float RayDistanceInside(
+        Component component,
+        PixelPoint center,
+        float dx,
+        float dy,
+        float maxDistance)
+    {
+        var lastInside = 0f;
+
+        for (var distance = 0.5f;
+             distance <= maxDistance;
+             distance += 0.5f)
+        {
+            var x = (int)MathF.Round(
+                center.X + dx * distance);
+
+            var y = (int)MathF.Round(
+                center.Y + dy * distance);
+
+            if (!component.Contains(x, y))
+            {
+                break;
+            }
+
+            lastInside = distance;
+        }
+
+        return lastInside;
+    }
+
+    private static bool SegmentInsideComponent(
+        Component component,
+        PixelPoint a,
+        PixelPoint b)
+    {
+        for (var sample = 1; sample < 10; sample++)
+        {
+            var ratio = sample / 10f;
+
+            var x = (int)MathF.Round(
+                a.X + (b.X - a.X) * ratio);
+
+            var y = (int)MathF.Round(
+                a.Y + (b.Y - a.Y) * ratio);
+
+            if (!component.Contains(x, y))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static List<StitchPoint> BuildRunningFromCenterline(
+        IReadOnlyList<PixelPoint> centers,
+        RasterGlyph raster,
+        int objectIndex,
+        DigitizeOptions options)
+    {
+        var points = new List<StitchPoint>();
+
+        AppendPolyline(
+            centers,
+            raster,
+            objectIndex,
+            points,
+            options.StitchLengthPx * raster.Scale,
+            jumpAtStart: true);
+
+        return points;
+    }
+
+    private static List<StitchPoint> BuildSatinFromRows(
+        IReadOnlyList<SatinRow> rows,
+        RasterGlyph raster,
+        int objectIndex,
+        DigitizeOptions options)
+    {
+        var points = new List<StitchPoint>();
+
+        if (rows.Count < 2)
+        {
+            return points;
+        }
+
+        if (options.IncludeUnderlay)
+        {
+            var centers = rows
+                .Select(static row => new PixelPoint(
+                    (row.A.X + row.B.X) / 2f,
+                    (row.A.Y + row.B.Y) / 2f))
+                .ToList();
+
+            AppendPolyline(
+                centers,
+                raster,
+                objectIndex,
+                points,
+                options.StitchLengthPx * raster.Scale,
+                jumpAtStart: true);
+        }
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+
+            var start =
+                i % 2 == 0
+                    ? row.A
+                    : row.B;
+
+            var end =
+                i % 2 == 0
+                    ? row.B
+                    : row.A;
+
+            var startWorld = raster.ToWorld(
+                start.X,
+                start.Y);
+
+            var endWorld = raster.ToWorld(
+                end.X,
+                end.Y);
+
+            points.Add(new StitchPoint(
+                startWorld.X,
+                startWorld.Y,
+                i == 0
+                    ? StitchCommand.Jump
+                    : StitchCommand.Stitch,
+                objectIndex));
+
+            points.Add(new StitchPoint(
+                endWorld.X,
+                endWorld.Y,
+                StitchCommand.Stitch,
+                objectIndex));
+        }
+
+        return points;
+    }
+
+    private static bool[] BuildJunctionPatchMask(
+        Component component,
+        IReadOnlyList<PixelPoint> centers,
+        RasterGlyph raster,
+        DigitizeOptions options)
+    {
+        var result = new bool[component.Mask.Length];
+
+        var radius = MathF.Max(
+            3f,
+            options.DensityPx * raster.Scale * 2.2f);
+
+        var radiusSquared = radius * radius;
+        var width = component.CanvasWidth;
+
+        foreach (var index in component.Pixels)
+        {
+            var x = index % width;
+            var y = index / width;
+
+            foreach (var center in centers)
+            {
+                var dx = x - center.X;
+                var dy = y - center.Y;
+
+                if (dx * dx + dy * dy > radiusSquared)
+                {
+                    continue;
+                }
+
+                result[index] = true;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private readonly record struct TopologyCandidate(
+        EmbroideryObjectKind Kind,
+        List<SatinRow> Rows,
+        List<PixelPoint> Centers);
 
     private static List<StitchPoint> BuildRunning(
         Component component,
