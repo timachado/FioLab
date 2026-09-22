@@ -297,6 +297,22 @@ var bentObjects = engine.DigitizePath(
 foreach (var bentSatinObject in bentObjects.Where(static item =>
     item.Kind == EmbroideryObjectKind.Satin))
 {
+    var jumpCount = bentSatinObject.Points.Count(static point =>
+        point.Command == StitchCommand.Jump);
+
+    if (jumpCount > 2)
+    {
+        throw new InvalidOperationException(
+            $"Smoke test: simple bent Satin fragmented into {jumpCount} jumps.");
+    }
+
+    if (bentSatinObject.Points.Count < 20)
+    {
+        throw new InvalidOperationException(
+            $"Smoke test: simple bent Satin became too sparse: " +
+            $"{bentSatinObject.Points.Count} points.");
+    }
+
     var segments = new List<(StitchPoint A, StitchPoint B)>();
 
     for (var i = 1; i < bentSatinObject.Points.Count; i++)
