@@ -1498,11 +1498,97 @@ public sealed class SkiaEmbroideryEngine
                     candidate);
             }
 
+            if (!TryFitSatinRowWithoutSelfCrossing(
+                rows,
+                candidate,
+                out candidate))
+            {
+                // A sharp turn can make a full-width cross-section cut
+                // through an earlier Satin bar. Dropping the impossible
+                // section is safer than creating a bow-tie/X stitch.
+                continue;
+            }
+
             rows.Add(candidate);
             previousRow = candidate;
         }
 
         return rows;
+    }
+
+    private static bool TryFitSatinRowWithoutSelfCrossing(
+        IReadOnlyList<SatinRow> accepted,
+        SatinRow source,
+        out SatinRow fitted)
+    {
+        // Consecutive cross-sections may touch/overlap naturally. A true
+        // artifact is a proper intersection with an older, non-adjacent row.
+        if (accepted.Count < 2)
+        {
+            fitted = source;
+            return true;
+        }
+
+        var center = new PixelPoint(
+            (source.A.X + source.B.X) / 2f,
+            (source.A.Y + source.B.Y) / 2f);
+
+        ReadOnlySpan<float> scales =
+        [
+            1.00f,
+            0.88f,
+            0.76f,
+            0.64f,
+            0.52f,
+            0.42f
+        ];
+
+        foreach (var scale in scales)
+        {
+            var candidate = scale >= 0.999f
+                ? source
+                : new SatinRow(
+                    new PixelPoint(
+                        center.X + (source.A.X - center.X) * scale,
+                        center.Y + (source.A.Y - center.Y) * scale),
+                    new PixelPoint(
+                        center.X + (source.B.X - center.X) * scale,
+                        center.Y + (source.B.Y - center.Y) * scale));
+
+            var crosses = false;
+
+            // Ignore the immediately previous row. It is allowed to meet the
+            // current row at a tight corner; it must not intersect older rows.
+            for (var index = 0;
+                 index < accepted.Count - 1;
+                 index++)
+            {
+                var older = accepted[index];
+
+                if (!SegmentsProperlyIntersect(
+                    older.A,
+                    older.B,
+                    candidate.A,
+                    candidate.B))
+                {
+                    continue;
+                }
+
+                crosses = true;
+                break;
+            }
+
+            if (crosses)
+            {
+                continue;
+            }
+
+            fitted = candidate;
+            return true;
+        }
+
+        fitted = default;
+        return false;
     }
 
     private static List<PixelPoint> ResampleCenterline(
