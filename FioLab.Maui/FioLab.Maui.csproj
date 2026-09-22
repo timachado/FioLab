@@ -10,8 +10,8 @@
     <LangVersion>latest</LangVersion>
     <ApplicationTitle>FioLab</ApplicationTitle>
     <ApplicationId>com.timachado.fiolab.maui</ApplicationId>
-    <ApplicationDisplayVersion>0.70.7</ApplicationDisplayVersion>
-    <ApplicationVersion>117</ApplicationVersion>
+    <ApplicationDisplayVersion>0.70.8</ApplicationDisplayVersion>
+    <ApplicationVersion>118</ApplicationVersion>
     <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
