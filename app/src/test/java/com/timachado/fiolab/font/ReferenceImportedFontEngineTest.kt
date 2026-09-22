@@ -753,6 +753,55 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun wideObjectsUseTatamiInsteadOfLongSatinThrows() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugWideObjectUsesTatami()
+
+        val stitches =
+            points.filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        assertTrue(
+            "Uma região de 10 mm deve receber múltiplos pontos internos, e não uma única travessa Satin longa.",
+            stitches.size >=
+                20
+        )
+
+        val maximumStep =
+            points
+                .zipWithNext()
+                .filter {
+                        pair ->
+                    pair.second.command ==
+                        StitchCommand.STITCH
+                }
+                .maxOfOrNull {
+                        pair ->
+                    kotlin.math.hypot(
+                        (
+                            pair.second.xUnits -
+                                pair.first.xUnits
+                            ).toDouble(),
+                        (
+                            pair.second.yUnits -
+                                pair.first.yUnits
+                            ).toDouble()
+                    )
+                }
+                ?: 0.0
+
+        assertTrue(
+            "O preenchimento de área larga deve limitar o avanço de cada ponto a aproximadamente 2,5 mm.",
+            maximumStep <=
+                26.5
+        )
+    }
+
+
+    @Test
     fun finalGlyphEndsOnStructuralLegInsteadOfThinFlourish() {
         val points =
             ReferenceImportedFontEngine
