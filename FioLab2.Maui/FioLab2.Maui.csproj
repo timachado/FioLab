@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>FioLab2.Maui</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ApplicationTitle>FioLab V2</ApplicationTitle>
+    <ApplicationId>com.timachado.fiolab.v2</ApplicationId>
+    <ApplicationDisplayVersion>2.0.0-alpha.1</ApplicationDisplayVersion>
+    <ApplicationVersion>20001</ApplicationVersion>
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <UseMaterial3>true</UseMaterial3>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../FioLab2.Engine/FioLab2.Engine.csproj" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.20" />
+    <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.151.2" />
+  </ItemGroup>
+</Project>
