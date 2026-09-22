@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.16
+
+### Correções após validação em vídeo
+- Corrigido o erro exibido em fontes nativas como Fio Ornamental: `Cannot coerce value to an empty range`. A interpolação do auto-fit agora usa margem dinâmica e nunca cria limites invertidos.
+- Adicionado teste de regressão específico para janela estreita de auto-fit.
+- O Satin adaptativo de fontes TTF/OTF passa a ignorar ramos de esqueleto degenerados com menos de 3 pontos, reduzindo blocos sem valor de costura.
+- A busca de continuidade entre blocos Satin deixou de testar geometricamente todas as regiões restantes. O motor ranqueia os possíveis pontos de entrada por distância e valida no máximo os 24 candidatos mais próximos.
+- A busca das bordas Satin deixa de refinar cada raio com repetidos testes point-in-polygon; usa a resolução submilimétrica da própria máscara e retorna o meio entre a última célula interna e a primeira externa.
+- Mantidos múltiplas direções por traço, início visual, underlay, compensação, limite de largura, conectores ocultos e JUMP em regiões desconectadas.
+- Mantidos o auto-fit rápido e a geração fora da thread principal das versões anteriores.
+
 ## 0.46.15
 
 ### Otimização estrutural do Satin adaptativo
