@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.60.1
+
+### Trilhos Satin estáveis em curvas
+- Corrigida a inversão ocasional de borda A/B entre amostras consecutivas do motor V2.
+- Cada nova travessa é orientada pela continuidade física dos dois trilhos, escolhendo a correspondência de menor deslocamento com a travessa anterior.
+- A validação angular deixa de aceitar uma inversão de 180 graus como se fosse continuidade normal.
+- Componentes pequenos e compactos, como ponto do i, coração e bolinha, deixam de usar esqueleto ramificado e passam a usar colunas regulares de preenchimento.
+- Mantidos Running/Satin/Tatami automáticos, underlay, pull compensation, sequência por objetos e exportação.
+- Adicionado teste de regressão que força uma normal invertida e exige preservação dos dois trilhos físicos.
+
 ## 0.60.0
 
 ### Motor V2 — reconstrução do digitalizador de fontes
