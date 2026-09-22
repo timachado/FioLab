@@ -10871,6 +10871,43 @@ internal object ReferenceImportedFontEngine {
         maxWidthMm: Float =
             7f
     ): List<Float> =
+        sampleColumnsByAxis(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .flatMap {
+                it.rows
+            }
+            .map {
+                distance(
+                    it.a,
+                    it.b
+                )
+            }
+
+    internal fun debugAdaptiveColumnWidths(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): List<Float> =
         buildAdaptiveSatinBlocks(
             polygons =
                 listOf(
