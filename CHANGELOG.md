@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.52.0
+
+### Motor automático e anti-leque acumulado
+- Removidos da tela Criar Nome os controles antigos de Digitalização por blocos, Objetos inteligentes, Compatibilidade e Ordem de costura.
+- Removida a referência visual ao PE-DESIGN; o usuário não precisa mais escolher motor ou ordem manualmente.
+- O motor interno continua automático e usa o caminho profissional com continuidade por padrão.
+- Adicionado limite de giro acumulado dentro de cada coluna Satin: uma curva suave pode acompanhar o traço, mas é dividida em novo bloco quando a rotação total passa de um limite seguro.
+- Adicionado limite de variação acumulada de largura dentro do mesmo bloco para impedir abertura progressiva em leque.
+- Mantidos eixo medial, auditoria de cobertura interna, Tatami para áreas largas, underlay, jumps/trims, bastidor e saída estrutural do último glifo.
+- Adicionado teste de regressão que simula uma rotação gradual de 50 graus e exige divisão em múltiplos blocos.
+
 ## 0.51.1
 
 ### Auditoria de cobertura do glifo
