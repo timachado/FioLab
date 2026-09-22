@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.48.4
+
+### Underlay seguro em curvas e vazados
+- O vídeo 1000309869.mp4 confirmou que o início da 0.48.3 passou para a região superior esquerda do "M", corrigindo o floreio inferior.
+- Foi identificado um defeito separado entre aproximadamente 7 e 12 segundos: o underlay espaçado criava triângulos que atravessavam o miolo vazio do laço da letra.
+- O avanço do underlay agora é validado geometricamente contra o contorno do glifo antes de cada ponto.
+- Em regiões retas, o passo espaçado é mantido.
+- Em curvas fechadas, o motor reduz progressivamente o número de linhas puladas até que a ligação inteira permaneça dentro do traço.
+- Se nem a seção adjacente possuir ligação interna segura, a camada de underlay é encerrada naquele bloco em vez de desenhar uma diagonal pelo vazado.
+- O ponto inicial, a escolha do primeiro bloco, o Satin vetorial e as correções de viewer/bastidor permanecem inalterados.
+- Adicionado teste de regressão com uma coluna curva em anel para garantir que nenhum segmento do underlay atravesse o vazado central.
+
 ## 0.48.3
 
 ### Primeiro bloco correto em letras cursivas
