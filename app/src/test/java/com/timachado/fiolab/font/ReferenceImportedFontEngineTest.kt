@@ -765,9 +765,9 @@ class ReferenceImportedFontEngineTest {
             }
 
         assertTrue(
-            "Uma região de 10 mm deve receber múltiplos pontos internos, e não uma única travessa Satin longa.",
+            "Uma região de 10 mm deve receber linhas Tatami densificadas, sem canais largos entre passes.",
             stitches.size >=
-                20
+                50
         )
 
         val maximumStep =
