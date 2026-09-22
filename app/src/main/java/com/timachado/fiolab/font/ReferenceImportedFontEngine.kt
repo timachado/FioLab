@@ -555,7 +555,8 @@ internal object ReferenceImportedFontEngine {
                 )
 
             polygonsByGlyph
-                .forEach {
+                .forEachIndexed {
+                        glyphIndex,
                         polygons ->
                     val columns =
                         sampleColumns(
@@ -589,7 +590,18 @@ internal object ReferenceImportedFontEngine {
                             densityMm,
                         strictVisualOrder =
                             options.importedFontSewingOrder ==
-                                ImportedFontSewingOrder.VISUAL
+                                ImportedFontSewingOrder.VISUAL,
+                        endHint =
+                            if (
+                                glyphIndex ==
+                                    polygonsByGlyph.lastIndex
+                            ) {
+                                glyphVisualEndPoint(
+                                    polygons
+                                )
+                            } else {
+                                null
+                            }
                     )
                 }
 
@@ -1138,6 +1150,114 @@ internal object ReferenceImportedFontEngine {
                 it.y
             }
         )
+    }
+
+    private fun glyphVisualEndPoint(
+        polygons: List<Polygon>
+    ): FPoint? {
+        val points =
+            polygons.flatMap {
+                it.points
+            }
+
+        if (
+            points.isEmpty()
+        ) {
+            return null
+        }
+
+        val minX =
+            points.minOf {
+                it.x
+            }
+
+        val maxX =
+            points.maxOf {
+                it.x
+            }
+
+        val minY =
+            points.minOf {
+                it.y
+            }
+
+        val maxY =
+            points.maxOf {
+                it.y
+            }
+
+        val width =
+            (
+                maxX -
+                    minX
+                ).coerceAtLeast(
+                1f
+            )
+
+        val height =
+            (
+                maxY -
+                    minY
+                ).coerceAtLeast(
+                1f
+            )
+
+        val bodyRightLimit =
+            maxX -
+                width *
+                    0.08f
+
+        val bodyLeftLimit =
+            minX +
+                width *
+                    0.55f
+
+        val lowerLimit =
+            minY +
+                height *
+                    0.58f
+
+        val candidates =
+            points.filter {
+                it.x >=
+                    bodyLeftLimit &&
+                    it.x <=
+                        bodyRightLimit &&
+                    it.y <=
+                        lowerLimit
+            }
+
+        val pool =
+            if (
+                candidates.isNotEmpty()
+            ) {
+                candidates
+            } else {
+                points.filter {
+                    it.y <=
+                        lowerLimit
+                }
+                    .ifEmpty {
+                        points
+                    }
+            }
+
+        val target =
+            FPoint(
+                maxX -
+                    width *
+                        0.16f,
+                minY +
+                    height *
+                        0.18f
+            )
+
+        return pool.minByOrNull {
+            distance(
+                it,
+                target
+            )
+        }
     }
 
     private fun columnLeftEdgeX(
