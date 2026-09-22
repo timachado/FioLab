@@ -81,6 +81,36 @@ jobs:
           cp "$APK" out/FioLab-MAUI-0.70.0-debug.apk
           sha256sum out/FioLab-MAUI-0.70.0-debug.apk > out/FioLab-MAUI-0.70.0-SHA256.txt
 
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Android startup smoke test
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            adb install -r out/FioLab-MAUI-0.70.0-debug.apk
+            adb logcat -c
+            adb shell monkey -p com.timachado.fiolab.maui -c android.intent.category.LAUNCHER 1
+            sleep 8
+            PID="$(adb shell pidof com.timachado.fiolab.maui | tr -d '\r')"
+            if [ -z "$PID" ]; then
+              echo "FioLab MAUI morreu durante a inicializacao."
+              adb logcat -d | tail -n 500
+              exit 1
+            fi
+            echo "FioLab MAUI permaneceu aberto. PID=$PID"
+
       - name: Upload MAUI APK
         uses: actions/upload-artifact@v4
         with:
