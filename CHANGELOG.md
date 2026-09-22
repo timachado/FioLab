@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.51.1
+
+### Auditoria de cobertura do glifo
+- Após gerar os objetos principais pelo eixo medial, o FioLab compara a geometria resultante com a silhueta real da letra.
+- Regiões internas a mais de aproximadamente 0,55 mm de qualquer travessa recebem blocos locais de reparo.
+- Os reparos são limitados a até 7 mm de largura para evitar novas travessias longas e leques em letras cursivas.
+- A malha de reparo usa passo de aproximadamente 0,30 mm e somente complementa áreas realmente descobertas.
+- Mantidos eixo medial, ordem por Continuidade, Satin/Tatami, underlay, jumps/trims, bastidor e saída estrutural do último glifo.
+- Adicionado teste de regressão específico para confirmar que áreas internas descobertas recebem pontos de reparo.
+
 ## 0.51.0
 
 ### Motor principal por eixo medial
