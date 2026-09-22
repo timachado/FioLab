@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.HoopProfile
+import com.timachado.fiolab.core.embroidery.HoopValidator
 import com.timachado.fiolab.ui.theme.FioBackground
 import com.timachado.fiolab.ui.theme.FioGold
 import com.timachado.fiolab.ui.theme.FioSurface
@@ -64,6 +65,15 @@ fun ViewerScreen(
             false
         )
     }
+
+    val referenceFit =
+        HoopValidator
+            .validateForViewer(
+                design =
+                    design,
+                hoop =
+                    referenceHoop
+            )
 
     if (
         showDisplaySettings
@@ -263,6 +273,48 @@ fun ViewerScreen(
                             FioTextMuted,
                         fontSize =
                             11.sp
+                    )
+                }
+
+                Text(
+                    "Bastidor de visualização: " +
+                        referenceHoop.displayName +
+                        if (
+                            referenceFit.rotated90
+                        ) {
+                            " • girado 90°"
+                        } else {
+                            ""
+                        },
+                    color =
+                        FioTextMuted,
+                    fontSize =
+                        11.sp
+                )
+
+                if (
+                    !referenceFit.fits
+                ) {
+                    Text(
+                        "⚠ Esta matriz não cabe na área segura deste bastidor. " +
+                            "Excesso: " +
+                            mm(
+                                referenceFit.widthOverflowMm
+                            ) +
+                            " mm na largura e " +
+                            mm(
+                                referenceFit.heightOverflowMm
+                            ) +
+                            " mm na altura.",
+                        color =
+                            Color(
+                                0xFFFF9F9A
+                            ),
+                        fontSize =
+                            11.sp,
+                        fontWeight =
+                            FontWeight
+                                .SemiBold
                     )
                 }
 
