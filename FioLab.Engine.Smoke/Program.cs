@@ -284,9 +284,14 @@ bentStroke.AddRect(new SKRect(18f, 18f, 38f, 105f));
 bentStroke.AddRect(new SKRect(18f, 85f, 105f, 105f));
 
 var bentObjectIndex = 500;
+var bentOptions = options with
+{
+    IncludeUnderlay = false
+};
+
 var bentObjects = engine.DigitizePath(
     bentStroke,
-    options,
+    bentOptions,
     ref bentObjectIndex);
 
 foreach (var bentSatinObject in bentObjects.Where(static item =>
