@@ -1276,6 +1276,29 @@ internal object ReferenceImportedFontEngine {
         }
     }
 
+    private data class CompactProfessionalRegion(
+        val column: SatinColumn,
+        val minX: Float,
+        val maxX: Float,
+        val minY: Float,
+        val maxY: Float
+    ) {
+        fun contains(
+            point: FPoint
+        ): Boolean =
+            point.x in
+                minX..maxX &&
+                point.y in
+                    minY..maxY
+    }
+
+    private data class ProfessionalGeometry(
+        val raster: RasterGlyph,
+        val distanceField: FloatArray,
+        val compactRegions:
+            List<CompactProfessionalRegion>
+    )
+
     private const val MAX_ADAPTIVE_RASTER_CELLS =
         360_000
 
@@ -1324,6 +1347,461 @@ internal object ReferenceImportedFontEngine {
     private const val CONTOUR_PAIR_PROBE_UNITS =
         0.85f
 
+    private fun buildProfessionalGeometry(
+        polygons: List<Polygon>,
+        densityMm: Float,
+        maxSatinWidthMm: Float,
+        pullCompensationMm: Float
+    ): ProfessionalGeometry? {
+        val all =
+            polygons.flatMap {
+                it.points
+            }
+
+        if (
+            all.isEmpty()
+        ) {
+            return null
+        }
+
+        val minX =
+            all.minOf {
+                it.x
+            }
+
+        val maxX =
+            all.maxOf {
+                it.x
+            }
+
+        val minY =
+            all.minOf {
+                it.y
+            }
+
+        val maxY =
+            all.maxOf {
+                it.y
+            }
+
+        val widthUnits =
+            maxX -
+                minX
+
+        val heightUnits =
+            maxY -
+                minY
+
+        if (
+            widthUnits <
+                1f ||
+            heightUnits <
+                1f
+        ) {
+            return null
+        }
+
+        val pitchUnits =
+            (
+                densityMm *
+                    10f
+                ).coerceAtLeast(
+                1f
+            )
+
+        var rasterStep =
+            (
+                pitchUnits /
+                    2f
+                ).coerceIn(
+                1f,
+                2.5f
+            )
+
+        fun estimatedCells(
+            step: Float
+        ): Long {
+            val width =
+                ceil(
+                    (
+                        widthUnits /
+                            step
+                        ).toDouble()
+                ).toLong() +
+                    3L
+
+            val height =
+                ceil(
+                    (
+                        heightUnits /
+                            step
+                        ).toDouble()
+                ).toLong() +
+                    3L
+
+            return width *
+                height
+        }
+
+        val initialCells =
+            estimatedCells(
+                rasterStep
+            )
+
+        if (
+            initialCells >
+                MAX_ADAPTIVE_RASTER_CELLS
+        ) {
+            val factor =
+                kotlin.math.sqrt(
+                    initialCells.toDouble() /
+                        MAX_ADAPTIVE_RASTER_CELLS
+                )
+                    .toFloat()
+
+            rasterStep *=
+                factor
+        }
+
+        val raster =
+            rasterizeGlyph(
+                polygons =
+                    polygons,
+                minX =
+                    minX,
+                minY =
+                    minY,
+                maxX =
+                    maxX,
+                maxY =
+                    maxY,
+                step =
+                    rasterStep
+            )
+
+        if (
+            raster.mask.none {
+                it
+            }
+        ) {
+            return null
+        }
+
+        val skeleton =
+            thinMask(
+                raster
+            )
+
+        val maxWidthUnits =
+            maxSatinWidthMm *
+                10f
+
+        val pullUnits =
+            pullCompensationMm *
+                10f
+
+        val compactRegions =
+            splitSkeletonComponents(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton
+            )
+                .mapNotNull {
+                        component ->
+                    val column =
+                        compactComponentColumn(
+                            raster =
+                                raster,
+                            skeletonComponent =
+                                component,
+                            pitchUnits =
+                                pitchUnits,
+                            maxWidthUnits =
+                                maxWidthUnits,
+                            pullUnits =
+                                pullUnits
+                        )
+                            ?: return@mapNotNull null
+
+                    val seed =
+                        component.firstOrNull()
+                            ?: return@mapNotNull null
+
+                    val filled =
+                        filledComponentFromSeed(
+                            raster =
+                                raster,
+                            seed =
+                                seed
+                        )
+
+                    if (
+                        filled.isEmpty()
+                    ) {
+                        return@mapNotNull null
+                    }
+
+                    val xs =
+                        filled.map {
+                            it %
+                                raster.width
+                        }
+
+                    val ys =
+                        filled.map {
+                            it /
+                                raster.width
+                        }
+
+                    val regionMinX =
+                        raster.originX +
+                            (
+                                xs.minOrNull()!!
+                            ) *
+                                raster.step
+
+                    val regionMaxX =
+                        raster.originX +
+                            (
+                                xs.maxOrNull()!! +
+                                    1
+                                ) *
+                                raster.step
+
+                    val regionMinY =
+                        raster.originY +
+                            (
+                                ys.minOrNull()!!
+                            ) *
+                                raster.step
+
+                    val regionMaxY =
+                        raster.originY +
+                            (
+                                ys.maxOrNull()!! +
+                                    1
+                                ) *
+                                raster.step
+
+                    CompactProfessionalRegion(
+                        column =
+                            column,
+                        minX =
+                            regionMinX,
+                        maxX =
+                            regionMaxX,
+                        minY =
+                            regionMinY,
+                        maxY =
+                            regionMaxY
+                    )
+                }
+
+        return ProfessionalGeometry(
+            raster =
+                raster,
+            distanceField =
+                buildDistanceField(
+                    raster
+                ),
+            compactRegions =
+                compactRegions
+        )
+    }
+
+    private fun clampProfessionalColumns(
+        columns: List<SatinColumn>,
+        geometry: ProfessionalGeometry,
+        maxSatinWidthMm: Float
+    ): List<SatinColumn> {
+        val maxWidthUnits =
+            maxSatinWidthMm *
+                10f
+
+        val filtered =
+            columns.filterNot {
+                    column ->
+                val center =
+                    column.rows
+                        .firstOrNull()
+                        ?.let {
+                                row ->
+                            FPoint(
+                                (
+                                    row.a.x +
+                                        row.b.x
+                                    ) /
+                                    2f,
+                                (
+                                    row.a.y +
+                                        row.b.y
+                                    ) /
+                                    2f
+                            )
+                        }
+                        ?: return@filterNot false
+
+                geometry.compactRegions.any {
+                    it.contains(
+                        center
+                    )
+                }
+            }
+
+        val clamped =
+            filtered.mapNotNull {
+                    column ->
+                val rows =
+                    column.rows
+                        .mapNotNull {
+                                row ->
+                            val center =
+                                FPoint(
+                                    (
+                                        row.a.x +
+                                            row.b.x
+                                        ) /
+                                        2f,
+                                    (
+                                        row.a.y +
+                                            row.b.y
+                                        ) /
+                                        2f
+                                )
+
+                            val x =
+                                kotlin.math.floor(
+                                    (
+                                        center.x -
+                                            geometry.raster.originX
+                                        ) /
+                                        geometry.raster.step
+                                )
+                                    .toInt()
+
+                            val y =
+                                kotlin.math.floor(
+                                    (
+                                        center.y -
+                                            geometry.raster.originY
+                                        ) /
+                                        geometry.raster.step
+                                )
+                                    .toInt()
+
+                            if (
+                                x !in
+                                    0 until geometry.raster.width ||
+                                y !in
+                                    0 until geometry.raster.height
+                            ) {
+                                return@mapNotNull null
+                            }
+
+                            val index =
+                                y *
+                                    geometry.raster.width +
+                                    x
+
+                            val radius =
+                                geometry.distanceField
+                                    .getOrElse(
+                                        index
+                                    ) {
+                                        0f
+                                    }
+
+                            if (
+                                radius <=
+                                    0.1f
+                            ) {
+                                return@mapNotNull null
+                            }
+
+                            val direction =
+                                normalize(
+                                    FPoint(
+                                        row.b.x -
+                                            row.a.x,
+                                        row.b.y -
+                                            row.a.y
+                                    )
+                                )
+
+                            val width =
+                                distance(
+                                    row.a,
+                                    row.b
+                                )
+
+                            val allowedWidth =
+                                minOf(
+                                    maxWidthUnits,
+                                    radius *
+                                        2f *
+                                        1.35f +
+                                        geometry.raster.step
+                                )
+                                    .coerceAtLeast(
+                                        geometry.raster.step
+                                    )
+
+                            val half =
+                                minOf(
+                                    width,
+                                    allowedWidth
+                                ) /
+                                    2f
+
+                            SatinRow(
+                                a =
+                                    FPoint(
+                                        center.x -
+                                            direction.x *
+                                                half,
+                                        center.y -
+                                            direction.y *
+                                                half
+                                    ),
+                                b =
+                                    FPoint(
+                                        center.x +
+                                            direction.x *
+                                                half,
+                                        center.y +
+                                            direction.y *
+                                                half
+                                    )
+                            )
+                        }
+                        .toMutableList()
+
+                if (
+                    rows.size >=
+                        2
+                ) {
+                    SatinColumn(
+                        rows =
+                            rows
+                    )
+                } else {
+                    null
+                }
+            }
+                .toMutableList()
+
+        geometry.compactRegions
+            .forEach {
+                clamped +=
+                    it.column
+            }
+
+        return standardSewingOrder(
+            clamped
+        )
+    }
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1351,19 +1829,61 @@ internal object ReferenceImportedFontEngine {
             )
 
         if (
-            contourPaired.isNotEmpty()
-        ) {
-            return contourPaired
-        }
-
-        if (
             digitizingMode ==
                 ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
         ) {
+            val geometry =
+                buildProfessionalGeometry(
+                    polygons =
+                        polygons,
+                    densityMm =
+                        densityMm,
+                    maxSatinWidthMm =
+                        maxSatinWidthMm,
+                    pullCompensationMm =
+                        pullCompensationMm
+                )
+
+            if (
+                contourPaired.isNotEmpty() &&
+                geometry !=
+                    null
+            ) {
+                val processed =
+                    clampProfessionalColumns(
+                        columns =
+                            contourPaired,
+                        geometry =
+                            geometry,
+                        maxSatinWidthMm =
+                            maxSatinWidthMm
+                    )
+
+                if (
+                    processed.isNotEmpty()
+                ) {
+                    return processed
+                }
+            }
+
+            if (
+                geometry !=
+                    null &&
+                geometry.compactRegions
+                    .isNotEmpty()
+            ) {
+                return standardSewingOrder(
+                    geometry.compactRegions
+                        .map {
+                            it.column
+                        }
+                )
+            }
+
             /*
-             * No modo profissional não voltamos ao esqueleto raster.
-             * Se o pareamento vetorial não for suficiente, usamos somente
-             * a varredura por eixo como fallback geométrico previsível.
+             * Sem pares vetoriais estáveis, mantemos um fallback geométrico
+             * previsível por eixo. O esqueleto raster não define a direção
+             * principal no modo profissional.
              */
             return sampleColumnsByAxis(
                 polygons =
@@ -1375,6 +1895,12 @@ internal object ReferenceImportedFontEngine {
                 pullCompensationMm =
                     pullCompensationMm
             )
+        }
+
+        if (
+            contourPaired.isNotEmpty()
+        ) {
+            return contourPaired
         }
 
         /*
