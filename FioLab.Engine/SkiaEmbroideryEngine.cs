@@ -1974,53 +1974,53 @@ public sealed class SkiaEmbroideryEngine
 
             var pair = best.Value;
 
-            var firstCandidate = OrientCandidateToJunctionEnd(
+            var mergedFirstCandidate = OrientCandidateToJunctionEnd(
                 candidates[pair.First.CandidateIndex],
                 pair.First.AtStart);
 
-            var secondCandidate = OrientCandidateFromJunctionStart(
+            var mergedSecondCandidate = OrientCandidateFromJunctionStart(
                 candidates[pair.Second.CandidateIndex],
                 pair.Second.AtStart);
 
             var mergedCenters = new List<PixelPoint>(
-                firstCandidate.Centers.Count +
-                secondCandidate.Centers.Count);
+                mergedFirstCandidate.Centers.Count +
+                mergedSecondCandidate.Centers.Count);
 
             mergedCenters.AddRange(
-                firstCandidate.Centers);
+                mergedFirstCandidate.Centers);
 
             if (
                 Distance(
                     mergedCenters[^1],
-                    secondCandidate.Centers[0]) > 0.75f)
+                    mergedSecondCandidate.Centers[0]) > 0.75f)
             {
                 mergedCenters.Add(
                     new PixelPoint(
                         (
                             mergedCenters[^1].X +
-                            secondCandidate.Centers[0].X
+                            mergedSecondCandidate.Centers[0].X
                         ) / 2f,
                         (
                             mergedCenters[^1].Y +
-                            secondCandidate.Centers[0].Y
+                            mergedSecondCandidate.Centers[0].Y
                         ) / 2f));
             }
 
             mergedCenters.AddRange(
-                secondCandidate.Centers);
+                mergedSecondCandidate.Centers);
 
             var mergedRows = new List<SatinRow>(
-                firstCandidate.Rows.Count +
-                secondCandidate.Rows.Count);
+                mergedFirstCandidate.Rows.Count +
+                mergedSecondCandidate.Rows.Count);
 
             mergedRows.AddRange(
-                firstCandidate.Rows);
+                mergedFirstCandidate.Rows);
 
             mergedRows.AddRange(
-                secondCandidate.Rows);
+                mergedSecondCandidate.Rows);
 
             var merged = new TopologyCandidate(
-                firstCandidate.Kind,
+                mergedFirstCandidate.Kind,
                 AlignSatinRows(mergedRows),
                 mergedCenters);
 
