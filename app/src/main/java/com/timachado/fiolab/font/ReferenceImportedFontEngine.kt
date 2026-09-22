@@ -8665,6 +8665,76 @@ internal object ReferenceImportedFontEngine {
                 )
             }
 
+    internal fun debugPrimaryMaxCenterGap(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): Float =
+        sampleColumns(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .flatMap {
+                    column ->
+                column.rows
+                    .zipWithNext()
+                    .map {
+                            pair ->
+                        val firstCenter =
+                            FPoint(
+                                (
+                                    pair.first.a.x +
+                                        pair.first.b.x
+                                    ) /
+                                    2f,
+                                (
+                                    pair.first.a.y +
+                                        pair.first.b.y
+                                    ) /
+                                    2f
+                            )
+
+                        val secondCenter =
+                            FPoint(
+                                (
+                                    pair.second.a.x +
+                                        pair.second.b.x
+                                    ) /
+                                    2f,
+                                (
+                                    pair.second.a.y +
+                                        pair.second.b.y
+                                    ) /
+                                    2f
+                            )
+
+                        distance(
+                            firstCenter,
+                            secondCenter
+                        )
+                    }
+            }
+            .maxOrNull()
+            ?: 0f
+
     internal fun debugAdaptiveRowVectors(
         polygon:
             List<Pair<Float, Float>>,
