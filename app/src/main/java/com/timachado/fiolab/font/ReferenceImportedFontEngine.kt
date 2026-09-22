@@ -6942,6 +6942,21 @@ internal object ReferenceImportedFontEngine {
             }
         }
 
+        fun emitUnderlayForTest(
+            column: SatinColumn,
+            polygons: List<Polygon>,
+            densityMm: Float
+        ) {
+            emitRegionZigzagUnderlay(
+                column =
+                    column,
+                polygons =
+                    polygons,
+                densityMm =
+                    densityMm
+            )
+        }
+
         private fun closestConnectedChoice(
             columns: List<SatinColumn>,
             anchor: FPoint,
@@ -8525,6 +8540,146 @@ internal object ReferenceImportedFontEngine {
         )
 
         return output
+    }
+
+    internal fun debugCurvedUnderlayAllSegmentsInside():
+        Boolean {
+        val output =
+            mutableListOf<EmbroideryPoint>()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val center =
+            FPoint(
+                60f,
+                60f
+            )
+
+        fun ringPoint(
+            radius: Float,
+            degrees: Float
+        ): FPoint {
+            val radians =
+                Math.toRadians(
+                    degrees.toDouble()
+                )
+
+            return FPoint(
+                center.x +
+                    kotlin.math.cos(
+                        radians
+                    ).toFloat() *
+                        radius,
+                center.y +
+                    kotlin.math.sin(
+                        radians
+                    ).toFloat() *
+                        radius
+            )
+        }
+
+        val outerContour =
+            Polygon(
+                (0 until 72).map {
+                        index ->
+                    ringPoint(
+                        radius =
+                            50f,
+                        degrees =
+                            index *
+                                5f
+                    )
+                }
+            )
+
+        val innerContour =
+            Polygon(
+                (0 until 72).map {
+                        index ->
+                    ringPoint(
+                        radius =
+                            34f,
+                        degrees =
+                            index *
+                                5f
+                    )
+                }
+            )
+
+        val polygons =
+            listOf(
+                outerContour,
+                innerContour
+            )
+
+        val rows =
+            (0..18).map {
+                    index ->
+                val degrees =
+                    90f +
+                        index *
+                            5f
+
+                SatinRow(
+                    a =
+                        ringPoint(
+                            radius =
+                                50f,
+                            degrees =
+                                degrees
+                        ),
+                    b =
+                        ringPoint(
+                            radius =
+                                34f,
+                            degrees =
+                                degrees
+                        )
+                )
+            }
+                .toMutableList()
+
+        emitter.emitUnderlayForTest(
+            column =
+                SatinColumn(
+                    rows
+                ),
+            polygons =
+                polygons,
+            densityMm =
+                0.4f
+        )
+
+        val stitched =
+            output.filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        return stitched
+            .zipWithNext()
+            .all {
+                    pair ->
+                segmentInsideGlyphGeometry(
+                    from =
+                        FPoint(
+                            pair.first.xUnits.toFloat(),
+                            pair.first.yUnits.toFloat()
+                        ),
+                    to =
+                        FPoint(
+                            pair.second.xUnits.toFloat(),
+                            pair.second.yUnits.toFloat()
+                        ),
+                    polygons =
+                        polygons,
+                    sampleUnits =
+                        ROUTING_SAMPLE_UNITS
+                )
+            }
     }
 
     internal fun debugReferencePath(
