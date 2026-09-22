@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.51.0
+
+### Motor principal por eixo medial
+- O digitalizador de fontes salvas passa a extrair primeiro o eixo medial de cada traço.
+- Bifurcações e junções são separadas em blocos locais antes da geração dos pontos.
+- As travessas Satin são abertas perpendicularmente ao caminho local do traço, evitando ligar bordas de ramos diferentes.
+- O pareamento direto de contornos deixa de ser o caminho principal e permanece apenas como fallback.
+- Áreas largas continuam usando Tatami denso; traços estreitos continuam usando Satin.
+- Mantidos underlay, compensação, ordem Visual/Continuidade, jumps/trims, bastidor e saída estrutural do último glifo.
+- Adicionado teste de regressão para impedir leques abruptos no motor principal em bifurcações cursivas.
+- A arquitetura foi reimplementada de forma independente; o APK do Mão Design foi usado somente como referência de comportamento e separação entre app e motor de bordado.
+
 ## 0.50.1
 
 ### Fechamento do preenchimento Tatami
