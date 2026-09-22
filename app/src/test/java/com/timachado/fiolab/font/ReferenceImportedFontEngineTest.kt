@@ -754,4 +754,15 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun professionalBlocksAddSafeEndCaps() {
+        assertEquals(
+            "Um bloco Satin com espaço interno seguro deve ganhar uma linha curta de fechamento em cada ponta.",
+            4,
+            ReferenceImportedFontEngine
+                .debugContourEndCapCount()
+        )
+    }
+
 }
