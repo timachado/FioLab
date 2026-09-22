@@ -1538,6 +1538,66 @@ internal object ReferenceImportedFontEngine {
         }
     }
 
+    private fun segmentInsideGlyphGeometry(
+        from: FPoint,
+        to: FPoint,
+        polygons: List<Polygon>,
+        sampleUnits: Float
+    ): Boolean {
+        if (
+            polygons.isEmpty()
+        ) {
+            return false
+        }
+
+        val total =
+            distance(
+                from,
+                to
+            )
+
+        val samples =
+            max(
+                2,
+                ceil(
+                    total /
+                        sampleUnits.coerceAtLeast(
+                            0.5f
+                        )
+                )
+                    .toInt()
+            )
+
+        for (
+            part in
+                0..samples
+        ) {
+            val ratio =
+                part.toFloat() /
+                    samples
+
+            val point =
+                lerp(
+                    from,
+                    to,
+                    ratio
+                )
+
+            if (
+                !pointInsideGlyphAdaptive(
+                    point =
+                        point,
+                    polygons =
+                        polygons
+                )
+            ) {
+                return false
+            }
+        }
+
+        return true
+    }
+
     private fun contourPairCandidates(
         polygons: List<Polygon>,
         pitchUnits: Float,
@@ -1746,7 +1806,7 @@ internal object ReferenceImportedFontEngine {
                     )
 
                 if (
-                    !segmentInsideGlyph(
+                    !segmentInsideGlyphGeometry(
                         from =
                             interiorStart,
                         to =
@@ -2052,7 +2112,7 @@ internal object ReferenceImportedFontEngine {
                     }
 
                     if (
-                        !segmentInsideGlyph(
+                        !segmentInsideGlyphGeometry(
                             from =
                                 current.center,
                             to =
