@@ -463,6 +463,31 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
+    fun cleanEngineSeparatesBranchesFromJunctionPatch() {
+        val kinds =
+            ReferenceImportedFontEngine
+                .debugCleanJunctionKinds()
+
+        assertTrue(
+            "Uma bifurcação deve gerar ramos independentes.",
+            kinds.count {
+                it ==
+                    "BRANCH"
+            } >=
+                2
+        )
+
+        assertTrue(
+            "O encontro dos ramos deve ser preenchido por um patch Tatami local, não por Satin radial.",
+            kinds.any {
+                it ==
+                    "JUNCTION_TATAMI"
+            }
+        )
+    }
+
+
+    @Test
     fun cleanEngineKeepsPhysicalRailIdentityWhenNormalFlips() {
         val rails =
             ReferenceImportedFontEngine
