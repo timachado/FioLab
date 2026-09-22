@@ -577,20 +577,38 @@ class ReferenceImportedFontEngineTest {
                     polygon =
                         listOf(
                             0f to 0f,
-                            22f to 0f,
-                            22f to 78f,
-                            82f to 78f,
-                            82f to 100f,
-                            0f to 100f
+                            20f to 0f,
+                            20f to 10f,
+                            20f to 20f,
+                            20f to 30f,
+                            20f to 40f,
+                            20f to 50f,
+                            20f to 60f,
+                            20f to 70f,
+                            20f to 80f,
+                            20f to 90f,
+                            20f to 100f,
+                            0f to 100f,
+                            0f to 90f,
+                            0f to 80f,
+                            0f to 70f,
+                            0f to 60f,
+                            0f to 50f,
+                            0f to 40f,
+                            0f to 30f,
+                            0f to 20f,
+                            0f to 10f
                         ),
                     densityMm =
                         0.4f
                 )
 
         assertTrue(
-            "As linhas Satin vetoriais não devem deixar lacunas grandes entre seções consecutivas.",
-            maxGap <=
-                6.2f
+            "Num mesmo traço contínuo, a densificação não pode deixar lacunas grandes entre linhas Satin.",
+            maxGap >
+                0f &&
+                maxGap <=
+                    6.2f
         )
     }
 
