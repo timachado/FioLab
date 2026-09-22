@@ -8069,6 +8069,28 @@ internal object ReferenceImportedFontEngine {
         return output
     }
 
+    internal fun debugGlyphVisualStart(
+        polygon:
+            List<Pair<Float, Float>>
+    ): Pair<Float, Float>? =
+        glyphVisualStartPoint(
+            listOf(
+                Polygon(
+                    polygon.map {
+                        FPoint(
+                            it.first,
+                            it.second
+                        )
+                    }
+                )
+            )
+        )?.let {
+            Pair(
+                it.x,
+                it.y
+            )
+        }
+
     internal fun debugVisualStartPath():
         List<EmbroideryPoint> {
         val output =
