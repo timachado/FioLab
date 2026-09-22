@@ -472,13 +472,17 @@ public sealed class SkiaEmbroideryEngine
                 continue;
             }
 
-            var selected = SelectInterval(
-                intervals,
-                previous,
-                cx,
-                cy,
-                geometry.NormalX,
-                geometry.NormalY);
+            // A true satin column must have one continuous rail pair per
+            // section. Branched/holed sections would force the path to jump
+            // from one branch to another before finishing the current one.
+            // In that case, abort satin generation and let BuildSatin fall
+            // back to Tatami, which covers the complete object.
+            if (intervals.Count > 1)
+            {
+                return [];
+            }
+
+            var selected = intervals[0];
 
             var candidate = new SatinRow(
                 new PixelPoint(
@@ -610,25 +614,41 @@ public sealed class SkiaEmbroideryEngine
         {
             var underlayStep = rowStep * 3;
             var underlayForward = true;
+            var firstUnderlay = true;
 
             for (var y = component.MinY; y <= component.MaxY; y += underlayStep)
             {
                 var runs = FindRuns(component, y);
 
-                foreach (var run in runs)
+                if (runs.Count == 0)
+                {
+                    continue;
+                }
+
+                if (!underlayForward)
+                {
+                    runs.Reverse();
+                }
+
+                for (var runIndex = 0; runIndex < runs.Count; runIndex++)
                 {
                     AppendRun(
-                        run,
+                        runs[runIndex],
                         y,
                         underlayForward,
                         raster,
                         objectIndex,
                         points,
                         options.StitchLengthPx * raster.Scale * 1.5f,
-                        jumpAtStart: true);
+                        jumpAtStart:
+                            firstUnderlay ||
+                            runIndex > 0);
 
-                    underlayForward = !underlayForward;
+                    firstUnderlay = false;
                 }
+
+                // Reverse only after the whole scan row is complete.
+                underlayForward = !underlayForward;
             }
         }
 
@@ -639,21 +659,44 @@ public sealed class SkiaEmbroideryEngine
         {
             var runs = FindRuns(component, y);
 
-            foreach (var run in runs)
+            if (runs.Count == 0)
             {
+                continue;
+            }
+
+            // The scanline is one pass. When travelling right-to-left,
+            // visit the rightmost span first so the needle reaches the
+            // physical end of the row before reversing.
+            if (!forward)
+            {
+                runs.Reverse();
+            }
+
+            for (var runIndex = 0; runIndex < runs.Count; runIndex++)
+            {
+                // Separate spans on the same row can be divided by a hole.
+                // Move between those spans with needle-up (Jump), never
+                // stitch across empty space. The first span of the next row
+                // remains connected to the previous edge, producing the
+                // expected edge-to-edge serpentine motion.
                 AppendRun(
-                    run,
+                    runs[runIndex],
                     y,
                     forward,
                     raster,
                     objectIndex,
                     points,
                     options.StitchLengthPx * raster.Scale,
-                    jumpAtStart: firstFill);
+                    jumpAtStart:
+                        firstFill ||
+                        runIndex > 0);
 
                 firstFill = false;
-                forward = !forward;
             }
+
+            // Critical rule: direction changes once per completed row,
+            // never once per interval/run.
+            forward = !forward;
         }
 
         return points;
