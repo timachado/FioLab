@@ -362,16 +362,47 @@ public sealed class SkiaEmbroideryEngine
                 component.Width * component.Height);
 
         // Detached compact ornaments (heart-shaped i dots, round dots,
-        // small filled symbols) are area fills, not stroke graphs. Sending
-        // them through skeleton topology creates artificial triangles and
-        // branches. Let the whole-component classifier emit a compact
-        // Tatami fill instead.
+        // small filled symbols) are area fills, not stroke graphs. Use a
+        // dedicated dense Tatami pass so their silhouette is preserved
+        // instead of collapsing into only a few coarse horizontal bars.
         if (
             compactAspect <= 1.55f &&
             compactFillRatio >= 0.42f &&
             compactMax <= options.MaxSatinWidthPx * 1.35f)
         {
-            return [];
+            var compactObjectIndex = nextObjectIndex++;
+
+            var compactOptions = options with
+            {
+                IncludeUnderlay = false,
+                TatamiDensityPx = MathF.Min(
+                    1.75f,
+                    options.TatamiDensityPx),
+                StitchLengthPx = MathF.Min(
+                    5.5f,
+                    options.StitchLengthPx)
+            };
+
+            var compactPoints = BuildTatami(
+                component,
+                raster,
+                compactObjectIndex,
+                compactOptions);
+
+            if (compactPoints.Count < 2)
+            {
+                return [];
+            }
+
+            return
+            [
+                new EmbroideryObject
+                {
+                    Index = compactObjectIndex,
+                    Kind = EmbroideryObjectKind.Tatami,
+                    Points = compactPoints
+                }
+            ];
         }
 
         var skeleton = ThinMask(component);
@@ -521,6 +552,14 @@ public sealed class SkiaEmbroideryEngine
             prepared,
             junctionCenters,
             mergeRadius);
+
+        // Some script crossings leave a tiny raster gap after the junction
+        // neighborhood is removed. Rejoin strongly collinear endpoints when
+        // the whole connector remains inside the original glyph.
+        prepared = MergeNearbyCollinearCandidates(
+            prepared,
+            component,
+            mergeRadius * 1.45f);
 
         // Stable, deterministic order inside a glyph. Each branch is fully
         // completed before the next one begins.
@@ -1603,7 +1642,15 @@ public sealed class SkiaEmbroideryEngine
         IReadOnlyList<PixelPoint> junctions,
         float radius)
     {
-        if (candidate.Centers.Count > 3 || junctions.Count == 0)
+        if (junctions.Count == 0 || candidate.Centers.Count < 2)
+        {
+            return false;
+        }
+
+        var length = PolylineLength(
+            candidate.Centers);
+
+        if (length > radius * 1.45f)
         {
             return false;
         }
@@ -1611,9 +1658,32 @@ public sealed class SkiaEmbroideryEngine
         var start = candidate.Centers[0];
         var end = candidate.Centers[^1];
 
-        return junctions.Any(junction =>
-            Distance(start, junction) <= radius * 1.15f ||
+        var startNear = junctions.Any(junction =>
+            Distance(start, junction) <= radius * 1.15f);
+
+        var endNear = junctions.Any(junction =>
             Distance(end, junction) <= radius * 1.15f);
+
+        // A short edge with only one end attached to a junction is a raster
+        // spur. If both ends return to the junction neighborhood it is a
+        // real micro-loop (for example the loop in Alliby's 'r') and must
+        // be preserved.
+        return startNear ^ endNear;
+    }
+
+    private static float PolylineLength(
+        IReadOnlyList<PixelPoint> points)
+    {
+        var length = 0f;
+
+        for (var i = 1; i < points.Count; i++)
+        {
+            length += Distance(
+                points[i - 1],
+                points[i]);
+        }
+
+        return length;
     }
 
     private static List<TopologyCandidate> MergeThroughJunctions(
@@ -1806,6 +1876,203 @@ public sealed class SkiaEmbroideryEngine
         }
 
         return candidates;
+    }
+
+    private static List<TopologyCandidate> MergeNearbyCollinearCandidates(
+        List<TopologyCandidate> source,
+        Component component,
+        float radius)
+    {
+        var candidates = source.ToList();
+
+        while (true)
+        {
+            CandidatePair? best = null;
+
+            for (var firstIndex = 0;
+                 firstIndex < candidates.Count;
+                 firstIndex++)
+            {
+                var firstCandidate = candidates[firstIndex];
+
+                if (firstCandidate.Centers.Count < 2)
+                {
+                    continue;
+                }
+
+                for (var secondIndex = firstIndex + 1;
+                     secondIndex < candidates.Count;
+                     secondIndex++)
+                {
+                    var secondCandidate = candidates[secondIndex];
+
+                    if (
+                        secondCandidate.Centers.Count < 2 ||
+                        firstCandidate.Kind != secondCandidate.Kind)
+                    {
+                        continue;
+                    }
+
+                    var endpointsA = GetCandidateEndpoints(
+                        firstCandidate,
+                        firstIndex);
+
+                    var endpointsB = GetCandidateEndpoints(
+                        secondCandidate,
+                        secondIndex);
+
+                    foreach (var first in endpointsA)
+                    {
+                        foreach (var second in endpointsB)
+                        {
+                            var gap = Distance(
+                                first.Point,
+                                second.Point);
+
+                            if (gap > radius)
+                            {
+                                continue;
+                            }
+
+                            var dot =
+                                first.DirectionX * second.DirectionX +
+                                first.DirectionY * second.DirectionY;
+
+                            if (dot > -0.62f)
+                            {
+                                continue;
+                            }
+
+                            if (!SegmentInsideComponent(
+                                component,
+                                first.Point,
+                                second.Point))
+                            {
+                                continue;
+                            }
+
+                            var score =
+                                dot +
+                                gap / MathF.Max(1f, radius);
+
+                            if (best is null || score < best.Value.Score)
+                            {
+                                best = new CandidatePair(
+                                    first,
+                                    second,
+                                    score);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (best is null)
+            {
+                break;
+            }
+
+            var pair = best.Value;
+
+            var firstCandidate = OrientCandidateToJunctionEnd(
+                candidates[pair.First.CandidateIndex],
+                pair.First.AtStart);
+
+            var secondCandidate = OrientCandidateFromJunctionStart(
+                candidates[pair.Second.CandidateIndex],
+                pair.Second.AtStart);
+
+            var mergedCenters = new List<PixelPoint>(
+                firstCandidate.Centers.Count +
+                secondCandidate.Centers.Count);
+
+            mergedCenters.AddRange(
+                firstCandidate.Centers);
+
+            if (
+                Distance(
+                    mergedCenters[^1],
+                    secondCandidate.Centers[0]) > 0.75f)
+            {
+                mergedCenters.Add(
+                    new PixelPoint(
+                        (
+                            mergedCenters[^1].X +
+                            secondCandidate.Centers[0].X
+                        ) / 2f,
+                        (
+                            mergedCenters[^1].Y +
+                            secondCandidate.Centers[0].Y
+                        ) / 2f));
+            }
+
+            mergedCenters.AddRange(
+                secondCandidate.Centers);
+
+            var mergedRows = new List<SatinRow>(
+                firstCandidate.Rows.Count +
+                secondCandidate.Rows.Count);
+
+            mergedRows.AddRange(
+                firstCandidate.Rows);
+
+            mergedRows.AddRange(
+                secondCandidate.Rows);
+
+            var merged = new TopologyCandidate(
+                firstCandidate.Kind,
+                AlignSatinRows(mergedRows),
+                mergedCenters);
+
+            var high = Math.Max(
+                pair.First.CandidateIndex,
+                pair.Second.CandidateIndex);
+
+            var low = Math.Min(
+                pair.First.CandidateIndex,
+                pair.Second.CandidateIndex);
+
+            candidates.RemoveAt(high);
+            candidates.RemoveAt(low);
+            candidates.Add(merged);
+        }
+
+        return candidates;
+    }
+
+    private static CandidateEndpoint[] GetCandidateEndpoints(
+        TopologyCandidate candidate,
+        int candidateIndex)
+    {
+        var start = candidate.Centers[0];
+        var startAdjacent = candidate.Centers[1];
+
+        var end = candidate.Centers[^1];
+        var endAdjacent = candidate.Centers[^2];
+
+        var startDirection = NormalizeVector(
+            startAdjacent.X - start.X,
+            startAdjacent.Y - start.Y);
+
+        var endDirection = NormalizeVector(
+            endAdjacent.X - end.X,
+            endAdjacent.Y - end.Y);
+
+        return
+        [
+            new CandidateEndpoint(
+                candidateIndex,
+                AtStart: true,
+                start,
+                startDirection.X,
+                startDirection.Y),
+            new CandidateEndpoint(
+                candidateIndex,
+                AtStart: false,
+                end,
+                endDirection.X,
+                endDirection.Y)
+        ];
     }
 
     private static TopologyCandidate OrientCandidateToJunctionEnd(
