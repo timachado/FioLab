@@ -1658,17 +1658,96 @@ public sealed class SkiaEmbroideryEngine
         var start = candidate.Centers[0];
         var end = candidate.Centers[^1];
 
-        var startNear = junctions.Any(junction =>
-            Distance(start, junction) <= radius * 1.15f);
+        var startMatch = FindNearestJunction(
+            start,
+            junctions,
+            radius * 1.15f);
 
-        var endNear = junctions.Any(junction =>
-            Distance(end, junction) <= radius * 1.15f);
+        var endMatch = FindNearestJunction(
+            end,
+            junctions,
+            radius * 1.15f);
 
-        // A short edge with only one end attached to a junction is a raster
-        // spur. If both ends return to the junction neighborhood it is a
-        // real micro-loop (for example the loop in Alliby's 'r') and must
-        // be preserved.
-        return startNear ^ endNear;
+        var startNear = startMatch >= 0;
+        var endNear = endMatch >= 0;
+
+        // One-sided short branches are thinning/raster spurs.
+        if (startNear ^ endNear)
+        {
+            return true;
+        }
+
+        if (!startNear || !endNear)
+        {
+            return false;
+        }
+
+        // If the two ends return to different real junctions, this is a
+        // connector between graph nodes, not a loop.
+        if (startMatch != endMatch)
+        {
+            return false;
+        }
+
+        // Both ends return to the same junction. A real script loop encloses
+        // measurable area; the tiny X/bow-tie artifacts produced by raster
+        // thinning have near-zero signed area because their crossings cancel.
+        var enclosedArea = MathF.Abs(
+            SignedPolygonArea(candidate.Centers));
+
+        var minimumLoopArea =
+            radius * radius * 0.075f;
+
+        return enclosedArea < minimumLoopArea;
+    }
+
+    private static int FindNearestJunction(
+        PixelPoint point,
+        IReadOnlyList<PixelPoint> junctions,
+        float maximumDistance)
+    {
+        var bestIndex = -1;
+        var bestDistance = maximumDistance;
+
+        for (var index = 0; index < junctions.Count; index++)
+        {
+            var distance = Distance(
+                point,
+                junctions[index]);
+
+            if (distance > bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            bestIndex = index;
+        }
+
+        return bestIndex;
+    }
+
+    private static float SignedPolygonArea(
+        IReadOnlyList<PixelPoint> points)
+    {
+        if (points.Count < 3)
+        {
+            return 0f;
+        }
+
+        var twiceArea = 0f;
+
+        for (var index = 0; index < points.Count; index++)
+        {
+            var current = points[index];
+            var next = points[(index + 1) % points.Count];
+
+            twiceArea +=
+                current.X * next.Y -
+                next.X * current.Y;
+        }
+
+        return twiceArea * 0.5f;
     }
 
     private static float PolylineLength(
