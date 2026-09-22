@@ -570,6 +570,38 @@ public sealed class SkiaEmbroideryEngine
             component,
             mergeRadius * 1.45f);
 
+        // IMPORTANT: after two branches become one physical stroke, their
+        // old cross-sections must not simply be concatenated. Their normals
+        // were calculated independently and can flip abruptly at the join,
+        // producing the small X/diamond visible in script letters. Rebuild
+        // Satin rows from the final merged centerline so the tangent passes
+        // smoothly through the junction.
+        prepared = prepared
+            .Select(candidate =>
+            {
+                if (
+                    candidate.Kind != EmbroideryObjectKind.Satin ||
+                    candidate.Centers.Count < 2)
+                {
+                    return candidate;
+                }
+
+                var rebuiltRows = BuildRowsFromCenterline(
+                    candidate.Centers,
+                    component,
+                    raster,
+                    options,
+                    resample: false);
+
+                return rebuiltRows.Count >= 2
+                    ? new TopologyCandidate(
+                        candidate.Kind,
+                        rebuiltRows,
+                        candidate.Centers)
+                    : candidate;
+            })
+            .ToList();
+
         // Stable, deterministic order inside a glyph. Each branch is fully
         // completed before the next one begins.
         prepared = prepared
@@ -1346,19 +1378,40 @@ public sealed class SkiaEmbroideryEngine
         DigitizeOptions options)
     {
         var width = component.CanvasWidth;
+
         var raw = path
             .Select(index => new PixelPoint(
                 index % width,
                 index / width))
             .ToList();
 
+        return BuildRowsFromCenterline(
+            raw,
+            component,
+            raster,
+            options,
+            resample: true);
+    }
+
+    private static List<SatinRow> BuildRowsFromCenterline(
+        IReadOnlyList<PixelPoint> source,
+        Component component,
+        RasterGlyph raster,
+        DigitizeOptions options,
+        bool resample)
+    {
+        if (source.Count < 2)
+        {
+            return [];
+        }
+
         var pitch = MathF.Max(
             2f,
             options.DensityPx * raster.Scale);
 
-        var centers = ResampleCenterline(
-            raw,
-            pitch);
+        var centers = resample
+            ? ResampleCenterline(source, pitch)
+            : source.ToList();
 
         if (centers.Count < 2)
         {
@@ -1367,14 +1420,26 @@ public sealed class SkiaEmbroideryEngine
 
         var rows = new List<SatinRow>();
         SatinRow? previousRow = null;
+
         var maxRay = MathF.Sqrt(
             component.Width * component.Width +
             component.Height * component.Height) + 4f;
 
         for (var i = 0; i < centers.Count; i++)
         {
-            var before = centers[Math.Max(0, i - 1)];
-            var after = centers[Math.Min(centers.Count - 1, i + 1)];
+            // Use a slightly wider tangent window around internal points.
+            // This suppresses one-pixel angular noise at script junctions
+            // without flattening the actual curve.
+            var beforeIndex = Math.Max(
+                0,
+                i - (i > 1 ? 2 : 1));
+
+            var afterIndex = Math.Min(
+                centers.Count - 1,
+                i + (i < centers.Count - 2 ? 2 : 1));
+
+            var before = centers[beforeIndex];
+            var after = centers[afterIndex];
 
             var tx = after.X - before.X;
             var ty = after.Y - before.Y;
@@ -1428,20 +1493,9 @@ public sealed class SkiaEmbroideryEngine
 
             if (previousRow is not null)
             {
-                var direct =
-                    Distance(previousRow.Value.A, candidate.A) +
-                    Distance(previousRow.Value.B, candidate.B);
-
-                var swapped =
-                    Distance(previousRow.Value.A, candidate.B) +
-                    Distance(previousRow.Value.B, candidate.A);
-
-                if (swapped < direct)
-                {
-                    candidate = new SatinRow(
-                        candidate.B,
-                        candidate.A);
-                }
+                candidate = AlignSatinRow(
+                    previousRow.Value,
+                    candidate);
             }
 
             rows.Add(candidate);
@@ -2264,20 +2318,9 @@ public sealed class SkiaEmbroideryEngine
 
             if (previous is not null)
             {
-                var direct =
-                    Distance(previous.Value.A, current.A) +
-                    Distance(previous.Value.B, current.B);
-
-                var swapped =
-                    Distance(previous.Value.A, current.B) +
-                    Distance(previous.Value.B, current.A);
-
-                if (swapped < direct)
-                {
-                    current = new SatinRow(
-                        current.B,
-                        current.A);
-                }
+                current = AlignSatinRow(
+                    previous.Value,
+                    current);
             }
 
             result.Add(current);
@@ -2286,6 +2329,76 @@ public sealed class SkiaEmbroideryEngine
 
         return result;
     }
+
+    private static SatinRow AlignSatinRow(
+        SatinRow previous,
+        SatinRow current)
+    {
+        var directCrosses =
+            SegmentsProperlyIntersect(
+                previous.A,
+                current.A,
+                previous.B,
+                current.B);
+
+        var swappedCrosses =
+            SegmentsProperlyIntersect(
+                previous.A,
+                current.B,
+                previous.B,
+                current.A);
+
+        if (directCrosses && !swappedCrosses)
+        {
+            return new SatinRow(
+                current.B,
+                current.A);
+        }
+
+        if (swappedCrosses && !directCrosses)
+        {
+            return current;
+        }
+
+        var direct =
+            Distance(previous.A, current.A) +
+            Distance(previous.B, current.B);
+
+        var swapped =
+            Distance(previous.A, current.B) +
+            Distance(previous.B, current.A);
+
+        return swapped < direct
+            ? new SatinRow(
+                current.B,
+                current.A)
+            : current;
+    }
+
+    private static bool SegmentsProperlyIntersect(
+        PixelPoint a,
+        PixelPoint b,
+        PixelPoint c,
+        PixelPoint d)
+    {
+        var ab1 = Cross(a, b, c);
+        var ab2 = Cross(a, b, d);
+        var cd1 = Cross(c, d, a);
+        var cd2 = Cross(c, d, b);
+
+        const float epsilon = 0.001f;
+
+        return
+            ab1 * ab2 < -epsilon &&
+            cd1 * cd2 < -epsilon;
+    }
+
+    private static float Cross(
+        PixelPoint a,
+        PixelPoint b,
+        PixelPoint c) =>
+        (b.X - a.X) * (c.Y - a.Y) -
+        (b.Y - a.Y) * (c.X - a.X);
 
     private static (float X, float Y) NormalizeVector(
         float x,
