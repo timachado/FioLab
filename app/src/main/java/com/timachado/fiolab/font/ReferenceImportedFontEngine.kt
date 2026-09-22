@@ -1508,6 +1508,16 @@ internal object ReferenceImportedFontEngine {
                                 true
                         }
 
+                        val junctionCenters =
+                            findJunctionCenters(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    componentSkeleton,
+                                distanceField =
+                                    distanceField
+                            )
+
                         val blockSkeleton =
                             clearJunctionNeighborhoods(
                                 raster =
@@ -1517,59 +1527,87 @@ internal object ReferenceImportedFontEngine {
                                 distanceField =
                                     distanceField,
                                 pitchUnits =
-                                    pitchUnits
+                                    pitchUnits,
+                                junctionCenters =
+                                    junctionCenters
                             )
 
-                        traceSkeletonPaths(
-                            raster =
-                                raster,
-                            skeleton =
-                                blockSkeleton
-                        )
-                            .mapNotNull {
-                                    path ->
-                                prepareAdaptiveSkeletonPath(
-                                    path =
-                                        path,
-                                    raster =
-                                        raster,
-                                    skeleton =
-                                        blockSkeleton,
-                                    pitchUnits =
-                                        pitchUnits
-                                )
-                            }
-                            .flatMap {
-                                    path ->
-                                satinColumnsFromSkeletonPath(
-                                    path =
-                                        path,
-                                    raster =
-                                        raster,
-                                    distanceField =
-                                        distanceField,
-                                    pitchUnits =
-                                        pitchUnits,
-                                    maxRayUnits =
-                                        max(
-                                            maxWidthUnits *
-                                                2f,
+                        val branchColumns =
+                            traceSkeletonPaths(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    blockSkeleton
+                            )
+                                .mapNotNull {
+                                        path ->
+                                    prepareAdaptiveSkeletonPath(
+                                        path =
+                                            path,
+                                        raster =
+                                            raster,
+                                        skeleton =
+                                            blockSkeleton,
+                                        pitchUnits =
+                                            pitchUnits
+                                    )
+                                }
+                                .flatMap {
+                                        path ->
+                                    satinColumnsFromSkeletonPath(
+                                        path =
+                                            path,
+                                        raster =
+                                            raster,
+                                        distanceField =
+                                            distanceField,
+                                        pitchUnits =
+                                            pitchUnits,
+                                        maxRayUnits =
                                             max(
-                                                widthUnits,
-                                                heightUnits
-                                            ) *
-                                                0.8f
-                                        ),
-                                    maxSatinWidthUnits =
-                                        maxWidthUnits,
-                                    pullUnits =
-                                        pullUnits
-                                )
-                            }
-                            .filter {
-                                it.rows.size >=
-                                    2
-                            }
+                                                maxWidthUnits *
+                                                    2f,
+                                                max(
+                                                    widthUnits,
+                                                    heightUnits
+                                                ) *
+                                                    0.8f
+                                            ),
+                                        maxSatinWidthUnits =
+                                            maxWidthUnits,
+                                        pullUnits =
+                                            pullUnits
+                                    )
+                                }
+                                .filter {
+                                    it.rows.size >=
+                                        2
+                                }
+
+                        val junctionColumns =
+                            junctionCenters
+                                .mapNotNull {
+                                        junction ->
+                                    buildJunctionSatinBlock(
+                                        junction =
+                                            junction,
+                                        raster =
+                                            raster,
+                                        skeleton =
+                                            componentSkeleton,
+                                        distanceField =
+                                            distanceField,
+                                        pitchUnits =
+                                            pitchUnits,
+                                        maxSatinWidthUnits =
+                                            maxWidthUnits,
+                                        pullUnits =
+                                            pullUnits
+                                    )
+                                }
+
+                        branchColumns +
+                            junctionColumns
                     }
                 }
 
@@ -2731,18 +2769,21 @@ internal object ReferenceImportedFontEngine {
         }
     }
 
-    private fun clearJunctionNeighborhoods(
+    private fun findJunctionCenters(
         raster: RasterGlyph,
         skeleton: BooleanArray,
-        distanceField: FloatArray,
-        pitchUnits: Float
-    ): BooleanArray {
-        val result =
-            skeleton.copyOf()
+        distanceField: FloatArray
+    ): List<Int> {
+        val candidateMask =
+            BooleanArray(
+                skeleton.size
+            )
 
-        val junctions =
-            skeleton.indices.filter {
-                    index ->
+        skeleton.indices.forEach {
+                index ->
+            candidateMask[
+                index
+            ] =
                 skeleton[
                     index
                 ] &&
@@ -2755,15 +2796,550 @@ internal object ReferenceImportedFontEngine {
                             skeleton
                     ).size >=
                         3
+        }
+
+        val visited =
+            BooleanArray(
+                skeleton.size
+            )
+
+        val result =
+            mutableListOf<Int>()
+
+        candidateMask.indices.forEach {
+                seed ->
+            if (
+                !candidateMask[
+                    seed
+                ] ||
+                visited[
+                    seed
+                ]
+            ) {
+                return@forEach
             }
 
+            val queue =
+                java.util.ArrayDeque<Int>()
+
+            val cluster =
+                mutableListOf<Int>()
+
+            queue.add(
+                seed
+            )
+
+            visited[
+                seed
+            ] =
+                true
+
+            while (
+                queue.isNotEmpty()
+            ) {
+                val current =
+                    queue.removeFirst()
+
+                cluster +=
+                    current
+
+                val x =
+                    current %
+                        raster.width
+
+                val y =
+                    current /
+                        raster.width
+
+                for (
+                    dy in
+                        -1..1
+                ) {
+                    for (
+                        dx in
+                            -1..1
+                    ) {
+                        if (
+                            dx ==
+                                0 &&
+                            dy ==
+                                0
+                        ) {
+                            continue
+                        }
+
+                        val nx =
+                            x +
+                                dx
+
+                        val ny =
+                            y +
+                                dy
+
+                        if (
+                            nx !in
+                                0 until raster.width ||
+                            ny !in
+                                0 until raster.height
+                        ) {
+                            continue
+                        }
+
+                        val neighbor =
+                            ny *
+                                raster.width +
+                                nx
+
+                        if (
+                            candidateMask[
+                                neighbor
+                            ] &&
+                            !visited[
+                                neighbor
+                            ]
+                        ) {
+                            visited[
+                                neighbor
+                            ] =
+                                true
+
+                            queue.add(
+                                neighbor
+                            )
+                        }
+                    }
+                }
+            }
+
+            val representative =
+                cluster.maxWithOrNull(
+                    compareBy<Int> {
+                        distanceField
+                            .getOrElse(
+                                it
+                            ) {
+                                0f
+                            }
+                    }.thenByDescending {
+                        -it
+                    }
+                )
+
+            if (
+                representative !=
+                    null
+            ) {
+                result +=
+                    representative
+            }
+        }
+
+        return result
+    }
+
+    private fun estimateJunctionTangent(
+        junction: Int,
+        raster: RasterGlyph,
+        skeleton: BooleanArray,
+        clearanceUnits: Float
+    ): FPoint {
+        val center =
+            raster.center(
+                junction
+            )
+
+        val minimumRadius =
+            max(
+                clearanceUnits *
+                    0.75f,
+                raster.step *
+                    2f
+            )
+
+        val maximumRadius =
+            max(
+                clearanceUnits *
+                    2.2f,
+                minimumRadius +
+                    raster.step *
+                        4f
+            )
+
+        val vectors =
+            skeleton.indices
+                .asSequence()
+                .filter {
+                    skeleton[
+                        it
+                    ]
+                }
+                .map {
+                    raster.center(
+                        it
+                    )
+                }
+                .map {
+                        point ->
+                    FPoint(
+                        point.x -
+                            center.x,
+                        point.y -
+                            center.y
+                    )
+                }
+                .filter {
+                        vector ->
+                    val length =
+                        kotlin.math.hypot(
+                            vector.x,
+                            vector.y
+                        )
+
+                    length in
+                        minimumRadius..maximumRadius
+                }
+                .map {
+                    normalize(
+                        it
+                    )
+                }
+                .toList()
+
         if (
-            junctions.isEmpty()
+            vectors.isEmpty()
+        ) {
+            return FPoint(
+                1f,
+                0f
+            )
+        }
+
+        var bestFirst =
+            vectors.first()
+
+        var bestSecond =
+            FPoint(
+                -bestFirst.x,
+                -bestFirst.y
+            )
+
+        var bestDot =
+            1f
+
+        for (
+            firstIndex in
+                vectors.indices
+        ) {
+            for (
+                secondIndex in
+                    firstIndex +
+                        1 until vectors.size
+            ) {
+                val first =
+                    vectors[
+                        firstIndex
+                    ]
+
+                val second =
+                    vectors[
+                        secondIndex
+                    ]
+
+                val dot =
+                    first.x *
+                        second.x +
+                        first.y *
+                            second.y
+
+                if (
+                    dot <
+                        bestDot
+                ) {
+                    bestDot =
+                        dot
+
+                    bestFirst =
+                        first
+
+                    bestSecond =
+                        second
+                }
+            }
+        }
+
+        val tangent =
+            normalize(
+                FPoint(
+                    bestFirst.x -
+                        bestSecond.x,
+                    bestFirst.y -
+                        bestSecond.y
+                )
+            )
+
+        return if (
+            kotlin.math.abs(
+                tangent.x
+            ) <
+                0.0001f &&
+            kotlin.math.abs(
+                tangent.y
+            ) <
+                0.0001f
+        ) {
+            bestFirst
+        } else {
+            tangent
+        }
+    }
+
+    private fun buildJunctionSatinBlock(
+        junction: Int,
+        raster: RasterGlyph,
+        skeleton: BooleanArray,
+        distanceField: FloatArray,
+        pitchUnits: Float,
+        maxSatinWidthUnits: Float,
+        pullUnits: Float
+    ): SatinColumn? {
+        val center =
+            raster.center(
+                junction
+            )
+
+        val localRadius =
+            distanceField
+                .getOrElse(
+                    junction
+                ) {
+                    pitchUnits
+                }
+                .coerceAtLeast(
+                    pitchUnits
+                )
+
+        val clearanceUnits =
+            max(
+                localRadius *
+                    JUNCTION_CLEARANCE_FACTOR,
+                pitchUnits *
+                    1.5f
+            )
+
+        val tangent =
+            estimateJunctionTangent(
+                junction =
+                    junction,
+                raster =
+                    raster,
+                skeleton =
+                    skeleton,
+                clearanceUnits =
+                    clearanceUnits
+            )
+
+        val normal =
+            FPoint(
+                -tangent.y,
+                tangent.x
+            )
+
+        val rows =
+            mutableListOf<SatinRow>()
+
+        val rowStep =
+            (
+                pitchUnits *
+                    0.82f
+                ).coerceAtLeast(
+                raster.step
+            )
+
+        var offset =
+            -clearanceUnits
+
+        while (
+            offset <=
+                clearanceUnits +
+                    0.001f
+        ) {
+            val rowCenter =
+                FPoint(
+                    center.x +
+                        tangent.x *
+                            offset,
+                    center.y +
+                        tangent.y *
+                            offset
+                )
+
+            if (
+                raster.contains(
+                    rowCenter
+                )
+            ) {
+                val maxHalfWidth =
+                    minOf(
+                        maxSatinWidthUnits /
+                            2f,
+                        clearanceUnits +
+                            raster.step
+                    )
+
+                val positive =
+                    rayToRasterBoundary(
+                        center =
+                            rowCenter,
+                        direction =
+                            normal,
+                        raster =
+                            raster,
+                        maxDistance =
+                            maxHalfWidth
+                    )
+
+                val negative =
+                    rayToRasterBoundary(
+                        center =
+                            rowCenter,
+                        direction =
+                            FPoint(
+                                -normal.x,
+                                -normal.y
+                            ),
+                        raster =
+                            raster,
+                        maxDistance =
+                            maxHalfWidth
+                    )
+
+                val width =
+                    positive +
+                        negative
+
+                if (
+                    positive >
+                        0.25f &&
+                    negative >
+                        0.25f &&
+                    width <=
+                        maxSatinWidthUnits *
+                            ADAPTIVE_MAX_RAW_WIDTH_FACTOR
+                ) {
+                    var row =
+                        SatinRow(
+                            a =
+                                FPoint(
+                                    rowCenter.x -
+                                        normal.x *
+                                            (
+                                                negative +
+                                                    pullUnits
+                                                ),
+                                    rowCenter.y -
+                                        normal.y *
+                                            (
+                                                negative +
+                                                    pullUnits
+                                                )
+                                ),
+                            b =
+                                FPoint(
+                                    rowCenter.x +
+                                        normal.x *
+                                            (
+                                                positive +
+                                                    pullUnits
+                                                ),
+                                    rowCenter.y +
+                                        normal.y *
+                                            (
+                                                positive +
+                                                    pullUnits
+                                                )
+                                )
+                        )
+
+                    val previous =
+                        rows.lastOrNull()
+
+                    if (
+                        previous !=
+                            null
+                    ) {
+                        val direct =
+                            distance(
+                                previous.a,
+                                row.a
+                            ) +
+                                distance(
+                                    previous.b,
+                                    row.b
+                                )
+
+                        val swapped =
+                            distance(
+                                previous.a,
+                                row.b
+                            ) +
+                                distance(
+                                    previous.b,
+                                    row.a
+                                )
+
+                        if (
+                            swapped <
+                                direct
+                        ) {
+                            row =
+                                SatinRow(
+                                    a =
+                                        row.b,
+                                    b =
+                                        row.a
+                                )
+                        }
+                    }
+
+                    rows +=
+                        row
+                }
+            }
+
+            offset +=
+                rowStep
+        }
+
+        return if (
+            rows.size >=
+                2
+        ) {
+            SatinColumn(
+                rows =
+                    rows
+            )
+        } else {
+            null
+        }
+    }
+
+    private fun clearJunctionNeighborhoods(
+        raster: RasterGlyph,
+        skeleton: BooleanArray,
+        distanceField: FloatArray,
+        pitchUnits: Float,
+        junctionCenters: List<Int>
+    ): BooleanArray {
+        val result =
+            skeleton.copyOf()
+
+        if (
+            junctionCenters.isEmpty()
         ) {
             return result
         }
 
-        junctions.forEach {
+        junctionCenters.forEach {
                 junction ->
             val localRadiusUnits =
                 distanceField
