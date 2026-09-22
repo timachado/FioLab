@@ -709,4 +709,49 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun professionalStraightStemUsesOneColumn() {
+        val count =
+            ReferenceImportedFontEngine
+                .debugColumnCount(
+                    polygons =
+                        listOf(
+                            listOf(
+                                0f to 0f,
+                                18f to 0f,
+                                18f to 80f,
+                                0f to 80f
+                            )
+                        )
+                )
+
+        assertEquals(
+            1,
+            count
+        )
+    }
+
+    @Test
+    fun professionalCompactDotUsesOneColumn() {
+        val count =
+            ReferenceImportedFontEngine
+                .debugColumnCount(
+                    polygons =
+                        listOf(
+                            listOf(
+                                2f to 100f,
+                                16f to 100f,
+                                16f to 114f,
+                                2f to 114f
+                            )
+                        )
+                )
+
+        assertEquals(
+            1,
+            count
+        )
+    }
+
 }
