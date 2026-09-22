@@ -445,11 +445,13 @@ public sealed class SkiaEmbroideryEngine
                 candidate.Kind == EmbroideryObjectKind.Running
                     ? BuildRunningFromCenterline(
                         candidate.Centers,
+                        component,
                         raster,
                         objectIndex,
                         options)
                     : BuildSatinFromRows(
                         candidate.Rows,
+                        component,
                         raster,
                         objectIndex,
                         options);
@@ -1242,25 +1244,27 @@ public sealed class SkiaEmbroideryEngine
 
     private static List<StitchPoint> BuildRunningFromCenterline(
         IReadOnlyList<PixelPoint> centers,
+        Component component,
         RasterGlyph raster,
         int objectIndex,
         DigitizeOptions options)
     {
         var points = new List<StitchPoint>();
 
-        AppendPolyline(
+        AppendSafePolyline(
             centers,
+            component,
             raster,
             objectIndex,
             points,
-            options.StitchLengthPx * raster.Scale,
-            jumpAtStart: true);
+            options.StitchLengthPx * raster.Scale);
 
         return points;
     }
 
     private static List<StitchPoint> BuildSatinFromRows(
         IReadOnlyList<SatinRow> rows,
+        Component component,
         RasterGlyph raster,
         int objectIndex,
         DigitizeOptions options)
@@ -1280,14 +1284,16 @@ public sealed class SkiaEmbroideryEngine
                     (row.A.Y + row.B.Y) / 2f))
                 .ToList();
 
-            AppendPolyline(
+            AppendSafePolyline(
                 centers,
+                component,
                 raster,
                 objectIndex,
                 points,
-                options.StitchLengthPx * raster.Scale,
-                jumpAtStart: true);
+                options.StitchLengthPx * raster.Scale);
         }
+
+        PixelPoint? previousEnd = null;
 
         for (var i = 0; i < rows.Count; i++)
         {
@@ -1311,12 +1317,19 @@ public sealed class SkiaEmbroideryEngine
                 end.X,
                 end.Y);
 
+            var startCommand =
+                previousEnd is not null &&
+                SegmentInsideComponent(
+                    component,
+                    previousEnd.Value,
+                    start)
+                    ? StitchCommand.Stitch
+                    : StitchCommand.Jump;
+
             points.Add(new StitchPoint(
                 startWorld.X,
                 startWorld.Y,
-                i == 0
-                    ? StitchCommand.Jump
-                    : StitchCommand.Stitch,
+                startCommand,
                 objectIndex));
 
             points.Add(new StitchPoint(
@@ -1324,9 +1337,67 @@ public sealed class SkiaEmbroideryEngine
                 endWorld.Y,
                 StitchCommand.Stitch,
                 objectIndex));
+
+            previousEnd = end;
         }
 
         return points;
+    }
+
+    private static void AppendSafePolyline(
+        IReadOnlyList<PixelPoint> source,
+        Component component,
+        RasterGlyph raster,
+        int objectIndex,
+        List<StitchPoint> destination,
+        float maxSegmentLength)
+    {
+        if (source.Count == 0)
+        {
+            return;
+        }
+
+        var first = raster.ToWorld(
+            source[0].X,
+            source[0].Y);
+
+        destination.Add(new StitchPoint(
+            first.X,
+            first.Y,
+            StitchCommand.Jump,
+            objectIndex));
+
+        for (var i = 1; i < source.Count; i++)
+        {
+            var current = source[i];
+            var previous = source[i - 1];
+            var next = raster.ToWorld(
+                current.X,
+                current.Y);
+
+            if (!SegmentInsideComponent(
+                component,
+                previous,
+                current))
+            {
+                destination.Add(new StitchPoint(
+                    next.X,
+                    next.Y,
+                    StitchCommand.Jump,
+                    objectIndex));
+
+                continue;
+            }
+
+            AppendSegmented(
+                new SKPoint(
+                    destination[^1].X,
+                    destination[^1].Y),
+                next,
+                objectIndex,
+                destination,
+                maxSegmentLength / raster.Scale);
+        }
     }
 
     private static bool[] BuildJunctionPatchMask(
