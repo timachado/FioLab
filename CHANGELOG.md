@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.18
+
+### Fontes salvas — correção de geometria Satin
+- Correção direcionada apenas ao caminho de fontes TTF/OTF salvas; as fontes FioLab permanecem sem alteração.
+- Removidas conexões diagonais redundantes do grafo do esqueleto quando já existe uma ponte ortogonal. Isso evita bifurcações falsas em cantos e curvas rasterizadas.
+- Uma coluna Satin agora é encerrada e reiniciada quando ocorre mudança abrupta de direção, crescimento anormal de largura ou salto do centro do traço.
+- Curvas graduais continuam em uma única coluna; junções reais viram blocos separados e deixam de formar leques/triângulos.
+- Mantidas as proteções da 0.46.17 para pontos e acentos compactos, poda nas bifurcações e suavização do eixo central.
+- Adicionado teste geométrico com forma ramificada para garantir que nenhuma coluna contenha mudança instantânea de ângulo acima do limite seguro.
+- Mantidos auto-fit, execução fora da UI, underlay, compensação de repuxo e formatos PES/DST/JEF.
+
 ## 0.46.17
 
 ### Correção visual do Satin em letras cursivas
