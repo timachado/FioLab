@@ -181,7 +181,7 @@ fun CreateNameScreen(
 
     var importedFontSewingOrder by remember {
         mutableStateOf(
-            ImportedFontSewingOrder.VISUAL
+            ImportedFontSewingOrder.CONTINUITY
         )
     }
 
