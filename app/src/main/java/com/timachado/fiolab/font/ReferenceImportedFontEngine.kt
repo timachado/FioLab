@@ -2216,14 +2216,201 @@ internal object ReferenceImportedFontEngine {
                     row
             }
 
-            columns +=
-                SatinColumn(
+            val densifiedRows =
+                densifyContourRows(
                     rows =
-                        stitchedRows
+                        stitchedRows,
+                    polygons =
+                        polygons,
+                    pitchUnits =
+                        pitchUnits
                 )
+
+            if (
+                densifiedRows.size >=
+                    2
+            ) {
+                columns +=
+                    SatinColumn(
+                        rows =
+                            densifiedRows
+                    )
+            }
         }
 
         return columns
+    }
+
+    private fun densifyContourRows(
+        rows: List<SatinRow>,
+        polygons: List<Polygon>,
+        pitchUnits: Float
+    ): MutableList<SatinRow> {
+        if (
+            rows.size <
+                2
+        ) {
+            return rows
+                .toMutableList()
+        }
+
+        val result =
+            mutableListOf<SatinRow>()
+
+        rows.forEachIndexed {
+                index,
+                row ->
+            if (
+                index ==
+                    0
+            ) {
+                result +=
+                    row
+
+                return@forEachIndexed
+            }
+
+            val previous =
+                result.last()
+
+            val previousCenter =
+                FPoint(
+                    (
+                        previous.a.x +
+                            previous.b.x
+                        ) /
+                        2f,
+                    (
+                        previous.a.y +
+                            previous.b.y
+                        ) /
+                        2f
+                )
+
+            val currentCenter =
+                FPoint(
+                    (
+                        row.a.x +
+                            row.b.x
+                        ) /
+                        2f,
+                    (
+                        row.a.y +
+                            row.b.y
+                        ) /
+                        2f
+                )
+
+            val gap =
+                distance(
+                    previousCenter,
+                    currentCenter
+                )
+
+            if (
+                gap >
+                    pitchUnits *
+                        1.45f
+            ) {
+                val inserts =
+                    (
+                        ceil(
+                            (
+                                gap /
+                                    pitchUnits
+                                ).toDouble()
+                        ).toInt() -
+                            1
+                        )
+                        .coerceIn(
+                            1,
+                            6
+                        )
+
+                for (
+                    part in
+                        1..inserts
+                ) {
+                    val ratio =
+                        part.toFloat() /
+                            (
+                                inserts +
+                                    1
+                                )
+
+                    val interpolated =
+                        SatinRow(
+                            a =
+                                lerp(
+                                    previous.a,
+                                    row.a,
+                                    ratio
+                                ),
+                            b =
+                                lerp(
+                                    previous.b,
+                                    row.b,
+                                    ratio
+                                )
+                        )
+
+                    val center =
+                        FPoint(
+                            (
+                                interpolated.a.x +
+                                    interpolated.b.x
+                                ) /
+                                2f,
+                            (
+                                interpolated.a.y +
+                                    interpolated.b.y
+                                ) /
+                                2f
+                        )
+
+                    val innerA =
+                        lerp(
+                            interpolated.a,
+                            center,
+                            0.08f
+                        )
+
+                    val innerB =
+                        lerp(
+                            interpolated.b,
+                            center,
+                            0.08f
+                        )
+
+                    if (
+                        pointInsideGlyphAdaptive(
+                            point =
+                                center,
+                            polygons =
+                                polygons
+                        ) &&
+                        segmentInsideGlyphGeometry(
+                            from =
+                                innerA,
+                            to =
+                                innerB,
+                            polygons =
+                                polygons,
+                            sampleUnits =
+                                1.25f
+                        )
+                    ) {
+                        result +=
+                            interpolated
+                    }
+                }
+            }
+
+            result +=
+                row
+        }
+
+        return result
     }
 
     private fun buildContourPairedSatinBlocks(
