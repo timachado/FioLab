@@ -66,6 +66,9 @@ internal object ReferenceImportedFontEngine {
     private const val ROUTING_SAMPLE_UNITS =
         2f
 
+    private const val MAX_CONNECTED_ROUTING_CANDIDATES =
+        24
+
     private const val CONNECTOR_EDGE_MARGIN_UNITS =
         2f
 
@@ -1426,6 +1429,10 @@ internal object ReferenceImportedFontEngine {
                 skeleton =
                     skeleton
             )
+                .filter {
+                    it.size >=
+                        3
+                }
 
         if (
             paths.isEmpty()
@@ -2723,8 +2730,6 @@ internal object ReferenceImportedFontEngine {
                         normal,
                     raster =
                         raster,
-                    polygons =
-                        polygons,
                     maxDistance =
                         maxRayUnits
                 )
@@ -2740,8 +2745,6 @@ internal object ReferenceImportedFontEngine {
                         ),
                     raster =
                         raster,
-                    polygons =
-                        polygons,
                     maxDistance =
                         maxRayUnits
                 )
@@ -2854,7 +2857,6 @@ internal object ReferenceImportedFontEngine {
         center: FPoint,
         direction: FPoint,
         raster: RasterGlyph,
-        polygons: List<Polygon>,
         maxDistance: Float
     ): Float {
         var lastInside =
@@ -2889,54 +2891,17 @@ internal object ReferenceImportedFontEngine {
                     point
                 )
             ) {
-                var low =
-                    lastInside
-
-                var high =
-                    distanceValue
-
                 /*
-                 * Só neste refinamento final consultamos o contorno vetorial.
-                 * Assim preservamos precisão de borda sem fazer centenas de
-                 * testes polygonais ao longo de cada raio.
+                 * A máscara já tem resolução submilimétrica. Usar o meio
+                 * entre o último centro interno e o primeiro externo limita
+                 * o erro à metade de uma célula e elimina milhares de testes
+                 * point-in-polygon durante a geração de uma palavra.
                  */
-                repeat(
-                    5
-                ) {
-                    val middle =
-                        (
-                            low +
-                                high
-                            ) /
-                            2f
-
-                    val middlePoint =
-                        FPoint(
-                            center.x +
-                                direction.x *
-                                    middle,
-                            center.y +
-                                direction.y *
-                                    middle
-                        )
-
-                    if (
-                        pointInsideGlyphAdaptive(
-                            point =
-                                middlePoint,
-                            polygons =
-                                polygons
-                        )
-                    ) {
-                        low =
-                            middle
-                    } else {
-                        high =
-                            middle
-                    }
-                }
-
-                return low
+                return (
+                    lastInside +
+                        distanceValue
+                    ) /
+                    2f
             }
 
             lastInside =
@@ -3709,9 +3674,58 @@ internal object ReferenceImportedFontEngine {
                 RoutedChoice? =
                 null
 
-            columns.forEachIndexed {
-                    index,
-                    column ->
+            /*
+             * Testar todas as quatro orientações de todas as regiões contra
+             * o contorno vetorial vira custo quadrático em fontes detalhadas.
+             * Primeiro ranqueamos por distância barata aos quatro possíveis
+             * pontos de entrada e só fazemos o teste geométrico caro nos
+             * candidatos realmente próximos.
+             */
+            val nearby =
+                columns
+                    .mapIndexed {
+                            index,
+                            column ->
+                        Pair(
+                            index,
+                            minimumEntryDistance(
+                                column =
+                                    column,
+                                anchor =
+                                    anchor
+                            )
+                        )
+                    }
+                    .sortedBy {
+                        it.second
+                    }
+                    .take(
+                        MAX_CONNECTED_ROUTING_CANDIDATES
+                    )
+
+            nearby.forEach {
+                    indexed ->
+                val index =
+                    indexed.first
+
+                val column =
+                    columns[
+                        index
+                    ]
+
+                val currentBest =
+                    best
+
+                if (
+                    currentBest !=
+                        null &&
+                    indexed.second >
+                        currentBest.entryDistance +
+                            0.001f
+                ) {
+                    return@forEach
+                }
+
                 orientationCandidates(
                     column
                 ).forEach {
@@ -3721,6 +3735,25 @@ internal object ReferenceImportedFontEngine {
                             .firstOrNull()
                             ?.a
                             ?: return@forEach
+
+                    val entryDistance =
+                        distance(
+                            anchor,
+                            entry
+                        )
+
+                    val previous =
+                        best
+
+                    if (
+                        previous !=
+                            null &&
+                        entryDistance >
+                            previous.entryDistance +
+                                0.001f
+                    ) {
+                        return@forEach
+                    }
 
                     if (
                         !segmentInsideGlyph(
@@ -3744,14 +3777,8 @@ internal object ReferenceImportedFontEngine {
                             oriented =
                                 candidate,
                             entryDistance =
-                                distance(
-                                    anchor,
-                                    entry
-                                )
+                                entryDistance
                         )
-
-                    val previous =
-                        best
 
                     if (
                         previous ==
@@ -3776,6 +3803,40 @@ internal object ReferenceImportedFontEngine {
             }
 
             return best
+        }
+
+        private fun minimumEntryDistance(
+            column: SatinColumn,
+            anchor: FPoint
+        ): Float {
+            val first =
+                column.rows
+                    .firstOrNull()
+                    ?: return Float.MAX_VALUE
+
+            val last =
+                column.rows
+                    .lastOrNull()
+                    ?: return Float.MAX_VALUE
+
+            return minOf(
+                distance(
+                    anchor,
+                    first.a
+                ),
+                distance(
+                    anchor,
+                    first.b
+                ),
+                distance(
+                    anchor,
+                    last.a
+                ),
+                distance(
+                    anchor,
+                    last.b
+                )
+            )
         }
 
         private fun orientationCandidates(
