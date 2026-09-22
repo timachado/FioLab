@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.48.1
+
+### Abertura correta de matrizes PES e fechamento de pequenas falhas Satin
+- Corrigido o viewer que abria toda matriz importada em 100 × 100 mm por padrão, mesmo quando o desenho real era maior.
+- O visualizador passa a escolher automaticamente o menor bastidor FioLab compatível com a matriz e considera a mesma opção de orientação em 90° usada em páginas de desenho retangulares.
+- Para a referência real enviada pelo usuário, 70,2 × 128,1 mm passa a selecionar 130 × 180 mm; 69,2 × 178,4 mm passa a selecionar 140 × 200 mm.
+- O canvas agora calcula a escala pelo maior retângulo entre matriz e bastidor. Mesmo se o usuário selecionar manualmente um bastidor pequeno, o desenho inteiro continua visível e o excesso pode ser identificado em vez de ser recortado.
+- A tela de informações mostra o bastidor de visualização, indica quando ele está girado 90° e exibe um aviso explícito quando a matriz excede a área segura.
+- Mantida a orientação Y das matrizes importadas conforme o sistema de coordenadas do EmbroideryIO; nenhum espelhamento adicional foi aplicado.
+- O Satin vetorial das fontes salvas passa a interpolar linhas intermediárias quando duas seções válidas ficam afastadas demais, fechando pequenas falhas de cobertura sem alterar o pareamento das bordas.
+- As linhas interpoladas só são aceitas quando o centro e a travessa interna permanecem dentro do glifo.
+- Adicionados testes para as duas dimensões PES reais enviadas e para o espaçamento máximo entre linhas Satin vetoriais.
+
 ## 0.48.0
 
 ### Novo motor vetorial para fontes TTF/OTF salvas
