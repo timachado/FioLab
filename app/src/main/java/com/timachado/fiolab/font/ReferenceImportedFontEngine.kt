@@ -7301,6 +7301,65 @@ internal object ReferenceImportedFontEngine {
                         ratio
         )
 
+    internal fun debugNearestSatinRowCenterDistance(
+        polygon:
+            List<Pair<Float, Float>>,
+        targetX: Float,
+        targetY: Float,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): Float =
+        buildAdaptiveSatinBlocks(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .flatMap {
+                it.rows
+            }
+            .map {
+                    row ->
+                val center =
+                    FPoint(
+                        (
+                            row.a.x +
+                                row.b.x
+                            ) /
+                            2f,
+                        (
+                            row.a.y +
+                                row.b.y
+                            ) /
+                            2f
+                    )
+
+                distance(
+                    center,
+                    FPoint(
+                        targetX,
+                        targetY
+                    )
+                )
+            }
+            .minOrNull()
+            ?: Float.MAX_VALUE
+
     internal fun debugAdaptiveMaxTurnDegrees(
         polygon:
             List<Pair<Float, Float>>,
