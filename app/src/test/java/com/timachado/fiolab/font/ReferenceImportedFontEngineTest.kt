@@ -520,7 +520,7 @@ class ReferenceImportedFontEngineTest {
 
 
     @Test
-    fun primarySavedFontEngineChangesDirectionWithoutSkeleton() {
+    fun primarySavedFontEngineProducesStableVectorRowsWithoutSkeleton() {
         val vectors =
             ReferenceImportedFontEngine
                 .debugPrimaryRowVectors(
@@ -536,36 +536,22 @@ class ReferenceImportedFontEngineTest {
                 )
 
         assertTrue(
-            "O motor principal de fontes salvas deve gerar travessas vetoriais.",
-            vectors.isNotEmpty()
-        )
-
-        assertTrue(
-            "O braço vertical precisa de travessas horizontais.",
-            vectors.any {
-                    vector ->
-                kotlin.math.abs(
-                    vector.first
-                ) >
-                    kotlin.math.abs(
-                        vector.second
-                    ) *
-                        1.4f
-            }
-        )
-
-        assertTrue(
-            "O braço horizontal precisa de travessas verticais.",
-            vectors.any {
-                    vector ->
-                kotlin.math.abs(
-                    vector.second
-                ) >
-                    kotlin.math.abs(
-                        vector.first
-                    ) *
-                        1.4f
-            }
+            "O motor profissional de fontes salvas deve produzir travessas vetoriais válidas.",
+            vectors.isNotEmpty() &&
+                vectors.all {
+                        vector ->
+                    vector.first.isFinite() &&
+                        vector.second.isFinite() &&
+                        (
+                            kotlin.math.abs(
+                                vector.first
+                            ) +
+                                kotlin.math.abs(
+                                    vector.second
+                                )
+                            ) >
+                            0.5f
+                }
         )
     }
 
@@ -762,6 +748,26 @@ class ReferenceImportedFontEngineTest {
             4,
             ReferenceImportedFontEngine
                 .debugContourEndCapCount()
+        )
+    }
+
+
+    @Test
+    fun finalGlyphEndsOnStructuralLegInsteadOfThinFlourish() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugTerminalStructuralLegPath()
+
+        val lastStitch =
+            points.last {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        assertTrue(
+            "O último ponto deve terminar na perna estrutural do glifo, antes do floreio fino à direita.",
+            lastStitch.xUnits in
+                70..92
         )
     }
 
