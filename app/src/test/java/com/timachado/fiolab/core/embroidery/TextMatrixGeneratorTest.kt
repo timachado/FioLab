@@ -489,4 +489,26 @@ class TextMatrixGeneratorTest {
             }
     }
 
+
+    @Test
+    fun importedFontsDefaultToProfessionalBlocksAndVisualOrder() {
+        val options =
+            TextMatrixOptions(
+                text =
+                    "Maria",
+                style =
+                    TextStitchStyle.SATIN
+            )
+
+        assertEquals(
+            ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS,
+            options.importedFontDigitizingMode
+        )
+
+        assertEquals(
+            ImportedFontSewingOrder.VISUAL,
+            options.importedFontSewingOrder
+        )
+    }
+
 }
