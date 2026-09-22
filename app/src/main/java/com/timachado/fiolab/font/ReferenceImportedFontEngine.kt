@@ -1345,6 +1345,9 @@ internal object ReferenceImportedFontEngine {
     private const val CONTOUR_PAIR_MIN_TANGENT_DOT =
         0.50f
 
+    private const val CONTOUR_PAIR_MIN_LOCAL_TURN_DOT =
+        0.82f
+
     private const val CONTOUR_CHAIN_MIN_ROW_DOT =
         0.78f
 
@@ -2361,6 +2364,61 @@ internal object ReferenceImportedFontEngine {
                             ) %
                             points.size
                     ]
+
+                val immediateBefore =
+                    points[
+                        (
+                            index -
+                                1 +
+                                points.size
+                            ) %
+                            points.size
+                    ]
+
+                val immediateAfter =
+                    points[
+                        (
+                            index +
+                                1
+                            ) %
+                            points.size
+                    ]
+
+                val incoming =
+                    normalize(
+                        FPoint(
+                            point.x -
+                                immediateBefore.x,
+                            point.y -
+                                immediateBefore.y
+                        )
+                    )
+
+                val outgoing =
+                    normalize(
+                        FPoint(
+                            immediateAfter.x -
+                                point.x,
+                            immediateAfter.y -
+                                point.y
+                        )
+                    )
+
+                val localTurnDot =
+                    incoming.x *
+                        outgoing.x +
+                        incoming.y *
+                            outgoing.y
+
+                if (
+                    localTurnDot <
+                        CONTOUR_PAIR_MIN_LOCAL_TURN_DOT
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
 
                 val tangent =
                     normalize(
