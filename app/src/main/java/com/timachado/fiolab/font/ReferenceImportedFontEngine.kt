@@ -1161,6 +1161,35 @@ internal object ReferenceImportedFontEngine {
                     )
                 ]
 
+        fun contains(
+            point: FPoint
+        ): Boolean {
+            val x =
+                kotlin.math.floor(
+                    (
+                        point.x -
+                            originX
+                        ) /
+                        step
+                )
+                    .toInt()
+
+            val y =
+                kotlin.math.floor(
+                    (
+                        point.y -
+                            originY
+                        ) /
+                        step
+                )
+                    .toInt()
+
+            return inside(
+                x,
+                y
+            )
+        }
+
         fun center(
             index: Int
         ): FPoint {
@@ -1545,45 +1574,158 @@ internal object ReferenceImportedFontEngine {
                     height
             )
 
+        /*
+         * Preenche a máscara por scanline (regra par/ímpar). A versão
+         * anterior chamava point-in-polygon para cada célula e, numa fonte
+         * detalhada, repetia todos os segmentos do contorno milhares de
+         * vezes. Aqui cada aresta é avaliada apenas uma vez por linha.
+         */
         for (
             y in
                 0 until height
         ) {
-            for (
-                x in
-                    0 until width
-            ) {
-                val point =
-                    FPoint(
-                        originX +
-                            (
-                                x +
-                                    0.5f
-                                ) *
-                                step,
-                        originY +
-                            (
-                                y +
-                                    0.5f
-                                ) *
-                                step
-                    )
+            val scanY =
+                originY +
+                    (
+                        y +
+                            0.5f
+                        ) *
+                        step
+
+            val intersections =
+                mutableListOf<Float>()
+
+            polygons.forEach {
+                    polygon ->
+                val points =
+                    polygon.points
 
                 if (
-                    pointInsideGlyphAdaptive(
-                        point =
-                            point,
-                        polygons =
-                            polygons
-                    )
+                    points.size <
+                        3
                 ) {
-                    mask[
-                        y *
-                            width +
-                            x
-                    ] =
-                        true
+                    return@forEach
                 }
+
+                var previous =
+                    points.last()
+
+                points.forEach {
+                        current ->
+                    val crosses =
+                        (
+                            previous.y <=
+                                scanY &&
+                            current.y >
+                                scanY
+                            ) ||
+                            (
+                                current.y <=
+                                    scanY &&
+                                previous.y >
+                                    scanY
+                                )
+
+                    if (
+                        crosses
+                    ) {
+                        val ratio =
+                            (
+                                scanY -
+                                    previous.y
+                                ) /
+                                (
+                                    current.y -
+                                        previous.y
+                                    )
+
+                        intersections +=
+                            previous.x +
+                                (
+                                    current.x -
+                                        previous.x
+                                    ) *
+                                    ratio
+                    }
+
+                    previous =
+                        current
+                }
+            }
+
+            intersections.sort()
+
+            var index =
+                0
+
+            while (
+                index +
+                    1 <
+                    intersections.size
+            ) {
+                val left =
+                    intersections[
+                        index
+                    ]
+
+                val right =
+                    intersections[
+                        index +
+                            1
+                    ]
+
+                val startX =
+                    ceil(
+                        (
+                            (
+                                left -
+                                    originX
+                                ) /
+                                step -
+                                0.5f
+                            ).toDouble()
+                    )
+                        .toInt()
+                        .coerceAtLeast(
+                            0
+                        )
+
+                val endX =
+                    kotlin.math.floor(
+                        (
+                            (
+                                right -
+                                    originX
+                                ) /
+                                step -
+                                0.5f
+                            ).toDouble()
+                    )
+                        .toInt()
+                        .coerceAtMost(
+                            width -
+                                1
+                        )
+
+                if (
+                    endX >=
+                        startX
+                ) {
+                    for (
+                        x in
+                            startX..endX
+                    ) {
+                        mask[
+                            y *
+                                width +
+                                x
+                        ] =
+                            true
+                    }
+                }
+
+                index +=
+                    2
             }
         }
 
@@ -1728,19 +1870,77 @@ internal object ReferenceImportedFontEngine {
                         x
                 ]
 
-        fun shouldRemove(
-            x: Int,
-            y: Int,
-            secondPass: Boolean
+        fun isBoundary(
+            index: Int
         ): Boolean {
             if (
-                !value(
-                    x,
-                    y
-                )
+                !skeleton[
+                    index
+                ]
             ) {
                 return false
             }
+
+            val x =
+                index %
+                    width
+
+            val y =
+                index /
+                    width
+
+            for (
+                dy in
+                    -1..1
+            ) {
+                for (
+                    dx in
+                        -1..1
+                ) {
+                    if (
+                        dx ==
+                            0 &&
+                        dy ==
+                            0
+                    ) {
+                        continue
+                    }
+
+                    if (
+                        !value(
+                            x +
+                                dx,
+                            y +
+                                dy
+                        )
+                    ) {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        fun shouldRemove(
+            index: Int,
+            secondPass: Boolean
+        ): Boolean {
+            if (
+                !skeleton[
+                    index
+                ]
+            ) {
+                return false
+            }
+
+            val x =
+                index %
+                    width
+
+            val y =
+                index /
+                    width
 
             val p2 =
                 value(
@@ -1830,18 +2030,18 @@ internal object ReferenceImportedFontEngine {
                 0
 
             for (
-                index in
+                neighborIndex in
                     neighbors.indices
             ) {
                 val current =
                     neighbors[
-                        index
+                        neighborIndex
                     ]
 
                 val next =
                     neighbors[
                         (
-                            index +
+                            neighborIndex +
                                 1
                             ) %
                             neighbors.size
@@ -1889,12 +2089,28 @@ internal object ReferenceImportedFontEngine {
             }
         }
 
+        val candidates =
+            linkedSetOf<Int>()
+
+        skeleton.indices.forEach {
+                index ->
+            if (
+                isBoundary(
+                    index
+                )
+            ) {
+                candidates +=
+                    index
+            }
+        }
+
         var pass =
             0
 
         while (
             pass <
-                MAX_ADAPTIVE_THINNING_PASSES
+                MAX_ADAPTIVE_THINNING_PASSES &&
+            candidates.isNotEmpty()
         ) {
             var removedAny =
                 false
@@ -1907,50 +2123,110 @@ internal object ReferenceImportedFontEngine {
                     )
             ) {
                 val remove =
-                    mutableListOf<Int>()
+                    candidates.filter {
+                            index ->
+                        shouldRemove(
+                            index =
+                                index,
+                            secondPass =
+                                secondPass
+                        )
+                    }
 
-                for (
-                    y in
-                        1 until
-                            height -
-                                1
+                if (
+                    remove.isEmpty()
                 ) {
+                    continue
+                }
+
+                removedAny =
+                    true
+
+                val affected =
+                    linkedSetOf<Int>()
+
+                remove.forEach {
+                        index ->
+                    skeleton[
+                        index
+                    ] =
+                        false
+
+                    val x =
+                        index %
+                            width
+
+                    val y =
+                        index /
+                            width
+
                     for (
-                        x in
-                            1 until
-                                width -
-                                    1
+                        dy in
+                            -1..1
                     ) {
-                        if (
-                            shouldRemove(
-                                x =
-                                    x,
-                                y =
-                                    y,
-                                secondPass =
-                                    secondPass
-                            )
+                        for (
+                            dx in
+                                -1..1
                         ) {
-                            remove +=
-                                y *
-                                    width +
-                                    x
+                            val nx =
+                                x +
+                                    dx
+
+                            val ny =
+                                y +
+                                    dy
+
+                            if (
+                                nx in
+                                    0 until width &&
+                                ny in
+                                    0 until height
+                            ) {
+                                val neighbor =
+                                    ny *
+                                        width +
+                                        nx
+
+                                if (
+                                    skeleton[
+                                        neighbor
+                                    ]
+                                ) {
+                                    affected +=
+                                        neighbor
+                                }
+                            }
                         }
                     }
                 }
 
-                if (
-                    remove.isNotEmpty()
-                ) {
-                    removedAny =
-                        true
+                val iterator =
+                    candidates.iterator()
 
-                    remove.forEach {
-                            index ->
-                        skeleton[
+                while (
+                    iterator.hasNext()
+                ) {
+                    val index =
+                        iterator.next()
+
+                    if (
+                        !isBoundary(
                             index
-                        ] =
-                            false
+                        )
+                    ) {
+                        iterator.remove()
+                    }
+                }
+
+                affected.forEach {
+                        index ->
+                    if (
+                        isBoundary(
+                            index
+                        )
+                    ) {
+                        candidates +=
+                            index
                     }
                 }
             }
@@ -2432,22 +2708,21 @@ internal object ReferenceImportedFontEngine {
                 ]
 
             if (
-                !pointInsideGlyphAdaptive(
-                    point =
-                        center,
-                    polygons =
-                        polygons
+                !raster.contains(
+                    center
                 )
             ) {
                 return@forEach
             }
 
             val positive =
-                rayToGlyphBoundary(
+                rayToRasterBoundary(
                     center =
                         center,
                     direction =
                         normal,
+                    raster =
+                        raster,
                     polygons =
                         polygons,
                     maxDistance =
@@ -2455,7 +2730,7 @@ internal object ReferenceImportedFontEngine {
                 )
 
             val negative =
-                rayToGlyphBoundary(
+                rayToRasterBoundary(
                     center =
                         center,
                     direction =
@@ -2463,6 +2738,8 @@ internal object ReferenceImportedFontEngine {
                             -normal.x,
                             -normal.y
                         ),
+                    raster =
+                        raster,
                     polygons =
                         polygons,
                     maxDistance =
@@ -2573,17 +2850,25 @@ internal object ReferenceImportedFontEngine {
         )
     }
 
-    private fun rayToGlyphBoundary(
+    private fun rayToRasterBoundary(
         center: FPoint,
         direction: FPoint,
+        raster: RasterGlyph,
         polygons: List<Polygon>,
         maxDistance: Float
     ): Float {
         var lastInside =
             0f
 
+        val step =
+            max(
+                ADAPTIVE_RAY_STEP_UNITS,
+                raster.step *
+                    0.75f
+            )
+
         var distanceValue =
-            ADAPTIVE_RAY_STEP_UNITS
+            step
 
         while (
             distanceValue <=
@@ -2600,11 +2885,8 @@ internal object ReferenceImportedFontEngine {
                 )
 
             if (
-                !pointInsideGlyphAdaptive(
-                    point =
-                        point,
-                    polygons =
-                        polygons
+                !raster.contains(
+                    point
                 )
             ) {
                 var low =
@@ -2613,8 +2895,13 @@ internal object ReferenceImportedFontEngine {
                 var high =
                     distanceValue
 
+                /*
+                 * Só neste refinamento final consultamos o contorno vetorial.
+                 * Assim preservamos precisão de borda sem fazer centenas de
+                 * testes polygonais ao longo de cada raio.
+                 */
                 repeat(
-                    6
+                    5
                 ) {
                     val middle =
                         (
@@ -2656,7 +2943,7 @@ internal object ReferenceImportedFontEngine {
                 distanceValue
 
             distanceValue +=
-                ADAPTIVE_RAY_STEP_UNITS
+                step
         }
 
         return lastInside
