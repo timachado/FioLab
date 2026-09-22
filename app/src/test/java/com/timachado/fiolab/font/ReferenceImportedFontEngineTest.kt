@@ -460,4 +460,31 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun directionalBlocksKeepJunctionWidthLocal() {
+        val widths =
+            ReferenceImportedFontEngine
+                .debugColumnWidths(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            100f to 0f,
+                            100f to 20f,
+                            60f to 20f,
+                            60f to 100f,
+                            40f to 100f,
+                            40f to 20f,
+                            0f to 20f
+                        )
+                )
+
+        assertTrue(
+            "O encontro de dois traços não pode virar uma travessa que atravesse a barra inteira.",
+            widths.isNotEmpty() &&
+                widths.maxOrNull()!! <=
+                    35f
+        )
+    }
+
 }
