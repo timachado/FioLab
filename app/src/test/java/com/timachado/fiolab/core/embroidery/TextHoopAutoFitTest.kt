@@ -169,4 +169,113 @@ class TextHoopAutoFitTest {
         )
     }
 
+
+    @Test
+    fun narrowInterpolationWindowDoesNotThrow() {
+        val hoop =
+            HoopProfile.H100X100
+
+        fun designFor(
+            height: Float
+        ): EmbroideryDesign {
+            val halfWidth =
+                (
+                    height *
+                        2.65f *
+                        10f /
+                        2f
+                    ).toInt()
+
+            val halfHeight =
+                (
+                    height *
+                        10f /
+                        2f
+                    ).toInt()
+
+            val points =
+                listOf(
+                    EmbroideryPoint(
+                        -halfWidth,
+                        -halfHeight,
+                        StitchCommand.STITCH,
+                        0
+                    ),
+                    EmbroideryPoint(
+                        halfWidth,
+                        halfHeight,
+                        StitchCommand.STITCH,
+                        0
+                    ),
+                    EmbroideryPoint(
+                        halfWidth,
+                        halfHeight,
+                        StitchCommand.END,
+                        0
+                    )
+                )
+
+            return EmbroideryDesign(
+                fileName =
+                    "fit.dst",
+                format =
+                    "DST",
+                label =
+                    "FIT",
+                points =
+                    points,
+                bounds =
+                    EmbroideryBounds(
+                        minXUnits =
+                            -halfWidth,
+                        maxXUnits =
+                            halfWidth,
+                        minYUnits =
+                            -halfHeight,
+                        maxYUnits =
+                            halfHeight
+                    ),
+                stitchCount =
+                    2,
+                jumpCount =
+                    0,
+                colorChanges =
+                    0,
+                endFound =
+                    true,
+                sourceBytes =
+                    ByteArray(
+                        0
+                    ),
+                isModified =
+                    true,
+                hoopProfile =
+                    hoop
+            )
+        }
+
+        val fitted =
+            TextHoopAutoFit
+                .fit(
+                    hoop =
+                        hoop,
+                    minHeightMm =
+                        16.5f,
+                    maxHeightMm =
+                        17.0f
+                ) {
+                        height ->
+                    Result.success(
+                        designFor(
+                            height
+                        )
+                    )
+                }
+
+        assertTrue(
+            "Uma janela estreita de interpolação não pode gerar coerceIn com faixa vazia.",
+            fitted.isSuccess
+        )
+    }
+
 }
