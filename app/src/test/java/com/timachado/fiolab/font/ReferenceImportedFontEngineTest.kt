@@ -487,4 +487,34 @@ class ReferenceImportedFontEngineTest {
         )
     }
 
+
+    @Test
+    fun junctionCenterIsCoveredByDedicatedSatinBlock() {
+        val distance =
+            ReferenceImportedFontEngine
+                .debugNearestSatinRowCenterDistance(
+                    polygon =
+                        listOf(
+                            0f to 0f,
+                            100f to 0f,
+                            100f to 20f,
+                            60f to 20f,
+                            60f to 100f,
+                            40f to 100f,
+                            40f to 20f,
+                            0f to 20f
+                        ),
+                    targetX =
+                        50f,
+                    targetY =
+                        20f
+                )
+
+        assertTrue(
+            "A região central da junção deve receber um bloco Satin próprio, sem ficar vazia.",
+            distance <=
+                12f
+        )
+    }
+
 }
