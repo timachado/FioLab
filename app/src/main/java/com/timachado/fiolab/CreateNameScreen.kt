@@ -1006,7 +1006,7 @@ fun CreateNameScreen(
                             }
 
                             Text(
-                                "Satin em blocos direcionais: divide a TTF/OTF em regiões de traço, controla a largura pela espessura local e muda a direção entre blocos.",
+                                "Satin vetorial: pareia as duas bordas do traço da TTF/OTF e cria blocos com linhas de direção próprias, sem usar o esqueleto raster como direção principal.",
                                 color =
                                     FioTextMuted,
                                 fontSize =
