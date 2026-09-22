@@ -123,10 +123,10 @@ for (var i = 1; i < holedPoints.Count; i++)
         var y = previous.Y + (current.Y - previous.Y) * ratio;
 
         if (
-            x > 40f &&
-            x < 80f &&
-            y > 40f &&
-            y < 80f)
+            x > 42f &&
+            x < 78f &&
+            y > 42f &&
+            y < 78f)
         {
             samplesInsideHole++;
         }
