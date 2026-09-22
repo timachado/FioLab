@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.48.3
+
+### Primeiro bloco correto em letras cursivas
+- Corrigido o comportamento observado no vídeo 1000309862.mp4: mesmo com o ponto inicial visual no alto, o motor ainda escolhia obrigatoriamente a coluna com menor X, que no "M" cursivo era o floreio inferior.
+- O início visual agora é calculado na metade superior do glifo, evitando que um swash inferior seja tratado como início da letra.
+- Na primeira região de cada glifo, o motor deixa de aceitar cegamente a primeira coluna da ordenação padrão e escolhe, entre todas as orientações válidas, o bloco com entrada mais próxima do início visual superior.
+- A ordenação por continuidade continua valendo para os blocos seguintes.
+- Mantidos o underlay interno em zigue-zague da 0.48.2, o Satin vetorial, a densificação de pequenas lacunas e as correções do viewer/bastidor.
+- Adicionado teste de regressão com um floreio inferior mais à esquerda e uma haste superior ligeiramente à direita; o primeiro comando deve entrar na haste superior.
+
 ## 0.48.2
 
 ### Início de costura e underlay das fontes salvas
