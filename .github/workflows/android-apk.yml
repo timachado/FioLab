@@ -79,18 +79,18 @@ jobs:
       - name: Prepare downloadable files
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.51.0-debug.apk
-          zip -9 FioLab-0.51.0-debug.zip FioLab-0.51.0-debug.apk
-          sha256sum FioLab-0.51.0-debug.apk FioLab-0.51.0-debug.zip > FioLab-0.51.0-SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk FioLab-0.51.1-debug.apk
+          zip -9 FioLab-0.51.1-debug.zip FioLab-0.51.1-debug.apk
+          sha256sum FioLab-0.51.1-debug.apk FioLab-0.51.1-debug.zip > FioLab-0.51.1-SHA256.txt
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FioLab-0.51.0-downloads
+          name: FioLab-0.51.1-downloads
           path: |
-            FioLab-0.51.0-debug.apk
-            FioLab-0.51.0-debug.zip
-            FioLab-0.51.0-SHA256.txt
+            FioLab-0.51.1-debug.apk
+            FioLab-0.51.1-debug.zip
+            FioLab-0.51.1-SHA256.txt
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.51.0 >/dev/null 2>&1; then
-            gh release upload v0.51.0               FioLab-0.51.0-debug.apk               FioLab-0.51.0-debug.zip               FioLab-0.51.0-SHA256.txt               --clobber
+          if gh release view v0.51.1 >/dev/null 2>&1; then
+            gh release upload v0.51.1               FioLab-0.51.1-debug.apk               FioLab-0.51.1-debug.zip               FioLab-0.51.1-SHA256.txt               --clobber
           else
-            gh release create v0.51.0               FioLab-0.51.0-debug.apk               FioLab-0.51.0-debug.zip               FioLab-0.51.0-SHA256.txt               --target main               --title "FioLab 0.51.0"               --notes "FioLab 0.51.0: motor principal por eixo medial do traço. Separa bifurcações antes de gerar Satin/Tatami para evitar leques e travessias internas em letras cursivas, mantendo underlay, preenchimento denso, continuidade de costura e saída estrutural final."
+            gh release create v0.51.1               FioLab-0.51.1-debug.apk               FioLab-0.51.1-debug.zip               FioLab-0.51.1-SHA256.txt               --target main               --title "FioLab 0.51.1"               --notes "FioLab 0.51.1: adiciona auditoria de cobertura após o eixo medial. Regiões internas sem travessas recebem blocos curtos de reparo, sem criar leques ou travessas longas. Mantém continuidade, Satin/Tatami e saída estrutural final."
           fi
