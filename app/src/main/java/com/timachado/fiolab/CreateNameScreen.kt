@@ -1455,7 +1455,7 @@ fun CreateNameScreen(
                                         importedFontDigitizingMode ==
                                             ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS
                                     ) {
-                                        "Profissional: usa apenas blocos vetoriais/varredura geométrica previsível; não retorna ao esqueleto raster."
+                                        "Objetos inteligentes: traços estreitos usam Satin; áreas largas usam Tatami com underlay e ordem real de costura."
                                     } else {
                                         "Compatibilidade: permite usar o motor adaptativo legado quando a fonte exigir."
                                     },
