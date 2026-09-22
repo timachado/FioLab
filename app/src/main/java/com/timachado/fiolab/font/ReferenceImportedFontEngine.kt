@@ -63,6 +63,15 @@ internal object ReferenceImportedFontEngine {
     private const val TATAMI_MIN_WIDE_ROW_RATIO =
         0.25f
 
+    private const val COVERAGE_REPAIR_MAX_GAP_MM =
+        0.55f
+
+    private const val COVERAGE_REPAIR_DENSITY_MM =
+        0.30f
+
+    private const val COVERAGE_REPAIR_MAX_WIDTH_MM =
+        7f
+
     private const val DEFAULT_PULL_MM =
         0.2f
 
@@ -1963,6 +1972,199 @@ internal object ReferenceImportedFontEngine {
         )
     }
 
+    private fun rowCenter(
+        row: SatinRow
+    ): FPoint =
+        FPoint(
+            (
+                row.a.x +
+                    row.b.x
+                ) /
+                2f,
+            (
+                row.a.y +
+                    row.b.y
+                ) /
+                2f
+        )
+
+    private fun pointToRowDistance(
+        point: FPoint,
+        row: SatinRow
+    ): Float {
+        val dx =
+            row.b.x -
+                row.a.x
+
+        val dy =
+            row.b.y -
+                row.a.y
+
+        val lengthSquared =
+            dx *
+                dx +
+                dy *
+                    dy
+
+        if (
+            lengthSquared <=
+                0.00001f
+        ) {
+            return distance(
+                point,
+                row.a
+            )
+        }
+
+        val ratio =
+            (
+                (
+                    point.x -
+                        row.a.x
+                    ) *
+                    dx +
+                    (
+                        point.y -
+                            row.a.y
+                        ) *
+                        dy
+                ) /
+                lengthSquared
+
+        val clamped =
+            ratio.coerceIn(
+                0f,
+                1f
+            )
+
+        return distance(
+            point,
+            FPoint(
+                row.a.x +
+                    dx *
+                        clamped,
+                row.a.y +
+                    dy *
+                        clamped
+            )
+        )
+    }
+
+    private fun buildCoverageRepairColumns(
+        polygons: List<Polygon>,
+        primary: List<SatinColumn>,
+        densityMm: Float,
+        pullCompensationMm: Float
+    ): List<SatinColumn> {
+        val primaryRows =
+            primary.flatMap {
+                it.rows
+            }
+
+        if (
+            primaryRows.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val candidates =
+            sampleColumnsByAxis(
+                polygons =
+                    polygons,
+                densityMm =
+                    minOf(
+                        densityMm,
+                        COVERAGE_REPAIR_DENSITY_MM
+                    ),
+                maxSatinWidthMm =
+                    COVERAGE_REPAIR_MAX_WIDTH_MM,
+                pullCompensationMm =
+                    pullCompensationMm
+                        .coerceIn(
+                            0f,
+                            0.25f
+                        )
+            )
+
+        val maxGapUnits =
+            COVERAGE_REPAIR_MAX_GAP_MM *
+                10f
+
+        val maxRepairWidthUnits =
+            COVERAGE_REPAIR_MAX_WIDTH_MM *
+                10f
+
+        val repaired =
+            mutableListOf<SatinColumn>()
+
+        candidates.forEach {
+                candidate ->
+            var run =
+                mutableListOf<SatinRow>()
+
+            fun flush() {
+                if (
+                    run.size >=
+                        2
+                ) {
+                    repaired +=
+                        SatinColumn(
+                            rows =
+                                run
+                                    .toMutableList()
+                        )
+                }
+
+                run =
+                    mutableListOf()
+            }
+
+            candidate.rows.forEach {
+                    row ->
+                val center =
+                    rowCenter(
+                        row
+                    )
+
+                val nearest =
+                    primaryRows.minOf {
+                        pointToRowDistance(
+                            point =
+                                center,
+                            row =
+                                it
+                        )
+                    }
+
+                val localWidth =
+                    distance(
+                        row.a,
+                        row.b
+                    )
+
+                val needsRepair =
+                    nearest >
+                        maxGapUnits &&
+                        localWidth <=
+                            maxRepairWidthUnits *
+                                1.05f
+
+                if (
+                    needsRepair
+                ) {
+                    run +=
+                        row
+                } else {
+                    flush()
+                }
+            }
+
+            flush()
+        }
+
+        return repaired
+    }
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -2021,7 +2223,28 @@ internal object ReferenceImportedFontEngine {
             if (
                 centerline.isNotEmpty()
             ) {
-                return centerline
+                val repairs =
+                    buildCoverageRepairColumns(
+                        polygons =
+                            polygons,
+                        primary =
+                            centerline,
+                        densityMm =
+                            densityMm,
+                        pullCompensationMm =
+                            pullCompensationMm
+                    )
+
+                return if (
+                    repairs.isEmpty()
+                ) {
+                    centerline
+                } else {
+                    standardSewingOrder(
+                        centerline +
+                            repairs
+                    )
+                }
             }
 
             if (
@@ -11401,6 +11624,115 @@ internal object ReferenceImportedFontEngine {
                         row.a.y
                 )
             }
+
+    internal fun debugCoverageRepairCount():
+        Int {
+        val polygons =
+            listOf(
+                Polygon(
+                    listOf(
+                        FPoint(
+                            0f,
+                            0f
+                        ),
+                        FPoint(
+                            100f,
+                            0f
+                        ),
+                        FPoint(
+                            100f,
+                            20f
+                        ),
+                        FPoint(
+                            60f,
+                            20f
+                        ),
+                        FPoint(
+                            60f,
+                            100f
+                        ),
+                        FPoint(
+                            40f,
+                            100f
+                        ),
+                        FPoint(
+                            40f,
+                            20f
+                        ),
+                        FPoint(
+                            0f,
+                            20f
+                        )
+                    )
+                )
+            )
+
+        val intentionallySparse =
+            listOf(
+                SatinColumn(
+                    mutableListOf(
+                        SatinRow(
+                            FPoint(
+                                0f,
+                                4f
+                            ),
+                            FPoint(
+                                32f,
+                                4f
+                            )
+                        ),
+                        SatinRow(
+                            FPoint(
+                                0f,
+                                12f
+                            ),
+                            FPoint(
+                                32f,
+                                12f
+                            )
+                        )
+                    )
+                ),
+                SatinColumn(
+                    mutableListOf(
+                        SatinRow(
+                            FPoint(
+                                68f,
+                                4f
+                            ),
+                            FPoint(
+                                100f,
+                                4f
+                            )
+                        ),
+                        SatinRow(
+                            FPoint(
+                                68f,
+                                12f
+                            ),
+                            FPoint(
+                                100f,
+                                12f
+                            )
+                        )
+                    )
+                )
+            )
+
+        return buildCoverageRepairColumns(
+            polygons =
+                polygons,
+            primary =
+                intentionallySparse,
+            densityMm =
+                0.4f,
+            pullCompensationMm =
+                0f
+        )
+            .sumOf {
+                it.rows.size
+            }
+    }
 
     internal fun debugPrimaryMaxTurnDegrees(
         polygon:
