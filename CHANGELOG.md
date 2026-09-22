@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.14
+
+### Auto-fit rápido sem repetir digitalização Satin
+- Corrigido o estado prolongado em "Gerando prévia…" observado na 0.46.13 ao usar fonte TTF/OTF importada com Satin adaptativo.
+- O ajuste automático ao bastidor para texto reto em Satin agora mede somente os contornos vetoriais da fonte, operação muito mais leve que rasterizar e digitalizar cada candidato.
+- Após encontrar o maior tamanho seguro, o motor Satin adaptativo é executado apenas uma vez para gerar a matriz final.
+- A medição rápida preserva a mesma altura de referência por cap height, espaçamento entre letras e área segura do bastidor, com margem de 2% para compensação e pontos de borda.
+- Mantidos o cálculo pesado fora da thread principal e o debounce introduzidos na 0.46.13.
+- A descrição da tela foi atualizada para refletir o motor atual: Satin adaptativo que acompanha a direção dos traços e muda o ângulo dentro da própria letra.
+- O fallback genérico de auto-fit permanece para outros estilos, efeitos especiais e layouts não retos.
+- Nenhuma redução foi aplicada na qualidade/densidade do Satin para obter esta melhoria de desempenho.
+
 ## 0.46.13
 
 ### Correção do travamento na tela Criar Nome
