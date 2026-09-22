@@ -127,7 +127,7 @@ data class TextMatrixOptions(
     val importedFontDigitizingMode: ImportedFontDigitizingMode =
         ImportedFontDigitizingMode.PROFESSIONAL_BLOCKS,
     val importedFontSewingOrder: ImportedFontSewingOrder =
-        ImportedFontSewingOrder.VISUAL,
+        ImportedFontSewingOrder.CONTINUITY,
     val specialStitchMode: SpecialStitchMode? = null,
     val color: Int = 0xE6BE70,
     val font: EmbroideryFontPreset = EmbroideryFontPreset.LINE,
