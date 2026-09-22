@@ -1239,6 +1239,12 @@ internal object ReferenceImportedFontEngine {
     private const val ADAPTIVE_MAX_RAW_WIDTH_FACTOR =
         1.20f
 
+    private const val MAX_ADAPTIVE_DIRECTION_TURN_DEGREES =
+        52f
+
+    private const val MAX_ADAPTIVE_WIDTH_GROWTH_FACTOR =
+        1.65f
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1507,9 +1513,9 @@ internal object ReferenceImportedFontEngine {
                                         pitchUnits
                                 )
                             }
-                            .mapNotNull {
+                            .flatMap {
                                     path ->
-                                satinColumnFromSkeletonPath(
+                                satinColumnsFromSkeletonPath(
                                     path =
                                         path,
                                     raster =
@@ -2366,13 +2372,63 @@ internal object ReferenceImportedFontEngine {
                         nx
 
                 if (
-                    skeleton[
+                    !skeleton[
                         neighbor
                     ]
                 ) {
-                    result +=
-                        neighbor
+                    continue
                 }
+
+                /*
+                 * Em uma grade 8-conectada, um canto pode criar um pequeno
+                 * triângulo: o pixel diagonal fica ligado aos dois vizinhos
+                 * ortogonais e aparece como uma bifurcação que não existe no
+                 * traço real. Isso era uma das origens dos leques nas fontes
+                 * salvas. Quando já existe ponte ortogonal, ignoramos a aresta
+                 * diagonal redundante.
+                 */
+                if (
+                    dx !=
+                        0 &&
+                    dy !=
+                        0
+                ) {
+                    val bridgeHorizontal =
+                        x +
+                            dx in
+                            0 until raster.width &&
+                        skeleton[
+                            y *
+                                raster.width +
+                                (
+                                    x +
+                                        dx
+                                    )
+                        ]
+
+                    val bridgeVertical =
+                        y +
+                            dy in
+                            0 until raster.height &&
+                        skeleton[
+                            (
+                                y +
+                                    dy
+                                ) *
+                                raster.width +
+                                x
+                        ]
+
+                    if (
+                        bridgeHorizontal ||
+                        bridgeVertical
+                    ) {
+                        continue
+                    }
+                }
+
+                result +=
+                    neighbor
             }
         }
 
@@ -3297,19 +3353,19 @@ internal object ReferenceImportedFontEngine {
         return paths
     }
 
-    private fun satinColumnFromSkeletonPath(
+    private fun satinColumnsFromSkeletonPath(
         path: List<Int>,
         raster: RasterGlyph,
         pitchUnits: Float,
         maxRayUnits: Float,
         maxSatinWidthUnits: Float,
         pullUnits: Float
-    ): SatinColumn? {
+    ): List<SatinColumn> {
         if (
             path.size <
                 2
         ) {
-            return null
+            return emptyList()
         }
 
         val centers =
@@ -3358,17 +3414,64 @@ internal object ReferenceImportedFontEngine {
             sampledIndices.size <
                 2
         ) {
-            return null
+            return emptyList()
         }
 
-        val rows =
+        val result =
+            mutableListOf<
+                SatinColumn
+            >()
+
+        var currentRows =
             mutableListOf<
                 SatinRow
             >()
 
-        var previousRow:
-            SatinRow? =
+        var previousWidth:
+            Float? =
             null
+
+        var previousDirection:
+            FPoint? =
+            null
+
+        var previousCenter:
+            FPoint? =
+            null
+
+        fun flushCurrent() {
+            if (
+                currentRows.size >=
+                    2
+            ) {
+                result +=
+                    SatinColumn(
+                        rows =
+                            currentRows
+                    )
+            }
+
+            currentRows =
+                mutableListOf()
+
+            previousWidth =
+                null
+
+            previousDirection =
+                null
+
+            previousCenter =
+                null
+        }
+
+        val minimumDirectionDot =
+            kotlin.math.cos(
+                Math.toRadians(
+                    MAX_ADAPTIVE_DIRECTION_TURN_DEGREES
+                        .toDouble()
+                )
+            )
+                .toFloat()
 
         sampledIndices.forEach {
                 centerIndex ->
@@ -3418,6 +3521,7 @@ internal object ReferenceImportedFontEngine {
                 ) <
                     0.0001f
             ) {
+                flushCurrent()
                 return@forEach
             }
 
@@ -3437,6 +3541,7 @@ internal object ReferenceImportedFontEngine {
                     center
                 )
             ) {
+                flushCurrent()
                 return@forEach
             }
 
@@ -3473,6 +3578,7 @@ internal object ReferenceImportedFontEngine {
                 negative <=
                     0.25f
             ) {
+                flushCurrent()
                 return@forEach
             }
 
@@ -3480,17 +3586,12 @@ internal object ReferenceImportedFontEngine {
                 positive +
                     negative
 
-            /*
-             * Uma travessa muito mais larga que a largura Satin permitida
-             * normalmente indica que o raio passou por uma bifurcação e
-             * alcançou a borda de outro traço. É exatamente o padrão em
-             * leque visto na simulação do "Maria".
-             */
             if (
                 rawWidth >
                     maxSatinWidthUnits *
                         ADAPTIVE_MAX_RAW_WIDTH_FACTOR
             ) {
+                flushCurrent()
                 return@forEach
             }
 
@@ -3528,30 +3629,31 @@ internal object ReferenceImportedFontEngine {
                         )
                 )
 
-            val previous =
-                previousRow
+            val previousRow =
+                currentRows
+                    .lastOrNull()
 
             if (
-                previous !=
+                previousRow !=
                     null
             ) {
                 val direct =
                     distance(
-                        previous.a,
+                        previousRow.a,
                         row.a
                     ) +
                         distance(
-                            previous.b,
+                            previousRow.b,
                             row.b
                         )
 
                 val swapped =
                     distance(
-                        previous.a,
+                        previousRow.a,
                         row.b
                     ) +
                         distance(
-                            previous.b,
+                            previousRow.b,
                             row.a
                         )
 
@@ -3569,24 +3671,97 @@ internal object ReferenceImportedFontEngine {
                 }
             }
 
-            rows +=
+            val direction =
+                normalize(
+                    FPoint(
+                        row.b.x -
+                            row.a.x,
+                        row.b.y -
+                            row.a.y
+                    )
+                )
+
+            val oldDirection =
+                previousDirection
+
+            val oldWidth =
+                previousWidth
+
+            val oldCenter =
+                previousCenter
+
+            val directionDot =
+                if (
+                    oldDirection ==
+                        null
+                ) {
+                    1f
+                } else {
+                    kotlin.math.abs(
+                        oldDirection.x *
+                            direction.x +
+                            oldDirection.y *
+                                direction.y
+                    )
+                }
+
+            val widthJump =
+                oldWidth !=
+                    null &&
+                    rawWidth >
+                        oldWidth *
+                            MAX_ADAPTIVE_WIDTH_GROWTH_FACTOR &&
+                    rawWidth -
+                        oldWidth >
+                        pitchUnits *
+                            1.5f
+
+            val centerJump =
+                oldCenter !=
+                    null &&
+                    distance(
+                        oldCenter,
+                        center
+                    ) >
+                        max(
+                            pitchUnits *
+                                2.8f,
+                            raster.step *
+                                5f
+                        )
+
+            if (
+                directionDot <
+                    minimumDirectionDot ||
+                widthJump ||
+                centerJump
+            ) {
+                /*
+                 * Uma coluna profissional pode curvar, mas a orientação não
+                 * muda de forma instantânea. Quando isso acontece estamos em
+                 * uma junção/ramo do esqueleto. Encerrar a coluna aqui evita
+                 * o leque e permite que o próximo trecho seja costurado como
+                 * outro bloco, com transição escondida ou JUMP quando preciso.
+                 */
+                flushCurrent()
+            }
+
+            currentRows +=
                 row
 
-            previousRow =
-                row
+            previousWidth =
+                rawWidth
+
+            previousDirection =
+                direction
+
+            previousCenter =
+                center
         }
 
-        if (
-            rows.size <
-                2
-        ) {
-            return null
-        }
+        flushCurrent()
 
-        return SatinColumn(
-            rows =
-                rows
-        )
+        return result
     }
 
     private fun rayToRasterBoundary(
