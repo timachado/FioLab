@@ -1486,6 +1486,17 @@ internal object ReferenceImportedFontEngine {
     private const val MAX_ADAPTIVE_DIRECTION_TURN_DEGREES =
         52f
 
+    /*
+     * Mesmo uma curva suave não pode continuar girando indefinidamente
+     * dentro da mesma coluna Satin. Acima deste giro acumulado fechamos o
+     * bloco e começamos outro, evitando o efeito de leque.
+     */
+    private const val MAX_BLOCK_ACCUMULATED_TURN_DEGREES =
+        28f
+
+    private const val MAX_BLOCK_ACCUMULATED_WIDTH_RATIO =
+        1.45f
+
     private const val MAX_ADAPTIVE_WIDTH_GROWTH_FACTOR =
         1.65f
 
@@ -4276,15 +4287,22 @@ internal object ReferenceImportedFontEngine {
         }
 
         val limited =
-            rawColumns.flatMap {
-                    column ->
-                splitWideColumn(
-                    column =
-                        column,
-                    maxWidthUnits =
-                        maxWidthUnits
-                )
-            }
+            rawColumns
+                .flatMap {
+                        column ->
+                    splitAccumulatedFanColumn(
+                        column
+                    )
+                }
+                .flatMap {
+                        column ->
+                    splitWideColumn(
+                        column =
+                            column,
+                        maxWidthUnits =
+                            maxWidthUnits
+                    )
+                }
 
         return standardSewingOrder(
             limited
@@ -8044,6 +8062,190 @@ internal object ReferenceImportedFontEngine {
             )
     }
 
+    private fun splitAccumulatedFanColumn(
+        column: SatinColumn
+    ): List<SatinColumn> {
+        val rows =
+            column.rows
+
+        if (
+            rows.size <
+                4
+        ) {
+            return listOf(
+                column
+            )
+        }
+
+        val minimumAccumulatedDot =
+            kotlin.math.cos(
+                Math.toRadians(
+                    MAX_BLOCK_ACCUMULATED_TURN_DEGREES
+                        .toDouble()
+                )
+            )
+                .toFloat()
+
+        val result =
+            mutableListOf<SatinColumn>()
+
+        var current =
+            mutableListOf<SatinRow>()
+
+        var baselineDirection:
+            FPoint? =
+            null
+
+        var baselineWidth:
+            Float? =
+            null
+
+        fun flush() {
+            if (
+                current.size >=
+                    2
+            ) {
+                result +=
+                    SatinColumn(
+                        rows =
+                            current
+                                .toMutableList()
+                    )
+            } else if (
+                current.isNotEmpty() &&
+                result.isNotEmpty()
+            ) {
+                result.last()
+                    .rows
+                    .addAll(
+                        current
+                    )
+            }
+
+            current =
+                mutableListOf()
+
+            baselineDirection =
+                null
+
+            baselineWidth =
+                null
+        }
+
+        rows.forEach {
+                row ->
+            val direction =
+                normalize(
+                    FPoint(
+                        row.b.x -
+                            row.a.x,
+                        row.b.y -
+                            row.a.y
+                    )
+                )
+
+            val width =
+                distance(
+                    row.a,
+                    row.b
+                )
+
+            val baseDirection =
+                baselineDirection
+
+            val baseWidth =
+                baselineWidth
+
+            val accumulatedDot =
+                if (
+                    baseDirection ==
+                        null
+                ) {
+                    1f
+                } else {
+                    kotlin.math.abs(
+                        baseDirection.x *
+                            direction.x +
+                            baseDirection.y *
+                                direction.y
+                    )
+                }
+
+            val widthRatio =
+                if (
+                    baseWidth ==
+                        null ||
+                    baseWidth <=
+                        0.001f ||
+                    width <=
+                        0.001f
+                ) {
+                    1f
+                } else {
+                    max(
+                        width /
+                            baseWidth,
+                        baseWidth /
+                            width
+                    )
+                }
+
+            val shouldSplit =
+                current.size >=
+                    2 &&
+                    (
+                        accumulatedDot <
+                            minimumAccumulatedDot ||
+                        widthRatio >
+                            MAX_BLOCK_ACCUMULATED_WIDTH_RATIO
+                        )
+
+            if (
+                shouldSplit
+            ) {
+                flush()
+            }
+
+            if (
+                current.isEmpty()
+            ) {
+                baselineDirection =
+                    direction
+
+                baselineWidth =
+                    width
+            }
+
+            current +=
+                row
+        }
+
+        flush()
+
+        if (
+            result.isEmpty()
+        ) {
+            return listOf(
+                column
+            )
+        }
+
+        /*
+         * Uma sobra unitária no fim já foi anexada ao bloco anterior. Se
+         * ainda houver somente um bloco, preservamos o objeto original.
+         */
+        return if (
+            result.size ==
+                1
+        ) {
+            listOf(
+                column
+            )
+        } else {
+            result
+        }
+    }
+
     private fun splitWideColumn(
         column: SatinColumn,
         maxWidthUnits: Float
@@ -11727,6 +11929,85 @@ internal object ReferenceImportedFontEngine {
                         row.a.y
                 )
             }
+
+    internal fun debugAccumulatedFanBlockCount():
+        Int {
+        val rows =
+            mutableListOf<SatinRow>()
+
+        val center =
+            FPoint(
+                0f,
+                0f
+            )
+
+        val length =
+            40f
+
+        listOf(
+            0f,
+            10f,
+            20f,
+            30f,
+            40f,
+            50f
+        ).forEachIndexed {
+                index,
+                degrees ->
+            val radians =
+                Math.toRadians(
+                    degrees.toDouble()
+                )
+
+            val dx =
+                kotlin.math.cos(
+                    radians
+                )
+                    .toFloat() *
+                    length /
+                    2f
+
+            val dy =
+                kotlin.math.sin(
+                    radians
+                )
+                    .toFloat() *
+                    length /
+                    2f
+
+            val offset =
+                index *
+                    5f
+
+            rows +=
+                SatinRow(
+                    a =
+                        FPoint(
+                            center.x -
+                                dx,
+                            center.y +
+                                offset -
+                                dy
+                        ),
+                    b =
+                        FPoint(
+                            center.x +
+                                dx,
+                            center.y +
+                                offset +
+                                dy
+                        )
+                )
+        }
+
+        return splitAccumulatedFanColumn(
+            SatinColumn(
+                rows =
+                    rows
+            )
+        )
+            .size
+    }
 
     internal fun debugCoverageRepairCount():
         Int {
