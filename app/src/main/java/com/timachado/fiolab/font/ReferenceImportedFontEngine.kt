@@ -49,6 +49,15 @@ internal object ReferenceImportedFontEngine {
     private const val DEFAULT_TATAMI_STITCH_LENGTH_MM =
         2.5f
 
+    private const val TATAMI_ROW_PITCH_MM =
+        0.30f
+
+    private const val TATAMI_EDGE_OVERLAP_MM =
+        0.12f
+
+    private const val TATAMI_STAGGER_FACTOR =
+        0.50f
+
     private const val TATAMI_MIN_WIDE_ROW_RATIO =
         0.25f
 
@@ -8723,13 +8732,312 @@ internal object ReferenceImportedFontEngine {
                         0.82
         }
 
+        private fun alignTatamiRows(
+            rows: List<SatinRow>
+        ): List<SatinRow> {
+            if (
+                rows.size <
+                    2
+            ) {
+                return rows
+            }
+
+            val aligned =
+                mutableListOf(
+                    rows.first()
+                )
+
+            rows.drop(
+                1
+            ).forEach {
+                    row ->
+                val previous =
+                    aligned.last()
+
+                val same =
+                    distance(
+                        previous.a,
+                        row.a
+                    ) +
+                        distance(
+                            previous.b,
+                            row.b
+                        )
+
+                val flipped =
+                    distance(
+                        previous.a,
+                        row.b
+                    ) +
+                        distance(
+                            previous.b,
+                            row.a
+                        )
+
+                aligned +=
+                    if (
+                        flipped <
+                            same
+                    ) {
+                        SatinRow(
+                            a =
+                                row.b,
+                            b =
+                                row.a
+                        )
+                    } else {
+                        row
+                    }
+            }
+
+            return aligned
+        }
+
+        private fun densifyTatamiRows(
+            rows: List<SatinRow>
+        ): List<SatinRow> {
+            val aligned =
+                alignTatamiRows(
+                    rows
+                )
+
+            if (
+                aligned.size <
+                    2
+            ) {
+                return aligned
+            }
+
+            val maxPitchUnits =
+                TATAMI_ROW_PITCH_MM *
+                    10f
+
+            val result =
+                mutableListOf<SatinRow>()
+
+            aligned
+                .zipWithNext()
+                .forEachIndexed {
+                        index,
+                        pair ->
+                    if (
+                        index ==
+                            0
+                    ) {
+                        result +=
+                            pair.first
+                    }
+
+                    val firstCenter =
+                        FPoint(
+                            (
+                                pair.first.a.x +
+                                    pair.first.b.x
+                                ) /
+                                2f,
+                            (
+                                pair.first.a.y +
+                                    pair.first.b.y
+                                ) /
+                                2f
+                        )
+
+                    val secondCenter =
+                        FPoint(
+                            (
+                                pair.second.a.x +
+                                    pair.second.b.x
+                                ) /
+                                2f,
+                            (
+                                pair.second.a.y +
+                                    pair.second.b.y
+                                ) /
+                                2f
+                        )
+
+                    val gap =
+                        distance(
+                            firstCenter,
+                            secondCenter
+                        )
+
+                    val pieces =
+                        max(
+                            1,
+                            ceil(
+                                gap /
+                                    maxPitchUnits
+                                        .coerceAtLeast(
+                                            1f
+                                        )
+                            ).toInt()
+                        )
+
+                    for (
+                        part in
+                            1 until pieces
+                    ) {
+                        val ratio =
+                            part.toFloat() /
+                                pieces
+
+                        result +=
+                            SatinRow(
+                                a =
+                                    lerp(
+                                        pair.first.a,
+                                        pair.second.a,
+                                        ratio
+                                    ),
+                                b =
+                                    lerp(
+                                        pair.first.b,
+                                        pair.second.b,
+                                        ratio
+                                    )
+                            )
+                    }
+
+                    result +=
+                        pair.second
+                }
+
+            return result
+        }
+
+        private fun expandTatamiRow(
+            row: SatinRow
+        ): SatinRow {
+            val dx =
+                row.b.x -
+                    row.a.x
+
+            val dy =
+                row.b.y -
+                    row.a.y
+
+            val length =
+                hypot(
+                    dx.toDouble(),
+                    dy.toDouble()
+                )
+                    .toFloat()
+
+            if (
+                length <
+                    0.001f
+            ) {
+                return row
+            }
+
+            val overlap =
+                TATAMI_EDGE_OVERLAP_MM *
+                    10f
+
+            val ux =
+                dx /
+                    length
+
+            val uy =
+                dy /
+                    length
+
+            return SatinRow(
+                a =
+                    FPoint(
+                        row.a.x -
+                            ux *
+                                overlap,
+                        row.a.y -
+                            uy *
+                                overlap
+                    ),
+                b =
+                    FPoint(
+                        row.b.x +
+                            ux *
+                                overlap,
+                        row.b.y +
+                            uy *
+                                overlap
+                    )
+            )
+        }
+
+        private fun emitTatamiSegmented(
+            from: FPoint,
+            to: FPoint,
+            maxSegmentUnits: Float,
+            staggered: Boolean
+        ) {
+            val total =
+                distance(
+                    from,
+                    to
+                )
+
+            if (
+                total <
+                    0.001f
+            ) {
+                return
+            }
+
+            val step =
+                maxSegmentUnits
+                    .coerceAtLeast(
+                        1f
+                    )
+
+            var travelled =
+                if (
+                    staggered
+                ) {
+                    step *
+                        TATAMI_STAGGER_FACTOR
+                } else {
+                    step
+                }
+
+            while (
+                travelled <
+                    total
+            ) {
+                emit(
+                    lerp(
+                        from,
+                        to,
+                        travelled /
+                            total
+                    ),
+                    StitchCommand.STITCH
+                )
+
+                travelled +=
+                    step
+            }
+
+            emit(
+                to,
+                StitchCommand.STITCH
+            )
+        }
+
         private fun emitTatamiColumn(
             column: SatinColumn,
             endHint: FPoint? =
                 null
         ) {
             val sourceRows =
-                column.rows
+                densifyTatamiRows(
+                    column.rows
+                )
+                    .map {
+                        expandTatamiRow(
+                            it
+                        )
+                    }
 
             if (
                 sourceRows.isEmpty()
@@ -8903,16 +9211,16 @@ internal object ReferenceImportedFontEngine {
                     start
                 )
 
-                emitSegmented(
+                emitTatamiSegmented(
                     from =
                         current
                             ?: start,
                     to =
                         end,
-                    command =
-                        StitchCommand.STITCH,
                     maxSegmentUnits =
-                        maxSegmentUnits
+                        maxSegmentUnits,
+                    staggered =
+                        !startOnA
                 )
 
                 startOnA =
