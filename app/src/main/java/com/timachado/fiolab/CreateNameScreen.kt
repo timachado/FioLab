@@ -369,44 +369,101 @@ fun CreateNameScreen(
             withContext(
                 Dispatchers.Default
             ) {
-                TextHoopAutoFit
-                    .fit(
-                        hoop =
-                            hoopProfile
-                    ) {
-                            candidateHeight ->
-                        TextLayoutGenerator
-                            .generate(
-                                baseOptions.copy(
-                                    textOptions =
-                                        baseOptions
-                                            .textOptions
-                                            .copy(
-                                                heightMm =
-                                                    candidateHeight
-                                            )
+                if (
+                    importedFont !=
+                        null &&
+                    layoutMode ==
+                        TextLayoutMode.STRAIGHT &&
+                    stitchStyle ==
+                        TextStitchStyle.SATIN &&
+                    specialStitchMode ==
+                        null
+                ) {
+                    runCatching {
+                        val fittedHeight =
+                            ImportedFontMatrixGenerator
+                                .fitHeightToHoopFast(
+                                    font =
+                                        importedFont,
+                                    text =
+                                        text,
+                                    spacingMm =
+                                        spacingMm,
+                                    hoop =
+                                        hoopProfile
                                 )
-                            )
+                                .getOrThrow()
+
+                        val design =
+                            TextLayoutGenerator
+                                .generate(
+                                    baseOptions.copy(
+                                        textOptions =
+                                            baseOptions
+                                                .textOptions
+                                                .copy(
+                                                    heightMm =
+                                                        fittedHeight
+                                                )
+                                    )
+                                )
+                                .getOrThrow()
+
+                        Pair(
+                            fittedHeight,
+                            design
+                        )
                     }
+                } else {
+                    TextHoopAutoFit
+                        .fit(
+                            hoop =
+                                hoopProfile
+                        ) {
+                                candidateHeight ->
+                            TextLayoutGenerator
+                                .generate(
+                                    baseOptions.copy(
+                                        textOptions =
+                                            baseOptions
+                                                .textOptions
+                                                .copy(
+                                                    heightMm =
+                                                        candidateHeight
+                                                )
+                                    )
+                                )
+                        }
+                        .map {
+                                fitted ->
+                            Pair(
+                                fitted.heightMm,
+                                fitted.design
+                            )
+                        }
+                }
             }
 
         val fitted =
             fittedResult.getOrNull()
 
         if (fitted != null) {
+            val fittedHeight =
+                fitted.first
+
             if (
                 kotlin.math.abs(
                     heightMm -
-                        fitted.heightMm
+                        fittedHeight
                 ) >=
                     0.05f
             ) {
                 heightMm =
-                    fitted.heightMm
+                    fittedHeight
             }
 
             preview =
-                fitted.design
+                fitted.second
 
             previewError =
                 null
