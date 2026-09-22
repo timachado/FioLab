@@ -58,18 +58,160 @@ data class HoopFitResult(
     val widthOverflowMm: Float,
     val heightOverflowMm: Float,
     val usableWidthMm: Float,
-    val usableHeightMm: Float
+    val usableHeightMm: Float,
+    val rotated90: Boolean = false,
+    val frameWidthMm: Float = usableWidthMm,
+    val frameHeightMm: Float = usableHeightMm
 )
 
 object HoopValidator {
     fun validate(
         design: EmbroideryDesign,
         hoop: HoopProfile
+    ): HoopFitResult =
+        validateOrientation(
+            design =
+                design,
+            hoop =
+                hoop,
+            rotated90 =
+                false
+        )
+
+    /**
+     * Validação usada no visualizador de matrizes importadas.
+     *
+     * O PE-DESIGN permite girar a Página de desenho em 90 graus para
+     * bastidores retangulares. Por isso, na visualização, escolhemos
+     * automaticamente a orientação do mesmo bastidor que melhor acomoda
+     * a matriz, sem girar os pontos do arquivo.
+     */
+    fun validateForViewer(
+        design: EmbroideryDesign,
+        hoop: HoopProfile
     ): HoopFitResult {
+        val normal =
+            validateOrientation(
+                design =
+                    design,
+                hoop =
+                    hoop,
+                rotated90 =
+                    false
+            )
+
+        if (
+            hoop.widthMm ==
+                hoop.heightMm
+        ) {
+            return normal
+        }
+
+        val rotated =
+            validateOrientation(
+                design =
+                    design,
+                hoop =
+                    hoop,
+                rotated90 =
+                    true
+            )
+
+        if (
+            normal.fits &&
+            !rotated.fits
+        ) {
+            return normal
+        }
+
+        if (
+            rotated.fits &&
+            !normal.fits
+        ) {
+            return rotated
+        }
+
+        val normalOverflow =
+            normal.widthOverflowMm +
+                normal.heightOverflowMm
+
+        val rotatedOverflow =
+            rotated.widthOverflowMm +
+                rotated.heightOverflowMm
+
+        return if (
+            rotatedOverflow <
+                normalOverflow
+        ) {
+            rotated
+        } else {
+            normal
+        }
+    }
+
+    fun recommendedForViewer(
+        design: EmbroideryDesign
+    ): HoopProfile =
+        HoopProfile
+            .entries
+            .firstOrNull {
+                    hoop ->
+                validateForViewer(
+                    design =
+                        design,
+                    hoop =
+                        hoop
+                ).fits
+            }
+            ?: HoopProfile
+                .entries
+                .last()
+
+    private fun validateOrientation(
+        design: EmbroideryDesign,
+        hoop: HoopProfile,
+        rotated90: Boolean
+    ): HoopFitResult {
+        val frameWidth =
+            if (
+                rotated90
+            ) {
+                hoop.heightMm
+            } else {
+                hoop.widthMm
+            }
+
+        val frameHeight =
+            if (
+                rotated90
+            ) {
+                hoop.widthMm
+            } else {
+                hoop.heightMm
+            }
+
+        val usableWidth =
+            (
+                frameWidth -
+                    hoop.safeMarginMm *
+                        2f
+                ).coerceAtLeast(
+                1f
+            )
+
+        val usableHeight =
+            (
+                frameHeight -
+                    hoop.safeMarginMm *
+                        2f
+                ).coerceAtLeast(
+                1f
+            )
+
         val widthOverflow =
             (
                 design.bounds.widthMm -
-                    hoop.usableWidthMm
+                    usableWidth
                 ).coerceAtLeast(
                     0f
                 )
@@ -77,7 +219,7 @@ object HoopValidator {
         val heightOverflow =
             (
                 design.bounds.heightMm -
-                    hoop.usableHeightMm
+                    usableHeight
                 ).coerceAtLeast(
                     0f
                 )
@@ -93,9 +235,15 @@ object HoopValidator {
             heightOverflowMm =
                 heightOverflow,
             usableWidthMm =
-                hoop.usableWidthMm,
+                usableWidth,
             usableHeightMm =
-                hoop.usableHeightMm
+                usableHeight,
+            rotated90 =
+                rotated90,
+            frameWidthMm =
+                frameWidth,
+            frameHeightMm =
+                frameHeight
         )
     }
 }
