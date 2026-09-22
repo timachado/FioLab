@@ -1245,6 +1245,15 @@ internal object ReferenceImportedFontEngine {
     private const val MAX_ADAPTIVE_WIDTH_GROWTH_FACTOR =
         1.65f
 
+    private const val BLOCK_RADIUS_CAP_FACTOR =
+        1.28f
+
+    private const val BLOCK_RADIUS_SMOOTH_WINDOW =
+        2
+
+    private const val JUNCTION_CLEARANCE_FACTOR =
+        1.35f
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1437,6 +1446,11 @@ internal object ReferenceImportedFontEngine {
                 raster
             )
 
+        val distanceField =
+            buildDistanceField(
+                raster
+            )
+
         val maxWidthUnits =
             maxSatinWidthMm *
                 10f
@@ -1494,11 +1508,23 @@ internal object ReferenceImportedFontEngine {
                                 true
                         }
 
+                        val blockSkeleton =
+                            clearJunctionNeighborhoods(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    componentSkeleton,
+                                distanceField =
+                                    distanceField,
+                                pitchUnits =
+                                    pitchUnits
+                            )
+
                         traceSkeletonPaths(
                             raster =
                                 raster,
                             skeleton =
-                                componentSkeleton
+                                blockSkeleton
                         )
                             .mapNotNull {
                                     path ->
@@ -1508,7 +1534,7 @@ internal object ReferenceImportedFontEngine {
                                     raster =
                                         raster,
                                     skeleton =
-                                        componentSkeleton,
+                                        blockSkeleton,
                                     pitchUnits =
                                         pitchUnits
                                 )
@@ -1520,6 +1546,8 @@ internal object ReferenceImportedFontEngine {
                                         path,
                                     raster =
                                         raster,
+                                    distanceField =
+                                        distanceField,
                                     pitchUnits =
                                         pitchUnits,
                                     maxRayUnits =
@@ -2461,6 +2489,419 @@ internal object ReferenceImportedFontEngine {
                 )
     }
 
+    private fun buildDistanceField(
+        raster: RasterGlyph
+    ): FloatArray {
+        val width =
+            raster.width
+
+        val height =
+            raster.height
+
+        val large =
+            (
+                width +
+                    height
+                ).toFloat() *
+                2f
+
+        val distance =
+            FloatArray(
+                raster.mask.size
+            ) {
+                index ->
+                if (
+                    raster.mask[
+                        index
+                    ]
+                ) {
+                    large
+                } else {
+                    0f
+                }
+            }
+
+        val diagonal =
+            1.41421356f
+
+        for (
+            y in
+                0 until height
+        ) {
+            for (
+                x in
+                    0 until width
+            ) {
+                val index =
+                    y *
+                        width +
+                        x
+
+                if (
+                    !raster.mask[
+                        index
+                    ]
+                ) {
+                    continue
+                }
+
+                var best =
+                    distance[
+                        index
+                    ]
+
+                if (
+                    x >
+                        0
+                ) {
+                    best =
+                        minOf(
+                            best,
+                            distance[
+                                index -
+                                    1
+                            ] +
+                                1f
+                        )
+                }
+
+                if (
+                    y >
+                        0
+                ) {
+                    best =
+                        minOf(
+                            best,
+                            distance[
+                                index -
+                                    width
+                            ] +
+                                1f
+                        )
+
+                    if (
+                        x >
+                            0
+                    ) {
+                        best =
+                            minOf(
+                                best,
+                                distance[
+                                    index -
+                                        width -
+                                        1
+                                ] +
+                                    diagonal
+                            )
+                    }
+
+                    if (
+                        x <
+                            width -
+                                1
+                    ) {
+                        best =
+                            minOf(
+                                best,
+                                distance[
+                                    index -
+                                        width +
+                                        1
+                                ] +
+                                    diagonal
+                            )
+                    }
+                }
+
+                distance[
+                    index
+                ] =
+                    best
+            }
+        }
+
+        for (
+            y in
+                height -
+                    1 downTo 0
+        ) {
+            for (
+                x in
+                    width -
+                        1 downTo 0
+            ) {
+                val index =
+                    y *
+                        width +
+                        x
+
+                if (
+                    !raster.mask[
+                        index
+                    ]
+                ) {
+                    continue
+                }
+
+                var best =
+                    distance[
+                        index
+                    ]
+
+                if (
+                    x <
+                        width -
+                            1
+                ) {
+                    best =
+                        minOf(
+                            best,
+                            distance[
+                                index +
+                                    1
+                            ] +
+                                1f
+                        )
+                }
+
+                if (
+                    y <
+                        height -
+                            1
+                ) {
+                    best =
+                        minOf(
+                            best,
+                            distance[
+                                index +
+                                    width
+                            ] +
+                                1f
+                        )
+
+                    if (
+                        x >
+                            0
+                    ) {
+                        best =
+                            minOf(
+                                best,
+                                distance[
+                                    index +
+                                        width -
+                                        1
+                                ] +
+                                    diagonal
+                            )
+                    }
+
+                    if (
+                        x <
+                            width -
+                                1
+                    ) {
+                        best =
+                            minOf(
+                                best,
+                                distance[
+                                    index +
+                                        width +
+                                        1
+                                ] +
+                                    diagonal
+                            )
+                    }
+                }
+
+                distance[
+                    index
+                ] =
+                    best
+            }
+        }
+
+        return FloatArray(
+            distance.size
+        ) {
+                index ->
+            distance[
+                index
+            ] *
+                raster.step
+        }
+    }
+
+    private fun clearJunctionNeighborhoods(
+        raster: RasterGlyph,
+        skeleton: BooleanArray,
+        distanceField: FloatArray,
+        pitchUnits: Float
+    ): BooleanArray {
+        val result =
+            skeleton.copyOf()
+
+        val junctions =
+            skeleton.indices.filter {
+                    index ->
+                skeleton[
+                    index
+                ] &&
+                    skeletonNeighbors(
+                        index =
+                            index,
+                        raster =
+                            raster,
+                        skeleton =
+                            skeleton
+                    ).size >=
+                        3
+            }
+
+        if (
+            junctions.isEmpty()
+        ) {
+            return result
+        }
+
+        junctions.forEach {
+                junction ->
+            val localRadiusUnits =
+                distanceField
+                    .getOrElse(
+                        junction
+                    ) {
+                        pitchUnits
+                    }
+                    .coerceAtLeast(
+                        pitchUnits
+                    )
+
+            val clearanceCells =
+                ceil(
+                    (
+                        max(
+                            localRadiusUnits *
+                                JUNCTION_CLEARANCE_FACTOR,
+                            pitchUnits *
+                                1.5f
+                        ) /
+                            raster.step
+                        ).toDouble()
+                )
+                    .toInt()
+                    .coerceIn(
+                        2,
+                        12
+                    )
+
+            val centerX =
+                junction %
+                    raster.width
+
+            val centerY =
+                junction /
+                    raster.width
+
+            for (
+                dy in
+                    -clearanceCells..clearanceCells
+            ) {
+                for (
+                    dx in
+                        -clearanceCells..clearanceCells
+                ) {
+                    if (
+                        dx *
+                            dx +
+                            dy *
+                                dy >
+                            clearanceCells *
+                                clearanceCells
+                    ) {
+                        continue
+                    }
+
+                    val x =
+                        centerX +
+                            dx
+
+                    val y =
+                        centerY +
+                            dy
+
+                    if (
+                        x in
+                            0 until raster.width &&
+                        y in
+                            0 until raster.height
+                    ) {
+                        result[
+                            y *
+                                raster.width +
+                                x
+                        ] =
+                            false
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun smoothedLocalRadius(
+        path: List<Int>,
+        centerIndex: Int,
+        distanceField: FloatArray
+    ): Float {
+        val start =
+            (
+                centerIndex -
+                    BLOCK_RADIUS_SMOOTH_WINDOW
+                ).coerceAtLeast(
+                0
+            )
+
+        val end =
+            (
+                centerIndex +
+                    BLOCK_RADIUS_SMOOTH_WINDOW
+                ).coerceAtMost(
+                path.lastIndex
+            )
+
+        val values =
+            (
+                start..end
+            )
+                .mapNotNull {
+                        index ->
+                    distanceField
+                        .getOrNull(
+                            path[
+                                index
+                            ]
+                        )
+                        ?.takeIf {
+                            it.isFinite() &&
+                                it >
+                                    0f
+                        }
+                }
+
+        return if (
+            values.isEmpty()
+        ) {
+            0f
+        } else {
+            values
+                .sorted()[
+                    values.size /
+                        2
+                ]
+        }
+    }
+
     private fun splitSkeletonComponents(
         raster: RasterGlyph,
         skeleton: BooleanArray
@@ -3356,6 +3797,7 @@ internal object ReferenceImportedFontEngine {
     private fun satinColumnsFromSkeletonPath(
         path: List<Int>,
         raster: RasterGlyph,
+        distanceField: FloatArray,
         pitchUnits: Float,
         maxRayUnits: Float,
         maxSatinWidthUnits: Float,
@@ -3536,6 +3978,25 @@ internal object ReferenceImportedFontEngine {
                     centerIndex
                 ]
 
+            val localRadius =
+                smoothedLocalRadius(
+                    path =
+                        path,
+                    centerIndex =
+                        centerIndex,
+                    distanceField =
+                        distanceField
+                )
+
+            if (
+                localRadius <=
+                    raster.step *
+                        0.55f
+            ) {
+                flushCurrent()
+                return@forEach
+            }
+
             if (
                 !raster.contains(
                     center
@@ -3544,6 +4005,14 @@ internal object ReferenceImportedFontEngine {
                 flushCurrent()
                 return@forEach
             }
+
+            val localRayLimit =
+                minOf(
+                    maxRayUnits,
+                    localRadius *
+                        BLOCK_RADIUS_CAP_FACTOR +
+                        raster.step
+                )
 
             val positive =
                 rayToRasterBoundary(
@@ -3554,7 +4023,7 @@ internal object ReferenceImportedFontEngine {
                     raster =
                         raster,
                     maxDistance =
-                        maxRayUnits
+                        localRayLimit
                 )
 
             val negative =
@@ -3569,7 +4038,7 @@ internal object ReferenceImportedFontEngine {
                     raster =
                         raster,
                     maxDistance =
-                        maxRayUnits
+                        localRayLimit
                 )
 
             if (
@@ -3582,14 +4051,30 @@ internal object ReferenceImportedFontEngine {
                 return@forEach
             }
 
+            val cappedPositive =
+                minOf(
+                    positive,
+                    localRadius *
+                        BLOCK_RADIUS_CAP_FACTOR
+                )
+
+            val cappedNegative =
+                minOf(
+                    negative,
+                    localRadius *
+                        BLOCK_RADIUS_CAP_FACTOR
+                )
+
             val rawWidth =
-                positive +
-                    negative
+                cappedPositive +
+                    cappedNegative
 
             if (
                 rawWidth >
                     maxSatinWidthUnits *
-                        ADAPTIVE_MAX_RAW_WIDTH_FACTOR
+                        ADAPTIVE_MAX_RAW_WIDTH_FACTOR ||
+                rawWidth <
+                    raster.step
             ) {
                 flushCurrent()
                 return@forEach
@@ -3602,7 +4087,7 @@ internal object ReferenceImportedFontEngine {
                             center.x -
                                 normal.x *
                                     (
-                                        negative +
+                                        cappedNegative +
                                             pullUnits
                                         ),
                             center.y -
@@ -3617,7 +4102,7 @@ internal object ReferenceImportedFontEngine {
                             center.x +
                                 normal.x *
                                     (
-                                        positive +
+                                        cappedPositive +
                                             pullUnits
                                         ),
                             center.y +
