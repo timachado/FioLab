@@ -10871,7 +10871,7 @@ internal object ReferenceImportedFontEngine {
         maxWidthMm: Float =
             7f
     ): List<Float> =
-        sampleColumns(
+        buildAdaptiveSatinBlocks(
             polygons =
                 listOf(
                     Polygon(
