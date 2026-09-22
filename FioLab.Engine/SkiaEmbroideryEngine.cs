@@ -1648,10 +1648,10 @@ public sealed class SkiaEmbroideryEngine
                         continue;
                     }
 
-                    var firstCandidate = candidates[first.CandidateIndex];
-                    var secondCandidate = candidates[second.CandidateIndex];
+                    var pairCandidateA = candidates[first.CandidateIndex];
+                    var pairCandidateB = candidates[second.CandidateIndex];
 
-                    if (firstCandidate.Kind != secondCandidate.Kind)
+                    if (pairCandidateA.Kind != pairCandidateB.Kind)
                     {
                         continue;
                     }
