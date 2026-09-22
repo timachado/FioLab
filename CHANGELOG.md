@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.49.1
+
+### Fechamento de microvazios no Satin
+- Ajuste fino após a simulação de "Maria" na 0.49.0: formato, início e ordem dos blocos foram mantidos.
+- Pequenas falhas residuais nas emendas entre blocos passam a receber uma linha curta de fechamento na ponta do Satin.
+- O fechamento só é adicionado quando o centro, a travessa interna e o deslocamento até a ponta permanecem dentro do contorno do glifo.
+- A densidade geral do nome não foi aumentada; o objetivo é fechar apenas microvazios sem engrossar a letra.
+- Mantidos Blocos profissionais + Ordem Visual como padrão, underlay seguro, pareamento vetorial TTF/OTF e correções do viewer/bastidor.
+- Adicionado teste garantindo uma linha segura de fechamento em cada ponta de um bloco com espaço interno suficiente.
+
 ## 0.49.0
 
 ### Digitalização por Blocos
