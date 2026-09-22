@@ -1006,7 +1006,7 @@ fun CreateNameScreen(
                             }
 
                             Text(
-                                "Satin adaptativo: acompanha a direção de cada traço da TTF/OTF, muda o ângulo dentro da própria letra e preserva o contorno visual.",
+                                "Satin em blocos direcionais: divide a TTF/OTF em regiões de traço, controla a largura pela espessura local e muda a direção entre blocos.",
                                 color =
                                     FioTextMuted,
                                 fontSize =
