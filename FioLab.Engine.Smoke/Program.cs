@@ -134,8 +134,13 @@ for (var i = 1; i < holedPoints.Count; i++)
 
     if (samplesInsideHole > 0)
     {
+        var owner = holedObjects.First(item =>
+            item.Index == current.ObjectIndex);
+
         throw new InvalidOperationException(
-            "Smoke test: embroidery stitched across an empty internal gap.");
+            $"Smoke test: {owner.Kind} object {owner.Index} stitched across hole: " +
+            $"({previous.X:F2},{previous.Y:F2}) -> ({current.X:F2},{current.Y:F2}), " +
+            $"command={current.Command}.");
     }
 }
 
