@@ -148,6 +148,19 @@ internal object ReferenceImportedFontEngine {
             mutableListOf()
     )
 
+    private data class ContourRowCandidate(
+        val row: SatinRow,
+        val center: FPoint,
+        val axis: FPoint,
+        val width: Float
+    )
+
+    private data class RayBoundaryHit(
+        val point: FPoint,
+        val tangent: FPoint,
+        val distance: Float
+    )
+
     private data class ActiveColumn(
         val lastSpan: SpanSegment,
         val column: SatinColumn
@@ -1254,6 +1267,21 @@ internal object ReferenceImportedFontEngine {
     private const val JUNCTION_CLEARANCE_FACTOR =
         1.35f
 
+    private const val CONTOUR_PAIR_MIN_TANGENT_DOT =
+        0.50f
+
+    private const val CONTOUR_CHAIN_MIN_ROW_DOT =
+        0.78f
+
+    private const val CONTOUR_CHAIN_MIN_AXIS_DOT =
+        0.42f
+
+    private const val CONTOUR_PAIR_MAX_WIDTH_FACTOR =
+        1.12f
+
+    private const val CONTOUR_PAIR_PROBE_UNITS =
+        0.85f
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1266,6 +1294,30 @@ internal object ReferenceImportedFontEngine {
             return emptyList()
         }
 
+        val contourPaired =
+            buildContourPairedSatinBlocks(
+                polygons =
+                    polygons,
+                densityMm =
+                    densityMm,
+                maxSatinWidthMm =
+                    maxSatinWidthMm,
+                pullCompensationMm =
+                    pullCompensationMm
+            )
+
+        if (
+            contourPaired.isNotEmpty()
+        ) {
+            return contourPaired
+        }
+
+        /*
+         * Fallback de compatibilidade: somente fontes/geometrias que não
+         * forneçam pares de borda estáveis entram no motor adaptativo antigo.
+         * A direção principal das fontes salvas passa a nascer do contorno
+         * vetorial TTF/OTF, não do esqueleto raster.
+         */
         val adaptive =
             buildAdaptiveSatinBlocks(
                 polygons =
@@ -1284,11 +1336,6 @@ internal object ReferenceImportedFontEngine {
             return adaptive
         }
 
-        /*
-         * Fallback conservador para sinais muito pequenos/compactos em que
-         * o eixo medial não produz um percurso estável. O motor antigo fica
-         * disponível somente como proteção, não como estratégia principal.
-         */
         return sampleColumnsByAxis(
             polygons =
                 polygons,
@@ -1298,6 +1345,889 @@ internal object ReferenceImportedFontEngine {
                 maxSatinWidthMm,
             pullCompensationMm =
                 pullCompensationMm
+        )
+    }
+
+    private fun cross(
+        first: FPoint,
+        second: FPoint
+    ): Float =
+        first.x *
+            second.y -
+            first.y *
+                second.x
+
+    private fun rayBoundaryHit(
+        origin: FPoint,
+        direction: FPoint,
+        polygons: List<Polygon>,
+        maxDistance: Float
+    ): RayBoundaryHit? {
+        var best:
+            RayBoundaryHit? =
+            null
+
+        polygons.forEach {
+                polygon ->
+            val points =
+                polygon.points
+
+            if (
+                points.size <
+                    2
+            ) {
+                return@forEach
+            }
+
+            var previous =
+                points.last()
+
+            points.forEach {
+                    current ->
+                val segment =
+                    FPoint(
+                        current.x -
+                            previous.x,
+                        current.y -
+                            previous.y
+                    )
+
+                val denominator =
+                    cross(
+                        direction,
+                        segment
+                    )
+
+                if (
+                    kotlin.math.abs(
+                        denominator
+                    ) >
+                        0.00001f
+                ) {
+                    val delta =
+                        FPoint(
+                            previous.x -
+                                origin.x,
+                            previous.y -
+                                origin.y
+                        )
+
+                    val distanceAlongRay =
+                        cross(
+                            delta,
+                            segment
+                        ) /
+                            denominator
+
+                    val segmentPosition =
+                        cross(
+                            delta,
+                            direction
+                        ) /
+                            denominator
+
+                    if (
+                        distanceAlongRay >
+                            CONTOUR_PAIR_PROBE_UNITS *
+                                0.35f &&
+                        distanceAlongRay <=
+                            maxDistance &&
+                        segmentPosition >=
+                            -0.001f &&
+                        segmentPosition <=
+                            1.001f
+                    ) {
+                        val previousBest =
+                            best
+
+                        if (
+                            previousBest ==
+                                null ||
+                            distanceAlongRay <
+                                previousBest.distance
+                        ) {
+                            best =
+                                RayBoundaryHit(
+                                    point =
+                                        FPoint(
+                                            origin.x +
+                                                direction.x *
+                                                    distanceAlongRay,
+                                            origin.y +
+                                                direction.y *
+                                                    distanceAlongRay
+                                        ),
+                                    tangent =
+                                        normalize(
+                                            segment
+                                        ),
+                                    distance =
+                                        distanceAlongRay
+                                )
+                        }
+                    }
+                }
+
+                previous =
+                    current
+            }
+        }
+
+        return best
+    }
+
+    private fun chooseInwardNormal(
+        point: FPoint,
+        tangent: FPoint,
+        polygons: List<Polygon>
+    ): FPoint? {
+        val left =
+            FPoint(
+                -tangent.y,
+                tangent.x
+            )
+
+        val right =
+            FPoint(
+                tangent.y,
+                -tangent.x
+            )
+
+        val leftInside =
+            pointInsideGlyphAdaptive(
+                point =
+                    FPoint(
+                        point.x +
+                            left.x *
+                                CONTOUR_PAIR_PROBE_UNITS,
+                        point.y +
+                            left.y *
+                                CONTOUR_PAIR_PROBE_UNITS
+                    ),
+                polygons =
+                    polygons
+            )
+
+        val rightInside =
+            pointInsideGlyphAdaptive(
+                point =
+                    FPoint(
+                        point.x +
+                            right.x *
+                                CONTOUR_PAIR_PROBE_UNITS,
+                        point.y +
+                            right.y *
+                                CONTOUR_PAIR_PROBE_UNITS
+                    ),
+                polygons =
+                    polygons
+            )
+
+        return when {
+            leftInside &&
+                !rightInside ->
+                left
+
+            rightInside &&
+                !leftInside ->
+                right
+
+            else ->
+                null
+        }
+    }
+
+    private fun contourPairCandidates(
+        polygons: List<Polygon>,
+        pitchUnits: Float,
+        maxWidthUnits: Float,
+        pullUnits: Float
+    ): List<ContourRowCandidate> {
+        val result =
+            mutableListOf<
+                ContourRowCandidate
+            >()
+
+        val sampleStride =
+            max(
+                1,
+                (
+                    pitchUnits /
+                        2f
+                    ).roundToInt()
+            )
+
+        polygons.forEach {
+                polygon ->
+            val points =
+                polygon.points
+
+            if (
+                points.size <
+                    6
+            ) {
+                return@forEach
+            }
+
+            var index =
+                0
+
+            while (
+                index <
+                    points.size
+            ) {
+                val before =
+                    points[
+                        (
+                            index -
+                                2 +
+                                points.size
+                            ) %
+                            points.size
+                    ]
+
+                val point =
+                    points[
+                        index
+                    ]
+
+                val after =
+                    points[
+                        (
+                            index +
+                                2
+                            ) %
+                            points.size
+                    ]
+
+                val tangent =
+                    normalize(
+                        FPoint(
+                            after.x -
+                                before.x,
+                            after.y -
+                                before.y
+                        )
+                    )
+
+                if (
+                    kotlin.math.abs(
+                        tangent.x
+                    ) <
+                        0.0001f &&
+                    kotlin.math.abs(
+                        tangent.y
+                    ) <
+                        0.0001f
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val inward =
+                    chooseInwardNormal(
+                        point =
+                            point,
+                        tangent =
+                            tangent,
+                        polygons =
+                            polygons
+                    )
+
+                if (
+                    inward ==
+                        null
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val origin =
+                    FPoint(
+                        point.x +
+                            inward.x *
+                                CONTOUR_PAIR_PROBE_UNITS *
+                                0.55f,
+                        point.y +
+                            inward.y *
+                                CONTOUR_PAIR_PROBE_UNITS *
+                                0.55f
+                    )
+
+                val hit =
+                    rayBoundaryHit(
+                        origin =
+                            origin,
+                        direction =
+                            inward,
+                        polygons =
+                            polygons,
+                        maxDistance =
+                            maxWidthUnits *
+                                CONTOUR_PAIR_MAX_WIDTH_FACTOR
+                    )
+
+                if (
+                    hit ==
+                        null
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val tangentAgreement =
+                    kotlin.math.abs(
+                        tangent.x *
+                            hit.tangent.x +
+                            tangent.y *
+                                hit.tangent.y
+                    )
+
+                if (
+                    tangentAgreement <
+                        CONTOUR_PAIR_MIN_TANGENT_DOT
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val start =
+                    point
+
+                val end =
+                    hit.point
+
+                val width =
+                    distance(
+                        start,
+                        end
+                    )
+
+                if (
+                    width <
+                        0.8f ||
+                    width >
+                        maxWidthUnits *
+                            CONTOUR_PAIR_MAX_WIDTH_FACTOR
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val interiorStart =
+                    FPoint(
+                        start.x +
+                            inward.x *
+                                0.6f,
+                        start.y +
+                            inward.y *
+                                0.6f
+                    )
+
+                val interiorEnd =
+                    FPoint(
+                        end.x -
+                            inward.x *
+                                0.6f,
+                        end.y -
+                            inward.y *
+                                0.6f
+                    )
+
+                if (
+                    !segmentInsideGlyph(
+                        from =
+                            interiorStart,
+                        to =
+                            interiorEnd,
+                        polygons =
+                            polygons,
+                        sampleUnits =
+                            1.5f
+                    )
+                ) {
+                    index +=
+                        sampleStride
+
+                    continue
+                }
+
+                val row =
+                    SatinRow(
+                        a =
+                            FPoint(
+                                start.x -
+                                    inward.x *
+                                        pullUnits,
+                                start.y -
+                                    inward.y *
+                                        pullUnits
+                            ),
+                        b =
+                            FPoint(
+                                end.x +
+                                    inward.x *
+                                        pullUnits,
+                                end.y +
+                                    inward.y *
+                                        pullUnits
+                            )
+                    )
+
+                val center =
+                    FPoint(
+                        (
+                            row.a.x +
+                                row.b.x
+                            ) /
+                            2f,
+                        (
+                            row.a.y +
+                                row.b.y
+                            ) /
+                            2f
+                    )
+
+                result +=
+                    ContourRowCandidate(
+                        row =
+                            row,
+                        center =
+                            center,
+                        axis =
+                            tangent,
+                        width =
+                            width
+                    )
+
+                index +=
+                    sampleStride
+            }
+        }
+
+        return result
+    }
+
+    private fun dedupeContourCandidates(
+        candidates: List<ContourRowCandidate>,
+        pitchUnits: Float
+    ): List<ContourRowCandidate> {
+        val accepted =
+            mutableListOf<
+                ContourRowCandidate
+            >()
+
+        candidates
+            .sortedWith(
+                compareBy<ContourRowCandidate> {
+                    it.center.x
+                }.thenBy {
+                    it.center.y
+                }
+            )
+            .forEach {
+                    candidate ->
+                val candidateDirection =
+                    normalize(
+                        FPoint(
+                            candidate.row.b.x -
+                                candidate.row.a.x,
+                            candidate.row.b.y -
+                                candidate.row.a.y
+                        )
+                    )
+
+                val duplicate =
+                    accepted.any {
+                            existing ->
+                        if (
+                            distance(
+                                candidate.center,
+                                existing.center
+                            ) >
+                                pitchUnits *
+                                    0.62f
+                        ) {
+                            false
+                        } else {
+                            val existingDirection =
+                                normalize(
+                                    FPoint(
+                                        existing.row.b.x -
+                                            existing.row.a.x,
+                                        existing.row.b.y -
+                                            existing.row.a.y
+                                    )
+                                )
+
+                            kotlin.math.abs(
+                                candidateDirection.x *
+                                    existingDirection.x +
+                                    candidateDirection.y *
+                                        existingDirection.y
+                            ) >
+                                0.90f
+                        }
+                    }
+
+                if (
+                    !duplicate
+                ) {
+                    accepted +=
+                        candidate
+                }
+            }
+
+        return accepted
+    }
+
+    private fun contourCandidatesToColumns(
+        candidates: List<ContourRowCandidate>,
+        polygons: List<Polygon>,
+        pitchUnits: Float
+    ): List<SatinColumn> {
+        if (
+            candidates.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        val remaining =
+            candidates
+                .toMutableList()
+
+        val columns =
+            mutableListOf<
+                SatinColumn
+            >()
+
+        while (
+            remaining.isNotEmpty()
+        ) {
+            val seedIndex =
+                remaining.indices.minWithOrNull(
+                    compareBy<Int> {
+                        remaining[
+                            it
+                        ].center.x
+                    }.thenBy {
+                        remaining[
+                            it
+                        ].center.y
+                    }
+                )
+                    ?: 0
+
+            val seed =
+                remaining.removeAt(
+                    seedIndex
+                )
+
+            val rows =
+                mutableListOf(
+                    seed
+                )
+
+            var current =
+                seed
+
+            while (
+                remaining.isNotEmpty()
+            ) {
+                val currentDirection =
+                    normalize(
+                        FPoint(
+                            current.row.b.x -
+                                current.row.a.x,
+                            current.row.b.y -
+                                current.row.a.y
+                        )
+                    )
+
+                var bestIndex =
+                    -1
+
+                var bestDistance =
+                    Float.MAX_VALUE
+
+                remaining.forEachIndexed {
+                        index,
+                        candidate ->
+                    val centerDistance =
+                        distance(
+                            current.center,
+                            candidate.center
+                        )
+
+                    val maximumDistance =
+                        max(
+                            pitchUnits *
+                                3.4f,
+                            minOf(
+                                current.width,
+                                candidate.width
+                            ) *
+                                0.95f
+                        )
+
+                    if (
+                        centerDistance >
+                            maximumDistance ||
+                        centerDistance <=
+                            0.001f
+                    ) {
+                        return@forEachIndexed
+                    }
+
+                    val candidateDirection =
+                        normalize(
+                            FPoint(
+                                candidate.row.b.x -
+                                    candidate.row.a.x,
+                                candidate.row.b.y -
+                                    candidate.row.a.y
+                            )
+                        )
+
+                    val rowDot =
+                        kotlin.math.abs(
+                            currentDirection.x *
+                                candidateDirection.x +
+                                currentDirection.y *
+                                    candidateDirection.y
+                        )
+
+                    if (
+                        rowDot <
+                            CONTOUR_CHAIN_MIN_ROW_DOT
+                    ) {
+                        return@forEachIndexed
+                    }
+
+                    val displacement =
+                        normalize(
+                            FPoint(
+                                candidate.center.x -
+                                    current.center.x,
+                                candidate.center.y -
+                                    current.center.y
+                            )
+                        )
+
+                    val currentAxisDot =
+                        kotlin.math.abs(
+                            displacement.x *
+                                current.axis.x +
+                                displacement.y *
+                                    current.axis.y
+                        )
+
+                    val candidateAxisDot =
+                        kotlin.math.abs(
+                            displacement.x *
+                                candidate.axis.x +
+                                displacement.y *
+                                    candidate.axis.y
+                        )
+
+                    if (
+                        max(
+                            currentAxisDot,
+                            candidateAxisDot
+                        ) <
+                            CONTOUR_CHAIN_MIN_AXIS_DOT
+                    ) {
+                        return@forEachIndexed
+                    }
+
+                    if (
+                        !segmentInsideGlyph(
+                            from =
+                                current.center,
+                            to =
+                                candidate.center,
+                            polygons =
+                                polygons,
+                            sampleUnits =
+                                1.5f
+                        )
+                    ) {
+                        return@forEachIndexed
+                    }
+
+                    if (
+                        centerDistance <
+                            bestDistance
+                    ) {
+                        bestDistance =
+                            centerDistance
+
+                        bestIndex =
+                            index
+                    }
+                }
+
+                if (
+                    bestIndex <
+                        0
+                ) {
+                    break
+                }
+
+                current =
+                    remaining.removeAt(
+                        bestIndex
+                    )
+
+                rows +=
+                    current
+            }
+
+            if (
+                rows.size <
+                    2
+            ) {
+                continue
+            }
+
+            val stitchedRows =
+                mutableListOf<
+                    SatinRow
+                >()
+
+            rows.forEach {
+                    candidate ->
+                var row =
+                    candidate.row
+
+                val previous =
+                    stitchedRows.lastOrNull()
+
+                if (
+                    previous !=
+                        null
+                ) {
+                    val direct =
+                        distance(
+                            previous.a,
+                            row.a
+                        ) +
+                            distance(
+                                previous.b,
+                                row.b
+                            )
+
+                    val swapped =
+                        distance(
+                            previous.a,
+                            row.b
+                        ) +
+                            distance(
+                                previous.b,
+                                row.a
+                            )
+
+                    if (
+                        swapped <
+                            direct
+                    ) {
+                        row =
+                            SatinRow(
+                                a =
+                                    row.b,
+                                b =
+                                    row.a
+                            )
+                    }
+                }
+
+                stitchedRows +=
+                    row
+            }
+
+            columns +=
+                SatinColumn(
+                    rows =
+                        stitchedRows
+                )
+        }
+
+        return columns
+    }
+
+    private fun buildContourPairedSatinBlocks(
+        polygons: List<Polygon>,
+        densityMm: Float,
+        maxSatinWidthMm: Float,
+        pullCompensationMm: Float
+    ): List<SatinColumn> {
+        val pitchUnits =
+            (
+                densityMm *
+                    10f
+                ).coerceAtLeast(
+                1f
+            )
+
+        val maxWidthUnits =
+            maxSatinWidthMm *
+                10f
+
+        val pullUnits =
+            pullCompensationMm *
+                10f
+
+        val candidates =
+            dedupeContourCandidates(
+                candidates =
+                    contourPairCandidates(
+                        polygons =
+                            polygons,
+                        pitchUnits =
+                            pitchUnits,
+                        maxWidthUnits =
+                            maxWidthUnits,
+                        pullUnits =
+                            pullUnits
+                    ),
+                pitchUnits =
+                    pitchUnits
+            )
+
+        val columns =
+            contourCandidatesToColumns(
+                candidates =
+                    candidates,
+                polygons =
+                    polygons,
+                pitchUnits =
+                    pitchUnits
+            )
+
+        val rowCount =
+            columns.sumOf {
+                it.rows.size
+            }
+
+        if (
+            rowCount <
+                3
+        ) {
+            return emptyList()
+        }
+
+        return standardSewingOrder(
+            columns
         )
     }
 
