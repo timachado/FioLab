@@ -6240,6 +6240,93 @@ internal object ReferenceImportedFontEngine {
                         ratio
         )
 
+    internal fun debugAdaptiveMaxTurnDegrees(
+        polygon:
+            List<Pair<Float, Float>>,
+        densityMm: Float =
+            0.4f,
+        maxWidthMm: Float =
+            7f
+    ): Float {
+        var maximum =
+            0f
+
+        buildAdaptiveSatinBlocks(
+            polygons =
+                listOf(
+                    Polygon(
+                        polygon.map {
+                            FPoint(
+                                it.first,
+                                it.second
+                            )
+                        }
+                    )
+                ),
+            densityMm =
+                densityMm,
+            maxSatinWidthMm =
+                maxWidthMm,
+            pullCompensationMm =
+                0f
+        )
+            .forEach {
+                    column ->
+                column.rows
+                    .zipWithNext()
+                    .forEach {
+                            pair ->
+                        val first =
+                            normalize(
+                                FPoint(
+                                    pair.first.b.x -
+                                        pair.first.a.x,
+                                    pair.first.b.y -
+                                        pair.first.a.y
+                                )
+                            )
+
+                        val second =
+                            normalize(
+                                FPoint(
+                                    pair.second.b.x -
+                                        pair.second.a.x,
+                                    pair.second.b.y -
+                                        pair.second.a.y
+                                )
+                            )
+
+                        val dot =
+                            kotlin.math.abs(
+                                first.x *
+                                    second.x +
+                                    first.y *
+                                        second.y
+                            )
+                                .coerceIn(
+                                    -1f,
+                                    1f
+                                )
+
+                        val degrees =
+                            Math.toDegrees(
+                                kotlin.math.acos(
+                                    dot.toDouble()
+                                )
+                            )
+                                .toFloat()
+
+                        maximum =
+                            max(
+                                maximum,
+                                degrees
+                            )
+                    }
+            }
+
+        return maximum
+    }
+
     internal fun debugAdaptiveRowVectors(
         polygon:
             List<Pair<Float, Float>>,
