@@ -952,6 +952,11 @@ internal object ReferenceImportedFontEngine {
                 raster
             )
 
+        val distanceField =
+            buildDistanceField(
+                raster
+            )
+
         val pitchUnits =
             (
                 densityMm *
@@ -1041,27 +1046,111 @@ internal object ReferenceImportedFontEngine {
                                 true
                         }
 
-                        traceSkeletonPaths(
-                            raster =
-                                raster,
-                            skeleton =
-                                componentMask
-                        )
-                            .flatMap {
-                                    path ->
-                                cleanObjectsFromSkeletonPath(
-                                    pathIndices =
-                                        path,
-                                    raster =
-                                        raster,
-                                    polygons =
-                                        polygons,
-                                    densityMm =
-                                        densityMm,
-                                    pullMm =
-                                        pullMm
-                                )
-                            }
+                        val junctionCenters =
+                            findJunctionCenters(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    componentMask,
+                                distanceField =
+                                    distanceField
+                            )
+
+                        val branchSkeleton =
+                            clearJunctionNeighborhoods(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    componentMask,
+                                distanceField =
+                                    distanceField,
+                                pitchUnits =
+                                    pitchUnits,
+                                junctionCenters =
+                                    junctionCenters
+                            )
+
+                        val branchObjects =
+                            traceSkeletonPaths(
+                                raster =
+                                    raster,
+                                skeleton =
+                                    branchSkeleton
+                            )
+                                .mapNotNull {
+                                        path ->
+                                    prepareAdaptiveSkeletonPath(
+                                        path =
+                                            path,
+                                        raster =
+                                            raster,
+                                        skeleton =
+                                            branchSkeleton,
+                                        pitchUnits =
+                                            pitchUnits
+                                    )
+                                }
+                                .flatMap {
+                                        path ->
+                                    cleanObjectsFromSkeletonPath(
+                                        pathIndices =
+                                            path,
+                                        raster =
+                                            raster,
+                                        polygons =
+                                            polygons,
+                                        densityMm =
+                                            densityMm,
+                                        pullMm =
+                                            pullMm
+                                    )
+                                }
+
+                        /*
+                         * A junção não vira Satin. Ela é um pequeno patch
+                         * Tatami local alinhado ao eixo dominante. Isso
+                         * fecha o miolo sem abrir um leque entre ramos.
+                         */
+                        val junctionObjects =
+                            junctionCenters
+                                .mapNotNull {
+                                        junction ->
+                                    buildJunctionSatinBlock(
+                                        junction =
+                                            junction,
+                                        raster =
+                                            raster,
+                                        skeleton =
+                                            componentMask,
+                                        distanceField =
+                                            distanceField,
+                                        pitchUnits =
+                                            pitchUnits,
+                                        maxSatinWidthUnits =
+                                            CLEAN_MAX_SATIN_WIDTH_MM *
+                                                10f,
+                                        pullUnits =
+                                            pullUnits
+                                    )
+                                }
+                                .map {
+                                        column ->
+                                    CleanObject(
+                                        kind =
+                                            CleanObjectKind.TATAMI,
+                                        rows =
+                                            column.rows,
+                                        path =
+                                            column.rows.map {
+                                                cleanRowCenter(
+                                                    it
+                                                )
+                                            }
+                                    )
+                                }
+
+                        branchObjects +
+                            junctionObjects
                     }
                 }
                 .filter {
@@ -2055,6 +2144,173 @@ internal object ReferenceImportedFontEngine {
             current =
                 point
         }
+    }
+
+    internal fun debugCleanJunctionKinds():
+        List<String> {
+        val width =
+            81
+
+        val height =
+            81
+
+        val mask =
+            BooleanArray(
+                width *
+                    height
+            )
+
+        fun fillRect(
+            left: Int,
+            top: Int,
+            right: Int,
+            bottom: Int
+        ) {
+            for (
+                y in
+                    top..bottom
+            ) {
+                for (
+                    x in
+                        left..right
+                ) {
+                    if (
+                        x in
+                            0 until width &&
+                        y in
+                            0 until height
+                    ) {
+                        mask[
+                            y *
+                                width +
+                                x
+                        ] =
+                            true
+                    }
+                }
+            }
+        }
+
+        fillRect(
+            35,
+            4,
+            45,
+            76
+        )
+
+        for (
+            step in
+                0..30
+        ) {
+            val y =
+                35 +
+                    step
+
+            val xLeft =
+                35 -
+                    step
+
+            val xRight =
+                45 +
+                    step
+
+            fillRect(
+                xLeft -
+                    4,
+                y -
+                    3,
+                xLeft +
+                    4,
+                y +
+                    3
+            )
+
+            fillRect(
+                xRight -
+                    4,
+                y -
+                    3,
+                xRight +
+                    4,
+                y +
+                    3
+            )
+        }
+
+        val raster =
+            RasterGlyph(
+                originX =
+                    0f,
+                originY =
+                    0f,
+                step =
+                    1f,
+                width =
+                    width,
+                height =
+                    height,
+                mask =
+                    mask
+            )
+
+        val skeleton =
+            thinMask(
+                raster
+            )
+
+        val distanceField =
+            buildDistanceField(
+                raster
+            )
+
+        val junctions =
+            findJunctionCenters(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton,
+                distanceField =
+                    distanceField
+            )
+
+        val branchSkeleton =
+            clearJunctionNeighborhoods(
+                raster =
+                    raster,
+                skeleton =
+                    skeleton,
+                distanceField =
+                    distanceField,
+                pitchUnits =
+                    4f,
+                junctionCenters =
+                    junctions
+            )
+
+        val kinds =
+            mutableListOf<String>()
+
+        traceSkeletonPaths(
+            raster =
+                raster,
+            skeleton =
+                branchSkeleton
+        )
+            .filter {
+                it.size >=
+                    2
+            }
+            .forEach {
+                kinds +=
+                    "BRANCH"
+            }
+
+        junctions.forEach {
+            kinds +=
+                "JUNCTION_TATAMI"
+        }
+
+        return kinds
     }
 
     internal fun debugCleanRailAlignment():
