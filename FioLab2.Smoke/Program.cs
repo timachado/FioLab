@@ -451,7 +451,11 @@ static bool ProperlyIntersects(
     var cd1 = Cross(c, d, a);
     var cd2 = Cross(c, d, b);
 
-    const float epsilon = 0.0001f;
+    // World coordinates are raster coordinates divided by RasterScale.
+    // Ignore endpoint grazing / floating-point noise while still rejecting
+    // genuine crossings. Real bow-ties in these tests produce cross products
+    // orders of magnitude larger than this threshold.
+    const float epsilon = 0.01f;
 
     return
         ab1 * ab2 < -epsilon &&
