@@ -413,9 +413,19 @@ static void AssertNoSelfCrossing(
                     segments[second].A,
                     segments[second].B))
             {
+                var firstSegment =
+                    segments[first];
+
+                var secondSegment =
+                    segments[second];
+
                 throw new InvalidOperationException(
                     $"{name}: Satin object {item.Index} self-crossed " +
-                    $"at stitch segments {first} and {second}.");
+                    $"at stitch segments {first} and {second}. " +
+                    $"S{first}=({firstSegment.A.X:F2},{firstSegment.A.Y:F2})->" +
+                    $"({firstSegment.B.X:F2},{firstSegment.B.Y:F2}); " +
+                    $"S{second}=({secondSegment.A.X:F2},{secondSegment.A.Y:F2})->" +
+                    $"({secondSegment.B.X:F2},{secondSegment.B.Y:F2}).");
             }
         }
     }
