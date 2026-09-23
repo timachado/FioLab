@@ -14,12 +14,13 @@ var options = new DigitizeOptions(
 RunStraight(engine, options);
 RunDiagonal(engine, options);
 RunBent(engine, options);
+RunConcaveU(engine, options);
 RunTee(engine, options);
 RunLoop(engine, options);
 RunCompactFill(engine, options);
 
 Console.WriteLine(
-    "OK: FioLab V2 core passed straight, diagonal, bend, T-junction, loop and compact-fill tests.");
+    "OK: FioLab V2 core passed straight, diagonal, bend, concave-U, T-junction, loop and compact-fill tests.");
 
 static void RunStraight(
     FioLab2Engine engine,
@@ -165,6 +166,67 @@ static void RunBent(
         AssertNoSelfCrossing(
             item,
             "L bend");
+    }
+}
+
+static void RunConcaveU(
+    FioLab2Engine engine,
+    DigitizeOptions options)
+{
+    using var path = new SKPath();
+
+    path.AddRect(
+        new SKRect(
+            18f,
+            18f,
+            42f,
+            146f));
+
+    path.AddRect(
+        new SKRect(
+            102f,
+            18f,
+            126f,
+            146f));
+
+    path.AddRect(
+        new SKRect(
+            18f,
+            122f,
+            126f,
+            146f));
+
+    var objects =
+        Digitize(
+            engine,
+            path,
+            options);
+
+    var satin =
+        objects.Where(static item =>
+            item.Kind == EmbroideryKind.Satin)
+        .ToList();
+
+    Require(
+        satin.Count <= 3,
+        $"concave U: fragmented into {satin.Count} Satin objects.");
+
+    var totalJumps =
+        satin.Sum(CountJumps);
+
+    Require(
+        totalJumps <= satin.Count + 2,
+        $"concave U: too many travels ({totalJumps} jumps across {satin.Count} objects).");
+
+    Require(
+        satin.Sum(static item => item.Points.Count) >= 30,
+        "concave U: result became too sparse.");
+
+    foreach (var item in satin)
+    {
+        AssertNoSelfCrossing(
+            item,
+            "concave U");
     }
 }
 
