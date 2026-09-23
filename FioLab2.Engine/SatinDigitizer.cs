@@ -358,6 +358,7 @@ internal static class SatinDigitizer
                         previousEnd.Value,
                         previousRow.Value,
                         start,
+                        end,
                         row,
                         component,
                         emittedSegments)
@@ -425,6 +426,7 @@ internal static class SatinDigitizer
         PixelPoint previousEnd,
         SatinRow previousRow,
         PixelPoint currentStart,
+        PixelPoint currentEnd,
         SatinRow currentRow,
         Component component,
         IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments)
@@ -434,7 +436,12 @@ internal static class SatinDigitizer
                 previousEnd,
                 currentStart,
                 component,
-                emittedSegments))
+                emittedSegments) &&
+            !Geometry.ProperlyIntersects(
+                previousEnd,
+                currentStart,
+                currentStart,
+                currentEnd))
         {
             return
             [
@@ -488,13 +495,44 @@ internal static class SatinDigitizer
                     previousEnd,
                     route,
                     component,
-                    emittedSegments))
+                    emittedSegments) &&
+                !ConnectorPathCrossesTargetRow(
+                    previousEnd,
+                    route,
+                    currentStart,
+                    currentEnd))
             {
                 return route.ToList();
             }
         }
 
         return null;
+    }
+
+    private static bool ConnectorPathCrossesTargetRow(
+        PixelPoint origin,
+        IReadOnlyList<PixelPoint> route,
+        PixelPoint rowStart,
+        PixelPoint rowEnd)
+    {
+        var from = origin;
+
+        foreach (var to in route)
+        {
+            if (
+                Geometry.ProperlyIntersects(
+                    from,
+                    to,
+                    rowStart,
+                    rowEnd))
+            {
+                return true;
+            }
+
+            from = to;
+        }
+
+        return false;
     }
 
     private static bool IsSafeConnectorPath(
