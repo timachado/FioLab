@@ -505,6 +505,9 @@ internal static class SatinDigitizer
     {
         var from = origin;
 
+        var localSegments =
+            new List<(PixelPoint A, PixelPoint B)>();
+
         foreach (var to in route)
         {
             if (
@@ -516,6 +519,22 @@ internal static class SatinDigitizer
             {
                 return false;
             }
+
+            foreach (var local in localSegments)
+            {
+                if (
+                    Geometry.ProperlyIntersects(
+                        from,
+                        to,
+                        local.A,
+                        local.B))
+                {
+                    return false;
+                }
+            }
+
+            localSegments.Add(
+                (from, to));
 
             from = to;
         }
