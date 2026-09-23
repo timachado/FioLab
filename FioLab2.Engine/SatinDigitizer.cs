@@ -332,6 +332,9 @@ internal static class SatinDigitizer
         var emittedSegments =
             new List<(PixelPoint A, PixelPoint B)>();
 
+        var typedSegments =
+            new List<(PixelPoint A, PixelPoint B, string Kind)>();
+
         var allSatinBars =
             rows
                 .Select(static row =>
@@ -393,6 +396,9 @@ internal static class SatinDigitizer
                     emittedSegments.Add(
                         (from, point));
 
+                    typedSegments.Add(
+                        (from, point, "TRAVEL"));
+
                     from = point;
                 }
             }
@@ -422,11 +428,50 @@ internal static class SatinDigitizer
             emittedSegments.Add(
                 (start, end));
 
+            typedSegments.Add(
+                (start, end, "BAR"));
+
             previousEnd = end;
             previousRow = row;
         }
 
+        ValidateTypedSegments(
+            typedSegments);
+
         return result;
+    }
+
+    private static void ValidateTypedSegments(
+        IReadOnlyList<(PixelPoint A, PixelPoint B, string Kind)> segments)
+    {
+        for (var first = 0;
+             first < segments.Count;
+             first++)
+        {
+            for (var second = first + 2;
+                 second < segments.Count;
+                 second++)
+            {
+                var a = segments[first];
+                var b = segments[second];
+
+                if (
+                    !Geometry.ProperlyIntersects(
+                        a.A,
+                        a.B,
+                        b.A,
+                        b.B))
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Satin invariant: {a.Kind} segment {first} crosses " +
+                    $"{b.Kind} segment {second}. " +
+                    $"A=({a.A.X:F2},{a.A.Y:F2})->({a.B.X:F2},{a.B.Y:F2}); " +
+                    $"B=({b.A.X:F2},{b.A.Y:F2})->({b.B.X:F2},{b.B.Y:F2}).");
+            }
+        }
     }
 
     private static List<PixelPoint>? BuildConnectorPath(
