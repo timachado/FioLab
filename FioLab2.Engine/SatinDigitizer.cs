@@ -332,6 +332,12 @@ internal static class SatinDigitizer
         var emittedSegments =
             new List<(PixelPoint A, PixelPoint B)>();
 
+        var allSatinBars =
+            rows
+                .Select(static row =>
+                    (row.A, row.B))
+                .ToList();
+
         PixelPoint? previousEnd = null;
         SatinRow? previousRow = null;
 
@@ -361,7 +367,8 @@ internal static class SatinDigitizer
                         end,
                         row,
                         component,
-                        emittedSegments)
+                        emittedSegments,
+                        allSatinBars)
                     : null;
 
             if (
@@ -429,14 +436,16 @@ internal static class SatinDigitizer
         PixelPoint currentEnd,
         SatinRow currentRow,
         Component component,
-        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments)
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> allSatinBars)
     {
         if (
             IsSafeConnectorSegment(
                 previousEnd,
                 currentStart,
                 component,
-                emittedSegments) &&
+                emittedSegments,
+                allSatinBars) &&
             !Geometry.ProperlyIntersects(
                 previousEnd,
                 currentStart,
@@ -495,7 +504,8 @@ internal static class SatinDigitizer
                     previousEnd,
                     route,
                     component,
-                    emittedSegments) &&
+                    emittedSegments,
+                    allSatinBars) &&
                 !ConnectorPathCrossesTargetRow(
                     previousEnd,
                     route,
@@ -539,7 +549,8 @@ internal static class SatinDigitizer
         PixelPoint origin,
         IReadOnlyList<PixelPoint> route,
         Component component,
-        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments)
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> allSatinBars)
     {
         var from = origin;
 
@@ -553,7 +564,8 @@ internal static class SatinDigitizer
                     from,
                     to,
                     component,
-                    emittedSegments))
+                    emittedSegments,
+                    allSatinBars))
             {
                 return false;
             }
@@ -584,7 +596,8 @@ internal static class SatinDigitizer
         PixelPoint from,
         PixelPoint to,
         Component component,
-        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments) =>
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> allSatinBars) =>
         component.Contains(from) &&
         component.Contains(to) &&
         Geometry.SegmentInside(
@@ -594,7 +607,11 @@ internal static class SatinDigitizer
         !CrossesAny(
             from,
             to,
-            emittedSegments);
+            emittedSegments) &&
+        !CrossesAny(
+            from,
+            to,
+            allSatinBars);
 
     private static PixelPoint Lerp(
         PixelPoint from,
