@@ -208,7 +208,7 @@ internal static class SatinDigitizer
 
             var halfWidth =
                 MathF.Min(
-                    radius * 0.92f,
+                    radius * 0.88f,
                     maxHalfWidth);
 
             if (halfWidth < 0.85f)
@@ -333,6 +333,7 @@ internal static class SatinDigitizer
             new List<(PixelPoint A, PixelPoint B)>();
 
         PixelPoint? previousEnd = null;
+        SatinRow? previousRow = null;
 
         for (var index = 0;
              index < rows.Count;
@@ -350,39 +351,58 @@ internal static class SatinDigitizer
                     ? row.B
                     : row.A;
 
-            var connectorIsSafe =
+            var connector =
                 previousEnd is not null &&
-                Geometry.SegmentInside(
-                    component,
-                    previousEnd.Value,
-                    start) &&
-                !CrossesAny(
-                    previousEnd.Value,
-                    start,
-                    emittedSegments);
+                previousRow is not null
+                    ? BuildConnectorPath(
+                        previousEnd.Value,
+                        previousRow.Value,
+                        start,
+                        row,
+                        component,
+                        emittedSegments)
+                    : null;
 
-            var startWorld =
-                raster.ToWorld(start);
+            if (
+                connector is not null &&
+                connector.Count > 0)
+            {
+                var from =
+                    previousEnd!.Value;
+
+                foreach (var point in connector)
+                {
+                    var world =
+                        raster.ToWorld(point);
+
+                    result.Add(
+                        new StitchPoint(
+                            world.X,
+                            world.Y,
+                            StitchCommand.Stitch,
+                            objectIndex));
+
+                    emittedSegments.Add(
+                        (from, point));
+
+                    from = point;
+                }
+            }
+            else
+            {
+                var startWorld =
+                    raster.ToWorld(start);
+
+                result.Add(
+                    new StitchPoint(
+                        startWorld.X,
+                        startWorld.Y,
+                        StitchCommand.Jump,
+                        objectIndex));
+            }
 
             var endWorld =
                 raster.ToWorld(end);
-
-            result.Add(
-                new StitchPoint(
-                    startWorld.X,
-                    startWorld.Y,
-                    connectorIsSafe
-                        ? StitchCommand.Stitch
-                        : StitchCommand.Jump,
-                    objectIndex));
-
-            if (
-                connectorIsSafe &&
-                previousEnd is not null)
-            {
-                emittedSegments.Add(
-                    (previousEnd.Value, start));
-            }
 
             result.Add(
                 new StitchPoint(
@@ -395,10 +415,139 @@ internal static class SatinDigitizer
                 (start, end));
 
             previousEnd = end;
+            previousRow = row;
         }
 
         return result;
     }
+
+    private static List<PixelPoint>? BuildConnectorPath(
+        PixelPoint previousEnd,
+        SatinRow previousRow,
+        PixelPoint currentStart,
+        SatinRow currentRow,
+        Component component,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments)
+    {
+        if (
+            IsSafeConnectorSegment(
+                previousEnd,
+                currentStart,
+                component,
+                emittedSegments))
+        {
+            return
+            [
+                currentStart
+            ];
+        }
+
+        var previousCenter =
+            new PixelPoint(
+                (previousRow.A.X + previousRow.B.X) * 0.5f,
+                (previousRow.A.Y + previousRow.B.Y) * 0.5f);
+
+        var currentCenter =
+            new PixelPoint(
+                (currentRow.A.X + currentRow.B.X) * 0.5f,
+                (currentRow.A.Y + currentRow.B.Y) * 0.5f);
+
+        ReadOnlySpan<float> insetRatios =
+        [
+            0.18f,
+            0.28f,
+            0.38f,
+            0.50f,
+            0.62f
+        ];
+
+        foreach (var ratio in insetRatios)
+        {
+            var previousInset =
+                Lerp(
+                    previousEnd,
+                    previousCenter,
+                    ratio);
+
+            var currentInset =
+                Lerp(
+                    currentStart,
+                    currentCenter,
+                    ratio);
+
+            var route =
+                new[]
+                {
+                    previousInset,
+                    currentInset,
+                    currentStart
+                };
+
+            if (
+                IsSafeConnectorPath(
+                    previousEnd,
+                    route,
+                    component,
+                    emittedSegments))
+            {
+                return route.ToList();
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsSafeConnectorPath(
+        PixelPoint origin,
+        IReadOnlyList<PixelPoint> route,
+        Component component,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments)
+    {
+        var from = origin;
+
+        foreach (var to in route)
+        {
+            if (
+                !IsSafeConnectorSegment(
+                    from,
+                    to,
+                    component,
+                    emittedSegments))
+            {
+                return false;
+            }
+
+            from = to;
+        }
+
+        return true;
+    }
+
+    private static bool IsSafeConnectorSegment(
+        PixelPoint from,
+        PixelPoint to,
+        Component component,
+        IReadOnlyList<(PixelPoint A, PixelPoint B)> emittedSegments) =>
+        component.Contains(from) &&
+        component.Contains(to) &&
+        Geometry.SegmentInside(
+            component,
+            from,
+            to) &&
+        !CrossesAny(
+            from,
+            to,
+            emittedSegments);
+
+    private static PixelPoint Lerp(
+        PixelPoint from,
+        PixelPoint to,
+        float ratio) =>
+        new(
+            from.X +
+            (to.X - from.X) * ratio,
+            from.Y +
+            (to.Y - from.Y) * ratio);
 
     private static void AppendUnderlay(
         IReadOnlyList<PixelPoint> centers,
