@@ -265,7 +265,19 @@ private sealed interface Screen {
     ) : Screen
 
     data class Editor(
-        val design: EmbroideryDesign
+        val design: EmbroideryDesign,
+        val displayMode:
+            EmbroideryDisplayMode =
+            EmbroideryDisplayMode.REALISTIC,
+        val referenceHoop:
+            HoopProfile =
+            design.hoopProfile
+                ?: recommendedHoopFor(
+                    design
+                ),
+        val showConnections:
+            Boolean =
+            false
     ) : Screen
 }
 
@@ -613,7 +625,14 @@ private fun FioLabApp(
 
                 is Screen.Editor ->
                     Screen.Viewer(
-                        current.design
+                        design =
+                            current.design,
+                        displayMode =
+                            current.displayMode,
+                        referenceHoop =
+                            current.referenceHoop,
+                        showConnections =
+                            current.showConnections
                     )
             }
     }
@@ -1992,8 +2011,14 @@ private fun FioLabApp(
                             screen =
                                 Screen
                                     .Editor(
-                                        current
-                                            .design
+                                        design =
+                                            current.design,
+                                        displayMode =
+                                            current.displayMode,
+                                        referenceHoop =
+                                            current.referenceHoop,
+                                        showConnections =
+                                            current.showConnections
                                     )
                         },
                         onConvert = {
@@ -2093,7 +2118,14 @@ private fun FioLabApp(
                             screen =
                                 Screen
                                     .Viewer(
-                                        edited
+                                        design =
+                                            edited,
+                                        displayMode =
+                                            current.displayMode,
+                                        referenceHoop =
+                                            current.referenceHoop,
+                                        showConnections =
+                                            current.showConnections
                                     )
                         }
                     )
