@@ -1802,21 +1802,6 @@ private fun FioLabApp(
                                     displayMode =
                                         displayMode
                                 )
-                        },
-                        onSimulate = {
-                                created,
-                                displayMode ->
-                            activateDesign(
-                                created
-                            )
-
-                            screen =
-                                Screen.Simulator(
-                                    design =
-                                        created,
-                                    displayMode =
-                                        displayMode
-                                )
                         }
                     )
                 }
