@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,7 +71,8 @@ fun ViewerScreen(
     ) {
         DisplaySettingsSheet(
             displayMode =
-                displayMode,
+                EmbroideryDisplayMode
+                    .SOLID,
             onDisplayModeChange =
                 onDisplayModeChange,
             hoop =
@@ -78,7 +80,7 @@ fun ViewerScreen(
             onHoopChange =
                 onReferenceHoopChange,
             showConnections =
-                showConnections,
+                false,
             onShowConnectionsChange =
                 onShowConnectionsChange,
             onDismiss = {
@@ -169,7 +171,7 @@ fun ViewerScreen(
 
         EmbroideryCanvas(
             design = design,
-            interactive = true,
+            interactive = false,
             hoop =
                 referenceHoop,
             displayMode =
@@ -188,6 +190,11 @@ fun ViewerScreen(
                         Color(
                             0xFF071017
                         ),
+                        RoundedCornerShape(
+                            24.dp
+                        )
+                    )
+                    .clip(
                         RoundedCornerShape(
                             24.dp
                         )
