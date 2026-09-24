@@ -1,5 +1,6 @@
 package com.timachado.fiolab
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,9 +88,6 @@ private val namePalette =
 fun CreateNameScreen(
     onBack: () -> Unit,
     onCreate:
-        (EmbroideryDesign, EmbroideryDisplayMode) ->
-            Unit,
-    onSimulate:
         (EmbroideryDesign, EmbroideryDisplayMode) ->
             Unit
 ) {
@@ -215,6 +213,39 @@ fun CreateNameScreen(
     var arcHeightMm by remember {
         mutableFloatStateOf(8f)
     }
+
+    var simulationPreview by remember {
+        mutableStateOf<
+            Pair<
+                EmbroideryDesign,
+                EmbroideryDisplayMode
+            >?
+        >(null)
+    }
+
+    simulationPreview
+        ?.let {
+                previewState ->
+            BackHandler {
+                simulationPreview =
+                    null
+            }
+
+            SimulatorScreen(
+                design =
+                    previewState.first,
+                displayMode =
+                    previewState.second,
+                referenceHoop =
+                    hoopProfile,
+                onBack = {
+                    simulationPreview =
+                        null
+                }
+            )
+
+            return
+        }
 
     val importedFont =
         importedFonts
@@ -1549,10 +1580,9 @@ fun CreateNameScreen(
                     OutlinedButton(
                         onClick = {
                             preview?.let {
-                                onSimulate(
-                                    it,
-                                    displayMode
-                                )
+                                simulationPreview =
+                                    it to
+                                        displayMode
                             }
                         },
                         enabled =
