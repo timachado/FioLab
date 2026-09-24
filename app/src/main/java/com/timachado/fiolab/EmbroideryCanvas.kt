@@ -144,11 +144,19 @@ private fun DrawScope.drawHoopPreview(
     val padding =
         36.dp.toPx()
 
-    val rotateHoop =
+    val designLandscape =
         design.bounds.widthMm >
-            design.bounds.heightMm &&
-        hoop.heightMm >
-            hoop.widthMm
+            design.bounds.heightMm
+
+    val hoopLandscape =
+        hoop.widthMm >
+            hoop.heightMm
+
+    val rotateHoop =
+        hoop.widthMm !=
+            hoop.heightMm &&
+        designLandscape !=
+            hoopLandscape
 
     val hoopWidthUnits =
         (
@@ -468,13 +476,25 @@ private fun DrawScope.drawDesign(
     val padding =
         36.dp.toPx()
 
+    val designLandscape =
+        widthUnits >
+            heightUnits
+
+    val hoopLandscape =
+        hoop
+            ?.let {
+                it.widthMm >
+                    it.heightMm
+            }
+            ?: designLandscape
+
     val rotateHoop =
         hoop !=
             null &&
-        widthUnits >
-            heightUnits &&
-        hoop.heightMm >
-            hoop.widthMm
+        hoop.widthMm !=
+            hoop.heightMm &&
+        designLandscape !=
+            hoopLandscape
 
     val frameWidthUnits =
         hoop
