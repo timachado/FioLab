@@ -2567,8 +2567,8 @@ internal object ReferenceImportedFontEngine {
                     90f,
                     10f
                 ),
-            includeUnderlay =
-                false,
+            underlayMode =
+                SatinUnderlayMode.NONE,
             densityMm =
                 0.4f
         )
@@ -2767,8 +2767,14 @@ internal object ReferenceImportedFontEngine {
                     5f,
                     5f
                 ),
-            includeUnderlay =
-                includeUnderlay,
+            underlayMode =
+                if (
+                    includeUnderlay
+                ) {
+                    SatinUnderlayMode.CENTER
+                } else {
+                    SatinUnderlayMode.NONE
+                },
             densityMm =
                 0.4f
         )
