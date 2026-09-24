@@ -113,6 +113,7 @@ fun EmbroideryCanvas(
 
             if (hoop != null) {
                 drawHoopPreview(
+                    design = design,
                     hoop = hoop,
                     realistic =
                         true
@@ -136,18 +137,41 @@ fun EmbroideryCanvas(
 
 
 private fun DrawScope.drawHoopPreview(
+    design: EmbroideryDesign,
     hoop: HoopProfile,
     realistic: Boolean
 ) {
     val padding =
         36.dp.toPx()
 
+    val rotateHoop =
+        design.bounds.widthMm >
+            design.bounds.heightMm &&
+        hoop.heightMm >
+            hoop.widthMm
+
     val hoopWidthUnits =
-        hoop.widthMm *
+        (
+            if (
+                rotateHoop
+            ) {
+                hoop.heightMm
+            } else {
+                hoop.widthMm
+            }
+            ) *
             10f
 
     val hoopHeightUnits =
-        hoop.heightMm *
+        (
+            if (
+                rotateHoop
+            ) {
+                hoop.widthMm
+            } else {
+                hoop.heightMm
+            }
+            ) *
             10f
 
     val scale =
@@ -444,10 +468,26 @@ private fun DrawScope.drawDesign(
     val padding =
         36.dp.toPx()
 
+    val rotateHoop =
+        hoop !=
+            null &&
+        widthUnits >
+            heightUnits &&
+        hoop.heightMm >
+            hoop.widthMm
+
     val frameWidthUnits =
         hoop
             ?.let {
-                it.widthMm *
+                (
+                    if (
+                        rotateHoop
+                    ) {
+                        it.heightMm
+                    } else {
+                        it.widthMm
+                    }
+                    ) *
                     10f
             }
             ?: widthUnits.toFloat()
@@ -455,7 +495,15 @@ private fun DrawScope.drawDesign(
     val frameHeightUnits =
         hoop
             ?.let {
-                it.heightMm *
+                (
+                    if (
+                        rotateHoop
+                    ) {
+                        it.widthMm
+                    } else {
+                        it.heightMm
+                    }
+                    ) *
                     10f
             }
             ?: heightUnits.toFloat()
