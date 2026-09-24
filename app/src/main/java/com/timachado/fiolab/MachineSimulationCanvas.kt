@@ -328,18 +328,30 @@ private data class SimulationTransform(
             2f
 
     private val centerXUnits =
-        (
-            minXUnits +
-                maxXUnits
-            ) /
-            2f
+        if (
+            design.isModified
+        ) {
+            0f
+        } else {
+            (
+                minXUnits +
+                    maxXUnits
+                ) /
+                2f
+        }
 
     private val centerYUnits =
-        (
-            minYUnits +
-                maxYUnits
-            ) /
-            2f
+        if (
+            design.isModified
+        ) {
+            0f
+        } else {
+            (
+                minYUnits +
+                    maxYUnits
+                ) /
+                2f
+        }
 
     private val originX =
         canvasWidth /
