@@ -52,34 +52,20 @@ object ImportedFontMatrixGenerator {
         text: String,
         options: TextMatrixOptions
     ): Result<EmbroideryDesign> =
-        if (
-            options.style ==
-                TextStitchStyle.SATIN &&
-            options.specialStitchMode ==
-                null
-        ) {
-            ReferenceImportedFontEngine
-                .generate(
-                    font =
-                        font,
-                    sourceText =
-                        text,
-                    options =
-                        options,
-                    filePrefix =
-                        "nome"
-                )
-        } else {
-            generateTextInternal(
-                font = font,
-                sourceText =
-                    text,
-                options =
-                    options,
-                filePrefix =
-                    "nome"
-            )
-        }
+        /*
+         * Mantém as métricas/avanços reais da TTF/OTF para a palavra,
+         * mas digitaliza cada glifo separadamente e na ordem do texto.
+         * Assim uma letra precisa terminar antes de a próxima começar.
+         */
+        generateTextInternal(
+            font = font,
+            sourceText =
+                text,
+            options =
+                options,
+            filePrefix =
+                "nome"
+        )
 
     private fun generateTextInternal(
         font: ImportedFont,
@@ -264,60 +250,41 @@ object ImportedFontMatrixGenerator {
                             2
                     }
 
+            /*
+             * A geometria global continua servindo para escala e
+             * posicionamento nativo da fonte. A costura, porém, é
+             * digitalizada por glifo. Isso evita que o esqueleto de uma
+             * palavra cursiva conectada misture regiões de letras
+             * diferentes e depois volte para completar uma anterior.
+             */
+            val glyphGroups =
+                sampleGlyphGroups(
+                    paint =
+                        paint,
+                    text =
+                        renderableText,
+                    pathBounds =
+                        pathBounds,
+                    scale =
+                        scale,
+                    spacingMm =
+                        options.spacingMm
+                )
+
+            require(
+                glyphGroups
+                    .isNotEmpty()
+            ) {
+                "A fonte não gerou contornos válidos."
+            }
+
             val points =
-                if (
-                    options.style ==
-                        TextStitchStyle.SATIN &&
-                    options.specialStitchMode ==
-                        null &&
-                    renderableText.length >
-                        1
-                ) {
-                    val wholeTextContours =
-                        guideContours
-
-                    require(
-                        wholeTextContours
-                            .isNotEmpty()
-                    ) {
-                        "A fonte não gerou contornos válidos."
-                    }
-
-                    buildSatinByAxis(
-                        contours =
-                            wholeTextContours,
-                        options =
-                            options
-                    )
-                } else {
-                    val glyphGroups =
-                        sampleGlyphGroups(
-                            paint =
-                                paint,
-                            text =
-                                renderableText,
-                            pathBounds =
-                                pathBounds,
-                            scale =
-                                scale,
-                            spacingMm =
-                                options.spacingMm
-                        )
-
-                    require(
-                        glyphGroups
-                            .isNotEmpty()
-                    ) {
-                        "A fonte não gerou contornos válidos."
-                    }
-
-                    buildTextInReadingOrder(
-                        glyphGroups =
-                            glyphGroups,
-                        options =
-                            options
-                    )
-                }
+                buildTextInReadingOrder(
+                    glyphGroups =
+                        glyphGroups,
+                    options =
+                        options
+                )
 
             val processedPoints =
                 SpecialStitchProcessor
