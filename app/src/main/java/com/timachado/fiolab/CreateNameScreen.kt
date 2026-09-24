@@ -275,19 +275,6 @@ fun CreateNameScreen(
                                 options =
                                     glyphOptions
                             )
-                    },
-                    generateText = {
-                            sourceText,
-                            textOptions ->
-                        ImportedFontMatrixGenerator
-                            .generateText(
-                                font =
-                                    selected,
-                                text =
-                                    sourceText,
-                                options =
-                                    textOptions
-                            )
                     }
                 )
             }
