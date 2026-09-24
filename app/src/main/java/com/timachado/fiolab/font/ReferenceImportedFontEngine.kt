@@ -917,6 +917,22 @@ internal object ReferenceImportedFontEngine {
             .minOrNull()
             ?: Float.MAX_VALUE
 
+
+    private fun nextColumnInReadingOrder(
+        columns: List<SatinColumn>
+    ): SatinColumn? =
+        columns.minWithOrNull(
+            compareBy<SatinColumn> {
+                columnLeftEdgeX(
+                    it
+                )
+            }.thenBy {
+                columnTopEdgeY(
+                    it
+                )
+            }
+        )
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1585,16 +1601,8 @@ internal object ReferenceImportedFontEngine {
                  * escolher a melhor orientação de entrada do bloco.
                  */
                 val nextColumn =
-                    remaining.minWithOrNull(
-                        compareBy<SatinColumn> {
-                            columnLeftEdgeX(
-                                it
-                            )
-                        }.thenBy {
-                                columnTopEdgeY(
-                                    it
-                                )
-                        }
+                    nextColumnInReadingOrder(
+                        remaining
                     )!!
 
                 val choice =
@@ -2836,6 +2844,87 @@ internal object ReferenceImportedFontEngine {
                         ) *
                         ratio
         )
+
+    internal fun debugReadingOrderColumnLeftEdges():
+        List<Float> {
+        val left =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            0f
+                        ),
+                        FPoint(
+                            90f,
+                            0f
+                        )
+                    )
+                )
+            )
+
+        val middle =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            40f,
+                            0f
+                        ),
+                        FPoint(
+                            50f,
+                            0f
+                        )
+                    )
+                )
+            )
+
+        val right =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            70f,
+                            0f
+                        ),
+                        FPoint(
+                            80f,
+                            0f
+                        )
+                    )
+                )
+            )
+
+        val remaining =
+            mutableListOf(
+                right,
+                left,
+                middle
+            )
+
+        val visited =
+            mutableListOf<Float>()
+
+        while (
+            remaining.isNotEmpty()
+        ) {
+            val next =
+                nextColumnInReadingOrder(
+                    remaining
+                )!!
+
+            visited +=
+                columnLeftEdgeX(
+                    next
+                )
+
+            remaining.remove(
+                next
+            )
+        }
+
+        return visited
+    }
 
     internal fun debugColumnWidths(
         polygon:
