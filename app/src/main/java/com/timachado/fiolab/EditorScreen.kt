@@ -1,5 +1,6 @@
 package com.timachado.fiolab
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -97,7 +99,7 @@ fun EditorScreen(
     }
 
     var centerAtOrigin by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
 
     var displayMode by remember(
@@ -201,7 +203,7 @@ fun EditorScreen(
             mirrorVertical =
                 mirrorV,
             centerAtOrigin =
-                centerAtOrigin,
+                true,
             threadColors =
                 colors
         )
@@ -211,6 +213,101 @@ fun EditorScreen(
             design,
             transform
         )
+
+    val hasPendingChanges =
+        scale !=
+            1f ||
+        rotation !=
+            0f ||
+        offsetXmm !=
+            0f ||
+        offsetYmm !=
+            0f ||
+        mirrorH ||
+        mirrorV ||
+        colors !=
+            initialColors
+
+    var showExitDialog by remember {
+        mutableStateOf(false)
+    }
+
+    fun requestBack() {
+        if (
+            hasPendingChanges
+        ) {
+            showExitDialog =
+                true
+        } else {
+            onBack()
+        }
+    }
+
+    BackHandler {
+        requestBack()
+    }
+
+    if (
+        showExitDialog
+    ) {
+        AlertDialog(
+            onDismissRequest = {
+                showExitDialog =
+                    false
+            },
+            title = {
+                Text(
+                    "Alterações não aplicadas"
+                )
+            },
+            text = {
+                Text(
+                    "Você alterou a matriz. Deseja aplicar as mudanças antes de voltar?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitDialog =
+                            false
+                        onApply(
+                            preview
+                        )
+                    }
+                ) {
+                    Text(
+                        "Aplicar e voltar"
+                    )
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            showExitDialog =
+                                false
+                        }
+                    ) {
+                        Text(
+                            "Cancelar"
+                        )
+                    }
+
+                    TextButton(
+                        onClick = {
+                            showExitDialog =
+                                false
+                            onBack()
+                        }
+                    ) {
+                        Text(
+                            "Descartar"
+                        )
+                    }
+                }
+            }
+        )
+    }
 
     Column(
         Modifier
@@ -229,7 +326,9 @@ fun EditorScreen(
                 Alignment.CenterVertically
         ) {
             TextButton(
-                onClick = onBack
+                onClick = {
+                    requestBack()
+                }
             ) {
                 Text(
                     "‹ Voltar",
@@ -276,7 +375,7 @@ fun EditorScreen(
                     mirrorH = false
                     mirrorV = false
                     centerAtOrigin =
-                        false
+                        true
                     colors =
                         initialColors
                     selectedColorBlock =
@@ -452,15 +551,24 @@ fun EditorScreen(
 
                 OutlinedButton(
                     onClick = {
+                        offsetXmm =
+                            0f
+                        offsetYmm =
+                            0f
                         centerAtOrigin =
-                            !centerAtOrigin
+                            true
                     },
                     modifier =
                         Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (centerAtOrigin) {
-                            "◎ Centralizado em 0,0"
+                        if (
+                            offsetXmm ==
+                                0f &&
+                            offsetYmm ==
+                                0f
+                        ) {
+                            "◎ Matriz centralizada"
                         } else {
                             "◎ Centralizar matriz"
                         }
