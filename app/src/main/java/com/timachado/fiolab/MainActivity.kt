@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.IntentCompat
 import com.timachado.fiolab.core.embroidery.ConvertedMatrix
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
@@ -64,8 +65,48 @@ class MainActivity : ComponentActivity() {
             0
         )
 
+    private var externalOpenUri by
+        mutableStateOf<Uri?>(
+            null
+        )
+
+    private fun captureExternalOpenIntent(
+        sourceIntent: Intent?
+    ) {
+        val uri =
+            when (
+                sourceIntent?.action
+            ) {
+                Intent.ACTION_VIEW ->
+                    sourceIntent.data
+
+                Intent.ACTION_SEND ->
+                    IntentCompat
+                        .getParcelableExtra(
+                            sourceIntent,
+                            Intent.EXTRA_STREAM,
+                            Uri::class.java
+                        )
+
+                else ->
+                    null
+            }
+
+        if (
+            uri !=
+                null
+        ) {
+            externalOpenUri =
+                uri
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        captureExternalOpenIntent(
+            intent
+        )
 
         if (
             intent.getBooleanExtra(
@@ -93,6 +134,18 @@ class MainActivity : ComponentActivity() {
                 FioLabApp(
                     openAccountRequest =
                         accountOpenRequest,
+                    externalOpenUri =
+                        externalOpenUri,
+                    onExternalOpenConsumed = {
+                            consumedUri ->
+                        if (
+                            externalOpenUri ==
+                                consumedUri
+                        ) {
+                            externalOpenUri =
+                                null
+                        }
+                    },
                     textScale =
                         textScale,
                     onTextScaleChange = {
@@ -116,6 +169,10 @@ class MainActivity : ComponentActivity() {
             intent
         )
         setIntent(
+            intent
+        )
+
+        captureExternalOpenIntent(
             intent
         )
 
@@ -183,6 +240,8 @@ private sealed interface Screen {
 @Composable
 private fun FioLabApp(
     openAccountRequest: Int = 0,
+    externalOpenUri: Uri? = null,
+    onExternalOpenConsumed: (Uri) -> Unit = {},
     textScale: Float,
     onTextScaleChange: (Float) -> Unit
 ) {
@@ -392,6 +451,55 @@ private fun FioLabApp(
             result.onFailure {
                 snackbar.showSnackbar(
                     "Não foi possível atualizar a cópia automática do trabalho. Verifique o espaço disponível no aparelho."
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(
+        externalOpenUri
+    ) {
+        val uri =
+            externalOpenUri
+                ?: return@LaunchedEffect
+
+        onExternalOpenConsumed(
+            uri
+        )
+
+        loading =
+            true
+
+        val result =
+            withContext(
+                Dispatchers.IO
+            ) {
+                EmbroideryLoader.load(
+                    context.contentResolver,
+                    uri
+                )
+            }
+
+        loading =
+            false
+
+        when (
+            result
+        ) {
+            is EmbroideryLoadResult.Success -> {
+                activateDesign(
+                    result.design
+                )
+
+                screen =
+                    Screen.Viewer(
+                        result.design
+                    )
+            }
+
+            is EmbroideryLoadResult.Error -> {
+                snackbar.showSnackbar(
+                    result.userMessage
                 )
             }
         }
