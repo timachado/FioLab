@@ -2,9 +2,9 @@ package com.timachado.fiolab
 
 import android.content.Intent
 import android.util.Base64
-import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.core.content.FileProvider
 import androidx.test.core.app.ActivityScenario
