@@ -54,7 +54,7 @@ internal object ReferenceImportedFontEngine {
         12f
 
     private const val CONNECTOR_SAMPLE_UNITS =
-        8f
+        2f
 
     private const val CONNECTOR_EDGE_MARGIN_UNITS =
         2f
