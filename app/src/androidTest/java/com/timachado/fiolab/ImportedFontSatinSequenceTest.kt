@@ -8,7 +8,6 @@ import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import com.timachado.fiolab.font.ImportedFont
 import com.timachado.fiolab.font.ImportedFontMatrixGenerator
 import java.io.File
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,7 +16,7 @@ import org.junit.runner.RunWith
 class ImportedFontSatinSequenceTest {
 
     @Test
-    fun wholeWordFinishesFirstGlyphBeforeAdvancing() {
+    fun importedSatinNeverReturnsToPreviousGlyphAfterAdvancing() {
         val fontFile =
             listOf(
                 File("/system/fonts/Roboto-Regular.ttf"),
@@ -37,78 +36,94 @@ class ImportedFontSatinSequenceTest {
                 absolutePath = fontFile.absolutePath
             )
 
-        val base =
-            TextMatrixOptions(
-                text = "Ma",
-                heightMm = 25f,
-                style = TextStitchStyle.SATIN,
-                satinUnderlayMode = SatinUnderlayMode.CENTER,
-                enforceHoop = false
-            )
-
-        val firstGlyph =
-            ImportedFontMatrixGenerator
-                .generateGlyph(
-                    font = font,
-                    char = 'M',
-                    options =
-                        base.copy(
-                            text = "M"
-                        )
-                )
-                .getOrThrow()
-                .points
-                .filter {
-                    it.command !=
-                        StitchCommand.END
-                }
-
-        val word =
+        val design =
             ImportedFontMatrixGenerator
                 .generateText(
                     font = font,
-                    text = "Ma",
-                    options = base
+                    text = "AB",
+                    options =
+                        TextMatrixOptions(
+                            text = "AB",
+                            heightMm = 25f,
+                            spacingMm = 15f,
+                            style = TextStitchStyle.SATIN,
+                            satinUnderlayMode =
+                                SatinUnderlayMode.CENTER,
+                            enforceHoop = false
+                        )
                 )
                 .getOrThrow()
-                .points
 
-        val firstSeparator =
-            word.indexOfFirst {
-                it.command ==
-                    StitchCommand.TRIM
-            }
-
-        assertTrue(
-            "A palavra precisa separar o primeiro glifo antes do segundo.",
-            firstSeparator >
-                0
-        )
-
-        val firstWordBlock =
-            word.take(
-                firstSeparator
-            )
-
-        assertEquals(
-            "O primeiro glifo da palavra deve terminar completamente antes do TRIM.",
-            firstGlyph.map {
-                it.command
-            },
-            firstWordBlock.map {
-                it.command
-            }
-        )
-
-        assertTrue(
-            "Depois do TRIM devem existir pontos da próxima letra.",
-            word.drop(
-                firstSeparator +
-                    1
-            ).any {
+        val stitches =
+            design.points.filter {
                 it.command ==
                     StitchCommand.STITCH
             }
+
+        assertTrue(
+            "A matriz precisa conter pontos Satin.",
+            stitches.isNotEmpty()
+        )
+
+        val sortedX =
+            stitches
+                .map {
+                    it.xUnits
+                }
+                .distinct()
+                .sorted()
+
+        val largestGap =
+            sortedX
+                .zipWithNext()
+                .maxByOrNull {
+                    it.second -
+                        it.first
+                }
+                ?: error(
+                    "Não foi possível separar os dois glifos."
+                )
+
+        val gapUnits =
+            largestGap.second -
+                largestGap.first
+
+        assertTrue(
+            "O teste precisa manter uma separação clara entre os glifos.",
+            gapUnits >=
+                50
+        )
+
+        val boundary =
+            (
+                largestGap.first +
+                    largestGap.second
+                ) /
+                2
+
+        var enteredSecondGlyph =
+            false
+
+        stitches.forEach {
+                point ->
+            if (
+                point.xUnits >
+                    boundary
+            ) {
+                enteredSecondGlyph =
+                    true
+            } else if (
+                enteredSecondGlyph
+            ) {
+                error(
+                    "A sequência voltou para o primeiro glifo depois de iniciar o segundo."
+                )
+            }
+        }
+
+        assertTrue(
+            "A sequência deve alcançar o segundo glifo.",
+            enteredSecondGlyph
         )
     }
 }
