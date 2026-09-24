@@ -463,10 +463,6 @@ private fun FioLabApp(
             externalOpenUri
                 ?: return@LaunchedEffect
 
-        onExternalOpenConsumed(
-            uri
-        )
-
         loading =
             true
 
@@ -503,6 +499,10 @@ private fun FioLabApp(
                 )
             }
         }
+
+        onExternalOpenConsumed(
+            uri
+        )
     }
 
     LaunchedEffect(Unit) {
