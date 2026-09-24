@@ -528,19 +528,36 @@ private fun DrawScope.drawDesign(
         baseScale *
             userScale
 
+    val preserveHoopPosition =
+        hoop !=
+            null &&
+        design.isModified
+
     val centerXUnits =
-        (
-            bounds.minXUnits +
-                bounds.maxXUnits
-            ) /
-            2f
+        if (
+            preserveHoopPosition
+        ) {
+            0f
+        } else {
+            (
+                bounds.minXUnits +
+                    bounds.maxXUnits
+                ) /
+                2f
+        }
 
     val centerYUnits =
-        (
-            bounds.minYUnits +
-                bounds.maxYUnits
-            ) /
-            2f
+        if (
+            preserveHoopPosition
+        ) {
+            0f
+        } else {
+            (
+                bounds.minYUnits +
+                    bounds.maxYUnits
+                ) /
+                2f
+        }
 
     val originX =
         size.width /
