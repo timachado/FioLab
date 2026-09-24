@@ -197,6 +197,19 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun satinColumnsKeepStableLeftToRightReadingOrder() {
+        assertEquals(
+            listOf(
+                0f,
+                40f,
+                70f
+            ),
+            ReferenceImportedFontEngine
+                .debugReadingOrderColumnLeftEdges()
+        )
+    }
+
+    @Test
     fun disconnectedShapesCreateMoreThanOneColumn() {
         val count =
             ReferenceImportedFontEngine
