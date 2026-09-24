@@ -902,6 +902,21 @@ internal object ReferenceImportedFontEngine {
             .minOrNull()
             ?: Float.MAX_VALUE
 
+
+    private fun columnTopEdgeY(
+        column: SatinColumn
+    ): Float =
+        column.rows
+            .flatMap {
+                    row ->
+                listOf(
+                    row.a.y,
+                    row.b.y
+                )
+            }
+            .minOrNull()
+            ?: Float.MAX_VALUE
+
     private fun sampleColumns(
         polygons: List<Polygon>,
         densityMm: Float,
@@ -1557,42 +1572,48 @@ internal object ReferenceImportedFontEngine {
                                 .a
                     }
 
-                val choice =
-                    if (
-                        firstColumn
-                    ) {
-                        val leftmostColumn =
-                            remaining.minBy {
-                                columnLeftEdgeX(
+                /*
+                 * A ordem física dos blocos Satin deve ser estável.
+                 * Escolher o próximo bloco apenas pela menor distância
+                 * pode avançar visualmente para a próxima parte da letra
+                 * e depois voltar para uma região anterior que ainda não
+                 * foi concluída. Para nomes cursivos isso parece que a
+                 * máquina começou outra letra e voltou.
+                 *
+                 * Mantemos a progressão espacial da esquerda para a
+                 * direita. A distância atual é usada somente para
+                 * escolher a melhor orientação de entrada do bloco.
+                 */
+                val nextColumn =
+                    remaining.minWithOrNull(
+                        compareBy<SatinColumn> {
+                            columnLeftEdgeX(
+                                it
+                            )
+                        }.thenBy {
+                                columnTopEdgeY(
                                     it
                                 )
-                            }
+                        }
+                    )!!
 
-                        closestOrientation(
-                            column =
-                                leftmostColumn,
-                            anchor =
+                val choice =
+                    closestOrientation(
+                        column =
+                            nextColumn,
+                        anchor =
+                            if (
+                                firstColumn
+                            ) {
                                 startHint
-                                    ?: leftmostColumn
+                                    ?: nextColumn
                                         .rows
                                         .first()
                                         .a
-                        )
-                    } else {
-                        remaining
-                            .map {
-                                    column ->
-                                closestOrientation(
-                                    column =
-                                        column,
-                                    anchor =
-                                        anchor
-                                )
+                            } else {
+                                anchor
                             }
-                            .minBy {
-                                it.entryDistance
-                            }
-                    }
+                    )
 
                 val column =
                     choice.oriented
