@@ -116,7 +116,9 @@ fun EditorScreen(
     ) {
         mutableStateOf(
             design.hoopProfile
-                ?: HoopProfile.H100X100
+                ?: recommendedHoopFor(
+                    design
+                )
         )
     }
 
