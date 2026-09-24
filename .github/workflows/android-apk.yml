@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "fix/brother-directopen-safe4-0469"]
   workflow_dispatch:
 
 permissions:
