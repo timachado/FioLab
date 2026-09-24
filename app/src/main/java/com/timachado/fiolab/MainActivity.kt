@@ -187,6 +187,34 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+internal fun recommendedHoopFor(
+    design: EmbroideryDesign
+): HoopProfile {
+    val designWidth =
+        design.bounds.widthMm
+    val designHeight =
+        design.bounds.heightMm
+
+    return HoopProfile.entries
+        .firstOrNull {
+                hoop ->
+            (
+                designWidth <=
+                    hoop.widthMm &&
+                designHeight <=
+                    hoop.heightMm
+                ) ||
+                (
+                    designWidth <=
+                        hoop.heightMm &&
+                    designHeight <=
+                        hoop.widthMm
+                    )
+        }
+        ?: HoopProfile.entries
+            .last()
+}
+
 private sealed interface Screen {
     data object Home : Screen
     data object CreateName : Screen
@@ -208,7 +236,9 @@ private sealed interface Screen {
         val referenceHoop:
             HoopProfile =
             design.hoopProfile
-                ?: HoopProfile.H100X100,
+                ?: recommendedHoopFor(
+                    design
+                ),
         val showConnections:
             Boolean =
             false
@@ -222,7 +252,9 @@ private sealed interface Screen {
         val referenceHoop:
             HoopProfile =
             design.hoopProfile
-                ?: HoopProfile.H100X100,
+                ?: recommendedHoopFor(
+                    design
+                ),
         val showConnections:
             Boolean =
             false
