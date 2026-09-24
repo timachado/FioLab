@@ -245,19 +245,43 @@ private data class SimulationTransform(
                 1f
             )
 
+    private val rotateHoop =
+        hoop !=
+            null &&
+        widthUnits >
+            heightUnits &&
+        hoop.heightMm >
+            hoop.widthMm
+
     private val hoopWidthUnits =
         hoop
-            ?.widthMm
-            ?.times(
-                10f
-            )
+            ?.let {
+                (
+                    if (
+                        rotateHoop
+                    ) {
+                        it.heightMm
+                    } else {
+                        it.widthMm
+                    }
+                    ) *
+                    10f
+            }
 
     private val hoopHeightUnits =
         hoop
-            ?.heightMm
-            ?.times(
-                10f
-            )
+            ?.let {
+                (
+                    if (
+                        rotateHoop
+                    ) {
+                        it.widthMm
+                    } else {
+                        it.heightMm
+                    }
+                    ) *
+                    10f
+            }
 
     val scale: Float =
         simulationScale(
