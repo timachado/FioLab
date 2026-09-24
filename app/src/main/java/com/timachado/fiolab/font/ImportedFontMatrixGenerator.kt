@@ -30,34 +30,22 @@ object ImportedFontMatrixGenerator {
         char: Char,
         options: TextMatrixOptions
     ): Result<EmbroideryDesign> =
-        if (
-            options.style ==
-                TextStitchStyle.SATIN &&
-            options.specialStitchMode ==
-                null
-        ) {
-            ReferenceImportedFontEngine
-                .generate(
-                    font =
-                        font,
-                    sourceText =
-                        char.toString(),
-                    options =
-                        options,
-                    filePrefix =
-                        "fonte"
-                )
-        } else {
-            generateTextInternal(
-                font = font,
-                sourceText =
-                    char.toString(),
-                options =
-                    options,
-                filePrefix =
-                    "fonte"
-            )
-        }
+        /*
+         * Para criação de nomes, cada glifo deve seguir o próprio traço
+         * até o fim antes de avançar. O pipeline interno usa o esqueleto
+         * do glifo para orientar o Satin e evita a varredura por regiões
+         * do ReferenceImportedFontEngine, que podia saltar visualmente
+         * entre partes da letra.
+         */
+        generateTextInternal(
+            font = font,
+            sourceText =
+                char.toString(),
+            options =
+                options,
+            filePrefix =
+                "fonte"
+        )
 
     fun generateText(
         font: ImportedFont,
