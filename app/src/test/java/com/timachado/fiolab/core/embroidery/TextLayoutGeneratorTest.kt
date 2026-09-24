@@ -334,6 +334,63 @@ class TextLayoutGeneratorTest {
     }
 
     @Test
+    fun perLetterSequenceNeverReturnsToPreviousGlyphBlock() {
+        val design =
+            TextLayoutGenerator
+                .generate(
+                    TextLayoutOptions(
+                        textOptions =
+                            base("ABC")
+                                .copy(
+                                    color =
+                                        0x111111
+                                ),
+                        letterAdjustments =
+                            listOf(
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        0,
+                                    color =
+                                        0x111111
+                                ),
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        1,
+                                    color =
+                                        0x222222
+                                ),
+                                LetterAdjustment(
+                                    sourceIndex =
+                                        2,
+                                    color =
+                                        0x333333
+                                )
+                            )
+                    )
+                )
+                .getOrThrow()
+
+        val stitchBlocks =
+            design.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+                .map {
+                    it.colorIndex
+                }
+
+        assertTrue(
+            stitchBlocks.zipWithNext()
+                .all {
+                        pair ->
+                    pair.first <=
+                        pair.second
+                }
+        )
+    }
+
+    @Test
     fun adjacentSameColorStaysInSameBlock() {
         val gold =
             0xE6BE70
