@@ -365,11 +365,9 @@ internal object ReferenceImportedFontEngine {
                             glyphVisualStartPoint(
                                 polygons
                             ),
-                        includeUnderlay =
+                        underlayMode =
                             options
-                                .satinUnderlayMode !=
-                                SatinUnderlayMode
-                                    .NONE,
+                                .satinUnderlayMode,
                         densityMm =
                             densityMm
                     )
@@ -1543,7 +1541,7 @@ internal object ReferenceImportedFontEngine {
             columns: List<SatinColumn>,
             polygons: List<Polygon>,
             startHint: FPoint?,
-            includeUnderlay: Boolean,
+            underlayMode: SatinUnderlayMode,
             densityMm: Float
         ) {
             val remaining =
@@ -1640,19 +1638,62 @@ internal object ReferenceImportedFontEngine {
                         firstColumn
                 )
 
-                if (
-                    includeUnderlay
-                ) {
-                    emitEdgeRunUnderlay(
-                        column =
-                            column,
-                        densityMm =
-                            densityMm
-                    )
-                }
+                val topColumn =
+                    when (
+                        underlayMode
+                    ) {
+                        SatinUnderlayMode.NONE ->
+                            column
+
+                        SatinUnderlayMode.CENTER -> {
+                            emitCenterRunUnderlay(
+                                column =
+                                    column,
+                                densityMm =
+                                    densityMm
+                            )
+
+                            reverseRows(
+                                column
+                            )
+                        }
+
+                        SatinUnderlayMode.ZIGZAG -> {
+                            emitSparseZigzagUnderlay(
+                                column =
+                                    column,
+                                densityMm =
+                                    densityMm
+                            )
+
+                            reverseRows(
+                                column
+                            )
+                        }
+
+                        SatinUnderlayMode.BOTH -> {
+                            emitCenterRunUnderlay(
+                                column =
+                                    column,
+                                densityMm =
+                                    densityMm
+                            )
+
+                            emitSparseZigzagUnderlay(
+                                column =
+                                    reverseRows(
+                                        column
+                                    ),
+                                densityMm =
+                                    densityMm
+                            )
+
+                            column
+                        }
+                    }
 
                 emitSatinColumn(
-                    column
+                    topColumn
                 )
 
                 remaining.remove(
@@ -1672,10 +1713,6 @@ internal object ReferenceImportedFontEngine {
                 column.rows
                     .toList()
 
-            val reversed =
-                column.rows
-                    .asReversed()
-
             val candidates =
                 listOf(
                     orientRows(
@@ -1685,16 +1722,6 @@ internal object ReferenceImportedFontEngine {
                     ),
                     orientRows(
                         normal,
-                        swap =
-                            true
-                    ),
-                    orientRows(
-                        reversed,
-                        swap =
-                            false
-                    ),
-                    orientRows(
-                        reversed,
                         swap =
                             true
                     )
@@ -1751,18 +1778,24 @@ internal object ReferenceImportedFontEngine {
                         .toMutableList()
             )
 
-        private fun emitEdgeRunUnderlay(
-            column: SatinColumn,
-            densityMm: Float
-        ) {
-            val rows =
-                column.rows
+        private fun reverseRows(
+            column: SatinColumn
+        ): SatinColumn =
+            SatinColumn(
+                rows =
+                    column.rows
+                        .asReversed()
+                        .toMutableList()
+            )
 
+        private fun underlayIndices(
+            rows: List<SatinRow>,
+            densityMm: Float
+        ): List<Int> {
             if (
-                rows.size <
-                    2
+                rows.isEmpty()
             ) {
-                return
+                return emptyList()
             }
 
             val pitchUnits =
@@ -1803,37 +1836,95 @@ internal object ReferenceImportedFontEngine {
                     rows.lastIndex
             }
 
-            // Ida: uma borda da coluna.
-            indices.forEach {
-                    rowIndex ->
-                stitchTo(
-                    rows[
-                        rowIndex
-                    ].a
-                )
+            return indices
+        }
+
+        private fun emitCenterRunUnderlay(
+            column: SatinColumn,
+            densityMm: Float
+        ) {
+            val rows =
+                column.rows
+
+            if (
+                rows.isEmpty()
+            ) {
+                return
             }
 
-            // Cruza somente no final.
-            stitchTo(
-                rows
-                    .last()
-                    .b
-            )
-
-            // Volta: a outra borda, uma única vez.
-            for (
-                reverseIndex in
-                    indices.size -
-                        2 downTo
-                        0
-            ) {
+            underlayIndices(
+                rows =
+                    rows,
+                densityMm =
+                    densityMm
+            ).forEach {
+                    rowIndex ->
                 stitchTo(
-                    rows[
-                        indices[
-                            reverseIndex
+                    center(
+                        rows[
+                            rowIndex
                         ]
-                    ].b
+                    )
                 )
+            }
+        }
+
+        private fun emitSparseZigzagUnderlay(
+            column: SatinColumn,
+            densityMm: Float
+        ) {
+            val rows =
+                column.rows
+
+            if (
+                rows.isEmpty()
+            ) {
+                return
+            }
+
+            var sideA =
+                true
+
+            underlayIndices(
+                rows =
+                    rows,
+                densityMm =
+                    densityMm
+            ).forEach {
+                    rowIndex ->
+                val row =
+                    rows[
+                        rowIndex
+                    ]
+
+                val midpoint =
+                    center(
+                        row
+                    )
+
+                val target =
+                    if (
+                        sideA
+                    ) {
+                        lerp(
+                            midpoint,
+                            row.a,
+                            0.60f
+                        )
+                    } else {
+                        lerp(
+                            midpoint,
+                            row.b,
+                            0.60f
+                        )
+                    }
+
+                stitchTo(
+                    target
+                )
+
+                sideA =
+                    !sideA
             }
         }
 
