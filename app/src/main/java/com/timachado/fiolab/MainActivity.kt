@@ -64,6 +64,45 @@ class MainActivity : ComponentActivity() {
             0
         )
 
+    private var externalOpenUri by
+        mutableStateOf<Uri?>(
+            null
+        )
+
+    @Suppress("DEPRECATION")
+    private fun captureExternalOpenUri(
+        incomingIntent: Intent
+    ) {
+        val uri =
+            when (
+                incomingIntent.action
+            ) {
+                Intent.ACTION_VIEW ->
+                    incomingIntent.data
+
+                Intent.ACTION_SEND ->
+                    incomingIntent
+                        .getParcelableExtra(
+                            Intent.EXTRA_STREAM
+                        ) as? Uri
+
+                else ->
+                    null
+            }
+
+        if (
+            uri !=
+                null
+        ) {
+            externalOpenUri =
+                uri
+
+            setIntent(
+                Intent()
+            )
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -75,6 +114,10 @@ class MainActivity : ComponentActivity() {
         ) {
             accountOpenRequest++
         }
+
+        captureExternalOpenUri(
+            intent
+        )
 
         setContent {
             var textScale by remember {
@@ -93,6 +136,12 @@ class MainActivity : ComponentActivity() {
                 FioLabApp(
                     openAccountRequest =
                         accountOpenRequest,
+                    externalOpenUri =
+                        externalOpenUri,
+                    onExternalOpenConsumed = {
+                        externalOpenUri =
+                            null
+                    },
                     textScale =
                         textScale,
                     onTextScaleChange = {
@@ -127,6 +176,10 @@ class MainActivity : ComponentActivity() {
         ) {
             accountOpenRequest++
         }
+
+        captureExternalOpenUri(
+            intent
+        )
     }
 }
 
@@ -183,6 +236,8 @@ private sealed interface Screen {
 @Composable
 private fun FioLabApp(
     openAccountRequest: Int = 0,
+    externalOpenUri: Uri? = null,
+    onExternalOpenConsumed: () -> Unit = {},
     textScale: Float,
     onTextScaleChange: (Float) -> Unit
 ) {
@@ -397,6 +452,79 @@ private fun FioLabApp(
         }
     }
 
+    fun openMatrixUri(
+        uri: Uri,
+        persistPermission: Boolean
+    ) {
+        if (
+            persistPermission
+        ) {
+            runCatching {
+                context.contentResolver
+                    .takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+            }
+        }
+
+        scope.launch {
+            loading =
+                true
+
+            val result =
+                withContext(
+                    Dispatchers.IO
+                ) {
+                    EmbroideryLoader.load(
+                        context.contentResolver,
+                        uri
+                    )
+                }
+
+            loading =
+                false
+
+            when (
+                result
+            ) {
+                is EmbroideryLoadResult.Success -> {
+                    activateDesign(
+                        result.design
+                    )
+
+                    screen =
+                        Screen.Viewer(
+                            result.design
+                        )
+                }
+
+                is EmbroideryLoadResult.Error -> {
+                    snackbar.showSnackbar(
+                        result.userMessage
+                    )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(
+        externalOpenUri
+    ) {
+        externalOpenUri
+            ?.let {
+                    uri ->
+                onExternalOpenConsumed()
+
+                openMatrixUri(
+                    uri =
+                        uri,
+                    persistPermission =
+                        false
+                )
+            }
+    }
+
     LaunchedEffect(Unit) {
         val result =
             withContext(
@@ -491,52 +619,19 @@ private fun FioLabApp(
             ActivityResultContracts
                 .OpenDocument()
         ) { uri: Uri? ->
-            if (uri == null) {
+            if (
+                uri ==
+                    null
+            ) {
                 return@rememberLauncherForActivityResult
             }
 
-            runCatching {
-                context.contentResolver
-                    .takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-            }
-
-            scope.launch {
-                loading = true
-
-                val result =
-                    withContext(
-                        Dispatchers.IO
-                    ) {
-                        EmbroideryLoader.load(
-                            context.contentResolver,
-                            uri
-                        )
-                    }
-
-                loading = false
-
-                when (result) {
-                    is EmbroideryLoadResult.Success -> {
-                        activateDesign(
-                            result.design
-                        )
-
-                        screen =
-                            Screen.Viewer(
-                                result.design
-                            )
-                    }
-
-                    is EmbroideryLoadResult.Error -> {
-                        snackbar.showSnackbar(
-                            result.userMessage
-                        )
-                    }
-                }
-            }
+            openMatrixUri(
+                uri =
+                    uri,
+                persistPermission =
+                    true
+            )
         }
 
     val saveDocumentLauncher =
