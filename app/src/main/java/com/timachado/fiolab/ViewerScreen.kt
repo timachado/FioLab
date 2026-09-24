@@ -247,16 +247,74 @@ fun ViewerScreen(
 
                 design.hoopProfile?.let {
                     hoop ->
+                    val designLandscape =
+                        design.bounds.widthMm >
+                            design.bounds.heightMm
+
+                    val hoopLandscape =
+                        hoop.widthMm >
+                            hoop.heightMm
+
+                    val rotateForDisplay =
+                        hoop.widthMm !=
+                            hoop.heightMm &&
+                        designLandscape !=
+                            hoopLandscape
+
+                    val effectiveWidthMm =
+                        if (
+                            rotateForDisplay
+                        ) {
+                            hoop.heightMm
+                        } else {
+                            hoop.widthMm
+                        }
+
+                    val effectiveHeightMm =
+                        if (
+                            rotateForDisplay
+                        ) {
+                            hoop.widthMm
+                        } else {
+                            hoop.heightMm
+                        }
+
+                    val effectiveUsableWidthMm =
+                        if (
+                            rotateForDisplay
+                        ) {
+                            hoop.usableHeightMm
+                        } else {
+                            hoop.usableWidthMm
+                        }
+
+                    val effectiveUsableHeightMm =
+                        if (
+                            rotateForDisplay
+                        ) {
+                            hoop.usableWidthMm
+                        } else {
+                            hoop.usableHeightMm
+                        }
+
                     Text(
                         "Bastidor: " +
                             hoop.displayName +
-                            " • área segura " +
+                            " • orientação " +
                             mm(
-                                hoop.usableWidthMm
+                                effectiveWidthMm
                             ) +
                             " × " +
                             mm(
-                                hoop.usableHeightMm
+                                effectiveHeightMm
+                            ) +
+                            " mm • área segura " +
+                            mm(
+                                effectiveUsableWidthMm
+                            ) +
+                            " × " +
+                            mm(
+                                effectiveUsableHeightMm
                             ) +
                             " mm",
                         color =
