@@ -245,13 +245,25 @@ private data class SimulationTransform(
                 1f
             )
 
+    private val designLandscape =
+        widthUnits >
+            heightUnits
+
+    private val hoopLandscape =
+        hoop
+            ?.let {
+                it.widthMm >
+                    it.heightMm
+            }
+            ?: designLandscape
+
     private val rotateHoop =
         hoop !=
             null &&
-        widthUnits >
-            heightUnits &&
-        hoop.heightMm >
-            hoop.widthMm
+        hoop.widthMm !=
+            hoop.heightMm &&
+        designLandscape !=
+            hoopLandscape
 
     private val hoopWidthUnits =
         hoop
