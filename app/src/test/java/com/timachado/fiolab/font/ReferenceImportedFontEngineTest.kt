@@ -158,7 +158,31 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
-    fun edgeRunUnderlayAddsSingleOutAndBackPass() {
+    fun centerUnderlayStartsOnColumnCenterInsteadOfWalkingEdges() {
+        val points =
+            ReferenceImportedFontEngine
+                .debugReferencePath(
+                    connected =
+                        true,
+                    includeUnderlay =
+                        true
+                )
+
+        val firstStitch =
+            points.first {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        assertTrue(
+            "Underlay central deve começar no centro da coluna, não na borda.",
+            firstStitch.xUnits in
+                11..14
+        )
+    }
+
+    @Test
+    fun centerUnderlayAddsAFoundationPass() {
         val without =
             ReferenceImportedFontEngine
                 .debugReferencePath(
