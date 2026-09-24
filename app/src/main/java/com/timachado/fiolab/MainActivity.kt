@@ -37,6 +37,7 @@ import com.timachado.fiolab.core.embroidery.EmbroideryDesign
 import com.timachado.fiolab.core.embroidery.EmbroideryLoadResult
 import com.timachado.fiolab.core.embroidery.EmbroideryLoader
 import com.timachado.fiolab.core.embroidery.HoopProfile
+import com.timachado.fiolab.core.embroidery.MachineTransferValidator
 import com.timachado.fiolab.core.embroidery.MatrixConverter
 import com.timachado.fiolab.core.embroidery.MatrixExporter
 import com.timachado.fiolab.core.library.LibraryActivityStore
@@ -204,7 +205,10 @@ private sealed interface Screen {
         val referenceHoop:
             HoopProfile =
             design.hoopProfile
-                ?: HoopProfile.H100X100,
+                ?: MachineTransferValidator
+                    .recommendedHoop(
+                        design
+                    ),
         val showConnections:
             Boolean =
             false
@@ -218,7 +222,10 @@ private sealed interface Screen {
         val referenceHoop:
             HoopProfile =
             design.hoopProfile
-                ?: HoopProfile.H100X100,
+                ?: MachineTransferValidator
+                    .recommendedHoop(
+                        design
+                    ),
         val showConnections:
             Boolean =
             false
