@@ -1638,62 +1638,13 @@ internal object ReferenceImportedFontEngine {
                         firstColumn
                 )
 
-                val topColumn =
-                    when (
-                        underlayMode
-                    ) {
-                        SatinUnderlayMode.NONE ->
-                            column
-
-                        SatinUnderlayMode.CENTER -> {
-                            emitCenterRunUnderlay(
-                                column =
-                                    column,
-                                densityMm =
-                                    densityMm
-                            )
-
-                            reverseRows(
-                                column
-                            )
-                        }
-
-                        SatinUnderlayMode.ZIGZAG -> {
-                            emitSparseZigzagUnderlay(
-                                column =
-                                    column,
-                                densityMm =
-                                    densityMm
-                            )
-
-                            reverseRows(
-                                column
-                            )
-                        }
-
-                        SatinUnderlayMode.BOTH -> {
-                            emitCenterRunUnderlay(
-                                column =
-                                    column,
-                                densityMm =
-                                    densityMm
-                            )
-
-                            emitSparseZigzagUnderlay(
-                                column =
-                                    reverseRows(
-                                        column
-                                    ),
-                                densityMm =
-                                    densityMm
-                            )
-
-                            column
-                        }
-                    }
-
-                emitSatinColumn(
-                    topColumn
+                emitProgressiveSatinColumn(
+                    column =
+                        column,
+                    underlayMode =
+                        underlayMode,
+                    densityMm =
+                        densityMm
                 )
 
                 remaining.remove(
@@ -1925,6 +1876,133 @@ internal object ReferenceImportedFontEngine {
 
                 sideA =
                     !sideA
+            }
+        }
+
+        private fun emitProgressiveSatinColumn(
+            column: SatinColumn,
+            underlayMode: SatinUnderlayMode,
+            densityMm: Float
+        ) {
+            val rows =
+                column.rows
+
+            if (
+                rows.isEmpty()
+            ) {
+                return
+            }
+
+            val underlayRows =
+                underlayIndices(
+                    rows =
+                        rows,
+                    densityMm =
+                        densityMm
+                ).toHashSet()
+
+            val before =
+                current
+
+            var nextIsA =
+                if (
+                    before ==
+                        null
+                ) {
+                    false
+                } else {
+                    distance(
+                        before,
+                        rows.first().a
+                    ) >=
+                        distance(
+                            before,
+                            rows.first().b
+                        )
+                }
+
+            var underlaySideA =
+                true
+
+            rows.forEachIndexed {
+                    rowIndex,
+                    row ->
+                if (
+                    rowIndex in
+                        underlayRows
+                ) {
+                    val midpoint =
+                        center(
+                            row
+                        )
+
+                    when (
+                        underlayMode
+                    ) {
+                        SatinUnderlayMode.NONE ->
+                            Unit
+
+                        SatinUnderlayMode.CENTER ->
+                            stitchTo(
+                                midpoint
+                            )
+
+                        SatinUnderlayMode.ZIGZAG -> {
+                            stitchTo(
+                                lerp(
+                                    midpoint,
+                                    if (
+                                        underlaySideA
+                                    ) {
+                                        row.a
+                                    } else {
+                                        row.b
+                                    },
+                                    0.60f
+                                )
+                            )
+
+                            underlaySideA =
+                                !underlaySideA
+                        }
+
+                        SatinUnderlayMode.BOTH -> {
+                            stitchTo(
+                                midpoint
+                            )
+
+                            stitchTo(
+                                lerp(
+                                    midpoint,
+                                    if (
+                                        underlaySideA
+                                    ) {
+                                        row.a
+                                    } else {
+                                        row.b
+                                    },
+                                    0.60f
+                                )
+                            )
+
+                            underlaySideA =
+                                !underlaySideA
+                        }
+                    }
+                }
+
+                stitchTo(
+                    if (
+                        nextIsA
+                    ) {
+                        row.a
+                    } else {
+                        row.b
+                    }
+                )
+
+                nextIsA =
+                    !nextIsA
             }
         }
 
