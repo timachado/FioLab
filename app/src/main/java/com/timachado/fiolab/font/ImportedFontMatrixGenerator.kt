@@ -2,6 +2,7 @@ package com.timachado.fiolab.font
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
@@ -190,157 +191,203 @@ object ImportedFontMatrixGenerator {
                 options.heightMm *
                     10f
 
-            val capPath =
-                Path()
-
-            val capSample =
+            val effectiveStyle =
                 if (
-                    paint.hasGlyph(
+                    options.specialStitchMode !=
+                        null
+                ) {
+                    TextStitchStyle.RUNNING
+                } else {
+                    options.style
+                }
+
+            val guideContours:
+                List<SampledContour>
+
+            val points:
+                MutableList<EmbroideryPoint>
+
+            if (
+                effectiveStyle ==
+                    TextStitchStyle.SATIN
+            ) {
+                /*
+                 * Caminho de referência do Mão Design 18.1.2.
+                 *
+                 * A geometria permanece em ponto flutuante até a emissão
+                 * das pontadas. Cada glifo é medido/posicionado primeiro,
+                 * todos são centralizados como conjunto e somente então
+                 * cada contorno fechado é amostrado pelo PathMeasure.
+                 */
+                val reference =
+                    buildReferenceGlyphGeometry(
+                        paint = paint,
+                        text = renderableText,
+                        targetHeightUnits =
+                            targetHeightUnits,
+                        spacingUnits =
+                            targetHeightUnits *
+                                0.04f +
+                                options.spacingMm *
+                                    10f
+                    )
+
+                guideContours =
+                    reference.guideContours
+
+                points =
+                    buildReferenceSatinText(
+                        glyphPolygons =
+                            reference.glyphPolygons,
+                        options =
+                            options
+                    )
+            } else {
+                val capPath =
+                    Path()
+
+                val capSample =
+                    if (
+                        paint.hasGlyph(
+                            "H"
+                        )
+                    ) {
                         "H"
-                    )
-                ) {
-                    "H"
-                } else {
-                    renderableText
-                        .first()
-                        .toString()
-                }
+                    } else {
+                        renderableText
+                            .first()
+                            .toString()
+                    }
 
-            paint.getTextPath(
-                capSample,
-                0,
-                capSample.length,
-                0f,
-                0f,
-                capPath
-            )
-
-            val capBounds =
-                RectF().also {
-                    capPath.computeBounds(
-                        it,
-                        true
-                    )
-                }
-
-            val fallbackCapHeight =
-                kotlin.math.abs(
-                    paint.fontMetrics
-                        .ascent
-                ) *
-                    0.72f
-
-            val capHeightRaw =
-                if (
-                    capBounds.height() >
-                        0.5f
-                ) {
-                    capBounds.height()
-                } else {
-                    fallbackCapHeight
-                }
-                    .coerceAtLeast(
-                        1f
-                    )
-
-            val scale =
-                targetHeightUnits /
-                    capHeightRaw
-
-            val guideContours =
-                samplePath(
-                    path
+                paint.getTextPath(
+                    capSample,
+                    0,
+                    capSample.length,
+                    0f,
+                    0f,
+                    capPath
                 )
-                    .map {
-                            contour ->
-                        SampledContour(
-                            points =
-                                contour.points
-                                    .map {
-                                        point ->
-                                        Pair(
-                                            (
-                                                (
-                                                    point.first -
-                                                        pathBounds
-                                                            .centerX()
-                                                    ) *
-                                                    scale
-                                                ).roundToInt(),
-                                            (
-                                                (
-                                                    pathBounds
-                                                        .centerY() -
-                                                        point.second
-                                                    ) *
-                                                    scale
-                                                ).roundToInt()
-                                        )
-                                    }
-                                    .fold(
-                                        mutableListOf<
-                                            Pair<Int, Int>
-                                        >()
-                                    ) {
-                                        acc,
-                                        point ->
-                                        if (
-                                            acc.lastOrNull() !=
-                                                point
-                                        ) {
-                                            acc +=
-                                                point
-                                        }
 
-                                        acc
-                                    },
-                            closed =
-                                contour.closed
+                val capBounds =
+                    RectF().also {
+                        capPath.computeBounds(
+                            it,
+                            true
                         )
                     }
-                    .filter {
-                        it.points.size >=
-                            2
+
+                val fallbackCapHeight =
+                    kotlin.math.abs(
+                        paint.fontMetrics
+                            .ascent
+                    ) *
+                        0.72f
+
+                val capHeightRaw =
+                    if (
+                        capBounds.height() >
+                            0.5f
+                    ) {
+                        capBounds.height()
+                    } else {
+                        fallbackCapHeight
                     }
+                        .coerceAtLeast(
+                            1f
+                        )
 
-            /*
-             * A geometria global continua servindo para escala e
-             * posicionamento nativo da fonte. A costura, porém, é
-             * digitalizada por glifo. Isso evita que o esqueleto de uma
-             * palavra cursiva conectada misture regiões de letras
-             * diferentes e depois volte para completar uma anterior.
-             */
-            val glyphGroups =
-                sampleGlyphGroups(
-                    paint =
-                        paint,
-                    text =
-                        renderableText,
-                    pathBounds =
-                        pathBounds,
-                    scale =
-                        scale,
-                    spacingUnits =
-                        targetHeightUnits *
-                            0.04f +
-                            options.spacingMm *
-                            10f
-                )
+                val scale =
+                    targetHeightUnits /
+                        capHeightRaw
 
-            require(
-                glyphGroups
-                    .isNotEmpty()
-            ) {
-                "A fonte não gerou contornos válidos."
+                guideContours =
+                    samplePath(
+                        path
+                    )
+                        .map {
+                                contour ->
+                            SampledContour(
+                                points =
+                                    contour.points
+                                        .map {
+                                            point ->
+                                            Pair(
+                                                (
+                                                    (
+                                                        point.first -
+                                                            pathBounds
+                                                                .centerX()
+                                                        ) *
+                                                        scale
+                                                    ).roundToInt(),
+                                                (
+                                                    (
+                                                        pathBounds
+                                                            .centerY() -
+                                                            point.second
+                                                        ) *
+                                                        scale
+                                                    ).roundToInt()
+                                            )
+                                        }
+                                        .fold(
+                                            mutableListOf<
+                                                Pair<Int, Int>
+                                            >()
+                                        ) {
+                                            acc,
+                                            point ->
+                                            if (
+                                                acc.lastOrNull() !=
+                                                    point
+                                            ) {
+                                                acc +=
+                                                    point
+                                            }
+
+                                            acc
+                                        },
+                                closed =
+                                    contour.closed
+                            )
+                        }
+                        .filter {
+                            it.points.size >=
+                                2
+                        }
+
+                val glyphGroups =
+                    sampleGlyphGroups(
+                        paint =
+                            paint,
+                        text =
+                            renderableText,
+                        pathBounds =
+                            pathBounds,
+                        scale =
+                            scale,
+                        spacingUnits =
+                            targetHeightUnits *
+                                0.04f +
+                                options.spacingMm *
+                                    10f
+                    )
+
+                require(
+                    glyphGroups
+                        .isNotEmpty()
+                ) {
+                    "A fonte não gerou contornos válidos."
+                }
+
+                points =
+                    buildTextInReadingOrder(
+                        glyphGroups =
+                            glyphGroups,
+                        options =
+                            options
+                    )
             }
-
-            val points =
-                buildTextInReadingOrder(
-                    glyphGroups =
-                        glyphGroups,
-                    options =
-                        options
-                )
 
             val processedPoints =
                 SpecialStitchProcessor
@@ -559,6 +606,413 @@ object ImportedFontMatrixGenerator {
             design
         }
 
+    private data class ReferenceGlyphGeometry(
+        val glyphPolygons:
+            List<
+                List<
+                    List<
+                        Pair<Float, Float>
+                    >
+                >
+            >,
+        val guideContours:
+            List<SampledContour>
+    )
+
+    private fun buildReferenceGlyphGeometry(
+        paint: Paint,
+        text: String,
+        targetHeightUnits: Float,
+        spacingUnits: Float
+    ): ReferenceGlyphGeometry {
+        /*
+         * Mão Design:
+         * SKFont(typeface, 100) -> Metrics.CapHeight.
+         * Na API Android não há CapHeight exposto; o contorno de "H"
+         * é usado como equivalente e o mesmo fallback ascent * 0,72
+         * é preservado.
+         */
+        paint.textSize =
+            100f
+
+        val capPath =
+            Path()
+
+        val capSample =
+            if (
+                paint.hasGlyph(
+                    "H"
+                )
+            ) {
+                "H"
+            } else {
+                text.first()
+                    .toString()
+            }
+
+        paint.getTextPath(
+            capSample,
+            0,
+            capSample.length,
+            0f,
+            0f,
+            capPath
+        )
+
+        val capBounds =
+            RectF().also {
+                capPath.computeBounds(
+                    it,
+                    true
+                )
+            }
+
+        val capHeightAt100 =
+            if (
+                capBounds.height() >
+                    0.01f
+            ) {
+                capBounds.height()
+            } else {
+                kotlin.math.abs(
+                    paint.fontMetrics
+                        .ascent
+                ) *
+                    0.72f
+            }
+                .coerceAtLeast(
+                    0.01f
+                )
+
+        val resolvedTextSize =
+            100f *
+                targetHeightUnits /
+                capHeightAt100
+
+        paint.textSize =
+            resolvedTextSize
+
+        val glyphPaths =
+            mutableListOf<Path>()
+
+        var penX =
+            0f
+
+        text.forEach {
+                char ->
+            val glyphText =
+                char.toString()
+
+            val advance =
+                paint.measureText(
+                    glyphText
+                )
+
+            if (
+                !char.isWhitespace()
+            ) {
+                val glyphPath =
+                    Path()
+
+                paint.getTextPath(
+                    glyphText,
+                    0,
+                    glyphText.length,
+                    penX,
+                    0f,
+                    glyphPath
+                )
+
+                if (
+                    !glyphPath.isEmpty
+                ) {
+                    glyphPaths +=
+                        glyphPath
+                }
+            }
+
+            penX +=
+                advance +
+                    spacingUnits
+        }
+
+        require(
+            glyphPaths.isNotEmpty()
+        ) {
+            "A fonte não gerou contornos válidos."
+        }
+
+        val union =
+            RectF()
+
+        var hasBounds =
+            false
+
+        glyphPaths.forEach {
+                glyphPath ->
+            val bounds =
+                RectF().also {
+                    glyphPath.computeBounds(
+                        it,
+                        true
+                    )
+                }
+
+            if (
+                !hasBounds
+            ) {
+                union.set(
+                    bounds
+                )
+
+                hasBounds =
+                    true
+            } else {
+                union.union(
+                    bounds
+                )
+            }
+        }
+
+        require(
+            hasBounds &&
+                union.width() >
+                0.01f &&
+                union.height() >
+                0.01f
+        ) {
+            "A fonte não gerou uma área utilizável para este texto."
+        }
+
+        val centerTransform =
+            Matrix().apply {
+                setTranslate(
+                    -union.centerX(),
+                    -union.centerY()
+                )
+            }
+
+        val glyphPolygons =
+            mutableListOf<
+                List<
+                    List<
+                        Pair<Float, Float>
+                    >
+                >
+            >()
+
+        val guideContours =
+            mutableListOf<
+                SampledContour
+            >()
+
+        glyphPaths.forEach {
+                source ->
+            val centeredPath =
+                Path(
+                    source
+                )
+
+            centeredPath.transform(
+                centerTransform
+            )
+
+            val polygons =
+                polygonizeReferencePath(
+                    centeredPath
+                )
+
+            if (
+                polygons.isEmpty()
+            ) {
+                return@forEach
+            }
+
+            glyphPolygons +=
+                polygons
+
+            polygons.forEach {
+                    polygon ->
+                val outputPoints =
+                    polygon
+                        .map {
+                            point ->
+                            Pair(
+                                point.first
+                                    .roundToInt(),
+                                (
+                                    -point.second
+                                    ).roundToInt()
+                            )
+                        }
+                        .fold(
+                            mutableListOf<
+                                Pair<Int, Int>
+                            >()
+                        ) {
+                            acc,
+                            point ->
+                            if (
+                                acc.lastOrNull() !=
+                                    point
+                            ) {
+                                acc +=
+                                    point
+                            }
+
+                            acc
+                        }
+
+                if (
+                    outputPoints.size >=
+                        2
+                ) {
+                    guideContours +=
+                        SampledContour(
+                            points =
+                                outputPoints,
+                            closed =
+                                true
+                        )
+                }
+            }
+        }
+
+        require(
+            glyphPolygons.isNotEmpty()
+        ) {
+            "A fonte não gerou contornos Satin utilizáveis."
+        }
+
+        return ReferenceGlyphGeometry(
+            glyphPolygons =
+                glyphPolygons,
+            guideContours =
+                guideContours
+        )
+    }
+
+    private fun polygonizeReferencePath(
+        path: Path
+    ): List<
+        List<
+            Pair<Float, Float>
+        >
+    > {
+        val measure =
+            PathMeasure(
+                path,
+                true
+            )
+
+        val result =
+            mutableListOf<
+                List<
+                    Pair<Float, Float>
+                >
+            >()
+
+        val position =
+            FloatArray(
+                2
+            )
+
+        do {
+            val length =
+                measure.length
+
+            if (
+                length <=
+                    0f
+            ) {
+                continue
+            }
+
+            val sampleCount =
+                max(
+                    8,
+                    ceil(
+                        length /
+                            2f
+                    ).toInt()
+                )
+
+            val polygon =
+                mutableListOf<
+                    Pair<Float, Float>
+                >()
+
+            for (
+                index in
+                    0 until
+                        sampleCount
+            ) {
+                val distance =
+                    length *
+                        index.toFloat() /
+                        sampleCount.toFloat()
+
+                if (
+                    measure.getPosTan(
+                        distance,
+                        position,
+                        null
+                    )
+                ) {
+                    polygon +=
+                        Pair(
+                            position[0],
+                            position[1]
+                        )
+                }
+            }
+
+            if (
+                polygon.size >=
+                    3
+            ) {
+                result +=
+                    polygon
+            }
+        } while (
+            measure.nextContour()
+        )
+
+        return result
+    }
+
+    private fun buildReferenceSatinText(
+        glyphPolygons:
+            List<
+                List<
+                    List<
+                        Pair<Float, Float>
+                    >
+                >
+            >,
+        options: TextMatrixOptions
+    ): MutableList<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val state =
+            ReferenceSatinState()
+
+        glyphPolygons.forEach {
+                polygons ->
+            appendReferenceSatinGlyph(
+                output = output,
+                polygons = polygons,
+                options = options,
+                state = state
+            )
+        }
+
+        return output
+    }
+
     private fun sampleGlyphGroups(
         paint: Paint,
         text: String,
@@ -728,7 +1182,11 @@ object ImportedFontMatrixGenerator {
                     contours ->
                 appendReferenceSatinGlyph(
                     output = output,
-                    contours = contours,
+                    polygons =
+                        densifyReferenceContours(
+                            contours = contours,
+                            maxStepUnits = 2f
+                        ),
                     options = options,
                     state = state
                 )
@@ -826,22 +1284,15 @@ object ImportedFontMatrixGenerator {
 
     private fun appendReferenceSatinGlyph(
         output: MutableList<EmbroideryPoint>,
-        contours: List<SampledContour>,
+        polygons:
+            List<
+                List<
+                    Pair<Float, Float>
+                >
+            >,
         options: TextMatrixOptions,
         state: ReferenceSatinState
     ) {
-        if (
-            contours.isEmpty()
-        ) {
-            return
-        }
-
-        val polygons =
-            densifyReferenceContours(
-                contours = contours,
-                maxStepUnits = 2f
-            )
-
         if (
             polygons.isEmpty()
         ) {
@@ -1839,8 +2290,9 @@ object ImportedFontMatrixGenerator {
                 EmbroideryPoint(
                     targetX
                         .roundToInt(),
-                    targetY
-                        .roundToInt(),
+                    (
+                        -targetY
+                        ).roundToInt(),
                     StitchCommand.JUMP,
                     0
                 )
@@ -1887,8 +2339,9 @@ object ImportedFontMatrixGenerator {
                 EmbroideryPoint(
                     state.currentX
                         .roundToInt(),
-                    state.currentY
-                        .roundToInt(),
+                    (
+                        -state.currentY
+                        ).roundToInt(),
                     StitchCommand.TRIM,
                     0
                 )
@@ -1925,9 +2378,11 @@ object ImportedFontMatrixGenerator {
                                 ratio
                         ).roundToInt(),
                     (
-                        startY +
-                            dy *
-                                ratio
+                        -(
+                            startY +
+                                dy *
+                                    ratio
+                            )
                         ).roundToInt(),
                     StitchCommand.JUMP,
                     0
@@ -1993,9 +2448,11 @@ object ImportedFontMatrixGenerator {
                                 ratio
                         ).roundToInt(),
                     (
-                        startY +
-                            dy *
-                                ratio
+                        -(
+                            startY +
+                                dy *
+                                    ratio
+                            )
                         ).roundToInt(),
                     StitchCommand.STITCH,
                     0
