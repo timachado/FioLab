@@ -247,10 +247,59 @@ class ImportedFontSatinSequenceTest {
                 }
                 .average()
 
+        val laterAverageSteps =
+            segments
+                .drop(1)
+                .mapNotNull {
+                        segment ->
+                    val distances =
+                        segment
+                            .zipWithNext()
+                            .map {
+                                (first, second) ->
+                                kotlin.math.hypot(
+                                    (
+                                        second.xUnits -
+                                            first.xUnits
+                                        ).toDouble(),
+                                    (
+                                        second.yUnits -
+                                            first.yUnits
+                                        ).toDouble()
+                                )
+                            }
+
+                    if (
+                        distances.isEmpty()
+                    ) {
+                        null
+                    } else {
+                        distances.average()
+                    }
+                }
+
+        val densestLaterAverage =
+            laterAverageSteps
+                .minOrNull()
+                ?: error(
+                    "As camadas posteriores não geraram pontos suficientes."
+                )
+
         assertTrue(
-            "A fixação deve usar pontos mais longos e leves.",
-            fixationAverageStep >=
-                16.0
+            "A fixação deve ser mais esparsa que a cobertura Satin.",
+            fixationAverageStep >
+                densestLaterAverage *
+                    1.35
+        )
+
+        assertTrue(
+            "A fixação deve usar menos pontos que a camada mais densa.",
+            fixation.size <
+                segments
+                    .drop(1)
+                    .maxOf {
+                        it.size
+                    }
         )
 
         val outline =
