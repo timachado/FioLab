@@ -3,6 +3,9 @@ package com.timachado.fiolab
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.timachado.fiolab.core.embroidery.SatinUnderlayMode
 import com.timachado.fiolab.core.embroidery.StitchCommand
+import com.timachado.fiolab.core.embroidery.TextGlyphProvider
+import com.timachado.fiolab.core.embroidery.TextLayoutGenerator
+import com.timachado.fiolab.core.embroidery.TextLayoutOptions
 import com.timachado.fiolab.core.embroidery.TextMatrixOptions
 import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import com.timachado.fiolab.font.ImportedFont
@@ -356,4 +359,108 @@ class ImportedFontSatinSequenceTest {
             }
         )
     }
+
+    @Test
+    fun textLayoutPreservesReferenceSatinSequenceWithoutSecondFinishingPass() {
+        val font =
+            systemFont()
+
+        val options =
+            TextMatrixOptions(
+                text = "Maria",
+                heightMm = 18f,
+                spacingMm = 0f,
+                style = TextStitchStyle.SATIN,
+                satinDensityMm = 0.4f,
+                satinPullCompensationMm = 0.2f,
+                satinUnderlayMode =
+                    SatinUnderlayMode.CENTER,
+                enforceHoop = false
+            )
+
+        val direct =
+            ImportedFontMatrixGenerator
+                .generateText(
+                    font = font,
+                    text = "Maria",
+                    options = options
+                )
+                .getOrThrow()
+
+        val provider =
+            TextGlyphProvider(
+                preserveCase = true,
+                generate = {
+                        char,
+                        glyphOptions ->
+                    ImportedFontMatrixGenerator
+                        .generateGlyph(
+                            font = font,
+                            char = char,
+                            options = glyphOptions
+                        )
+                },
+                generateText = {
+                        sourceText,
+                        textOptions ->
+                    ImportedFontMatrixGenerator
+                        .generateText(
+                            font = font,
+                            text = sourceText,
+                            options = textOptions
+                        )
+                },
+                preserveWholeTextSequenceForSatin =
+                    true
+            )
+
+        val laidOut =
+            TextLayoutGenerator
+                .generate(
+                    TextLayoutOptions(
+                        textOptions = options,
+                        glyphProvider = provider
+                    )
+                )
+                .getOrThrow()
+
+        val directSequence =
+            direct.points.map {
+                listOf(
+                    it.xUnits,
+                    it.yUnits,
+                    it.command.ordinal,
+                    it.colorIndex
+                )
+            }
+
+        val layoutSequence =
+            laidOut.points.map {
+                listOf(
+                    it.xUnits,
+                    it.yUnits,
+                    it.command.ordinal,
+                    it.colorIndex
+                )
+            }
+
+        assertEquals(
+            "O layout não pode adicionar tie-in, tie-off, TRIM ou reordenar o Satin importado.",
+            directSequence,
+            layoutSequence
+        )
+
+        assertEquals(
+            "O layout precisa preservar a contagem exata de pontos do gerador de referência.",
+            direct.stitchCount,
+            laidOut.stitchCount
+        )
+
+        assertEquals(
+            "O layout precisa preservar a contagem exata de saltos do gerador de referência.",
+            direct.jumpCount,
+            laidOut.jumpCount
+        )
+    }
+
 }
