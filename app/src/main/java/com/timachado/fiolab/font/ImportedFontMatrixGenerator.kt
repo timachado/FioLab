@@ -972,6 +972,23 @@ object ImportedFontMatrixGenerator {
                 EmbroideryPoint
             >()
 
+        /*
+         * CAMADA 1 — alinhamento/fixação.
+         *
+         * Antes de qualquer underlay ou Satin visível, percorremos o
+         * esqueleto com pontos longos e leves. O percurso é feito em
+         * ordem inversa para terminar próximo do início da primeira
+         * região que receberá underlay, reduzindo saltos de retorno.
+         */
+        appendFixationLayer(
+            output = output,
+            lines = lines,
+            minX = minX,
+            maxY = maxY,
+            padding = padding,
+            unitsPerPixel = unitsPerPixel
+        )
+
         lines.forEach {
                 rawLine ->
             val samples =
@@ -1519,13 +1536,21 @@ object ImportedFontMatrixGenerator {
 
             if (
                 options
-                    .satinUnderlayMode !=
+                    .satinUnderlayMode ==
                     com.timachado
                         .fiolab
                         .core
                         .embroidery
                         .SatinUnderlayMode
-                        .NONE
+                        .CENTER ||
+                options
+                    .satinUnderlayMode ==
+                    com.timachado
+                        .fiolab
+                        .core
+                        .embroidery
+                        .SatinUnderlayMode
+                        .BOTH
             ) {
                 val first =
                     samples.first()
@@ -1606,6 +1631,51 @@ object ImportedFontMatrixGenerator {
                     )
             }
 
+            /*
+             * CAMADA 2 — underlay de suporte.
+             *
+             * ZIGZAG/BOTH usam um zigue-zague estreito centralizado,
+             * cuja normal gira junto com o eixo local da letra. Assim
+             * a base acompanha curvas em vez de permanecer horizontal
+             * ou vertical.
+             */
+            if (
+                options
+                    .satinUnderlayMode ==
+                    com.timachado
+                        .fiolab
+                        .core
+                        .embroidery
+                        .SatinUnderlayMode
+                        .ZIGZAG ||
+                options
+                    .satinUnderlayMode ==
+                    com.timachado
+                        .fiolab
+                        .core
+                        .embroidery
+                        .SatinUnderlayMode
+                        .BOTH
+            ) {
+                appendDynamicZigzagUnderlay(
+                    output = output,
+                    samples = samples,
+                    minX = minX,
+                    maxY = maxY,
+                    padding = padding,
+                    unitsPerPixel = unitsPerPixel,
+                    satinWidthUnits =
+                        options.satinWidthMm *
+                            10f
+                )
+            }
+
+            /*
+             * CAMADA 3 — Satin visível.
+             *
+             * O ângulo continua sendo calculado pela tangente do
+             * esqueleto e pela normal local em cada amostra.
+             */
             var currentX:
                 Int? =
                 null
@@ -1863,6 +1933,43 @@ object ImportedFontMatrixGenerator {
             }
         }
 
+        /*
+         * CAMADA 4 — fechamento/contorno.
+         *
+         * O contorno vetorial original só entra depois que todas as
+         * regiões Satin do glifo foram preenchidas. Isso evita que o
+         * preenchimento puxe o tecido depois de um outline já pronto.
+         */
+        if (
+            output.isNotEmpty() &&
+            output.last().command !=
+                StitchCommand.TRIM
+        ) {
+            val last =
+                output.last()
+
+            output +=
+                EmbroideryPoint(
+                    last.xUnits,
+                    last.yUnits,
+                    StitchCommand.TRIM,
+                    0
+                )
+        }
+
+        output +=
+            buildRunningOutline(
+                contours = contours,
+                stitchLengthUnits =
+                    (
+                        options.stitchLengthMm *
+                            10f
+                        ).coerceIn(
+                        12f,
+                        20f
+                    )
+            )
+
         val quality =
             AdaptiveFontPolicy
                 .qualityFromCoordinates(
@@ -1910,6 +2017,333 @@ object ImportedFontMatrixGenerator {
                         .stitchLengthMm *
                         10f
             )
+        }
+    }
+
+    private fun appendFixationLayer(
+        output: MutableList<EmbroideryPoint>,
+        lines: List<List<SkeletonPoint>>,
+        minX: Int,
+        maxY: Int,
+        padding: Int,
+        unitsPerPixel: Float
+    ) {
+        val stitchStepUnits =
+            36f
+
+        lines
+            .asReversed()
+            .forEach {
+                    sourceLine ->
+                val samples =
+                    smoothAndResampleSkeleton(
+                        source =
+                            sourceLine
+                                .asReversed(),
+                        radius = 4,
+                        passes = 2,
+                        stepPixels =
+                            (
+                                stitchStepUnits /
+                                    unitsPerPixel
+                                ).coerceAtLeast(
+                                2f
+                            )
+                    )
+
+                if (
+                    samples.size <
+                        2
+                ) {
+                    return@forEach
+                }
+
+                if (
+                    output.isNotEmpty() &&
+                    output.last().command !=
+                        StitchCommand.TRIM
+                ) {
+                    val last =
+                        output.last()
+
+                    output +=
+                        EmbroideryPoint(
+                            last.xUnits,
+                            last.yUnits,
+                            StitchCommand.TRIM,
+                            0
+                        )
+                }
+
+                val first =
+                    samples.first()
+
+                var currentX =
+                    skeletonXToUnits(
+                        first.x,
+                        minX,
+                        padding,
+                        unitsPerPixel
+                    )
+
+                var currentY =
+                    skeletonYToUnits(
+                        first.y,
+                        maxY,
+                        padding,
+                        unitsPerPixel
+                    )
+
+                output +=
+                    EmbroideryPoint(
+                        currentX,
+                        currentY,
+                        StitchCommand.JUMP,
+                        0
+                    )
+
+                samples
+                    .drop(1)
+                    .forEach {
+                            sample ->
+                        val targetX =
+                            skeletonXToUnits(
+                                sample.x,
+                                minX,
+                                padding,
+                                unitsPerPixel
+                            )
+
+                        val targetY =
+                            skeletonYToUnits(
+                                sample.y,
+                                maxY,
+                                padding,
+                                unitsPerPixel
+                            )
+
+                        appendSplitStitch(
+                            output = output,
+                            fromX = currentX,
+                            fromY = currentY,
+                            toX = targetX,
+                            toY = targetY,
+                            maxLengthUnits =
+                                stitchStepUnits
+                        )
+
+                        currentX =
+                            targetX
+
+                        currentY =
+                            targetY
+                    }
+            }
+
+        if (
+            output.isNotEmpty() &&
+            output.last().command !=
+                StitchCommand.TRIM
+        ) {
+            val last =
+                output.last()
+
+            output +=
+                EmbroideryPoint(
+                    last.xUnits,
+                    last.yUnits,
+                    StitchCommand.TRIM,
+                    0
+                )
+        }
+    }
+
+    private fun appendDynamicZigzagUnderlay(
+        output: MutableList<EmbroideryPoint>,
+        samples: List<FloatSkeletonPoint>,
+        minX: Int,
+        maxY: Int,
+        padding: Int,
+        unitsPerPixel: Float,
+        satinWidthUnits: Float
+    ) {
+        if (
+            samples.size <
+                2
+        ) {
+            return
+        }
+
+        val halfWidthPixels =
+            (
+                satinWidthUnits *
+                    0.30f /
+                    unitsPerPixel
+                ).coerceAtLeast(
+                0.8f
+            )
+
+        var currentX:
+            Int? =
+            null
+
+        var currentY:
+            Int? =
+            null
+
+        samples.forEachIndexed {
+                index,
+                sample ->
+            val before =
+                samples[
+                    (
+                        index -
+                            3
+                        ).coerceAtLeast(
+                        0
+                    )
+                ]
+
+            val after =
+                samples[
+                    (
+                        index +
+                            3
+                        ).coerceAtMost(
+                        samples.lastIndex
+                    )
+                ]
+
+            val tangentX =
+                (
+                    after.x -
+                        before.x
+                    ).toDouble()
+
+            val tangentY =
+                (
+                    after.y -
+                        before.y
+                    ).toDouble()
+
+            val tangentLength =
+                sqrt(
+                    tangentX *
+                        tangentX +
+                        tangentY *
+                            tangentY
+                )
+
+            if (
+                tangentLength <
+                    0.001
+            ) {
+                return@forEachIndexed
+            }
+
+            val normalX =
+                -tangentY /
+                    tangentLength
+
+            val normalY =
+                tangentX /
+                    tangentLength
+
+            val side =
+                if (
+                    index %
+                        2 ==
+                        0
+                ) {
+                    1.0
+                } else {
+                    -1.0
+                }
+
+            val targetX =
+                skeletonXToUnits(
+                    (
+                        sample.x +
+                            normalX *
+                                halfWidthPixels *
+                                side
+                        ).toFloat(),
+                    minX,
+                    padding,
+                    unitsPerPixel
+                )
+
+            val targetY =
+                skeletonYToUnits(
+                    (
+                        sample.y +
+                            normalY *
+                                halfWidthPixels *
+                                side
+                        ).toFloat(),
+                    maxY,
+                    padding,
+                    unitsPerPixel
+                )
+
+            val fromX =
+                currentX
+
+            val fromY =
+                currentY
+
+            if (
+                fromX ==
+                    null ||
+                fromY ==
+                    null
+            ) {
+                output +=
+                    EmbroideryPoint(
+                        targetX,
+                        targetY,
+                        StitchCommand.JUMP,
+                        0
+                    )
+            } else if (
+                fromX !=
+                    targetX ||
+                fromY !=
+                    targetY
+            ) {
+                appendSplitStitch(
+                    output = output,
+                    fromX = fromX,
+                    fromY = fromY,
+                    toX = targetX,
+                    toY = targetY,
+                    maxLengthUnits =
+                        36f
+                )
+            }
+
+            currentX =
+                targetX
+
+            currentY =
+                targetY
+        }
+
+        if (
+            output.isNotEmpty() &&
+            output.last().command !=
+                StitchCommand.TRIM
+        ) {
+            val last =
+                output.last()
+
+            output +=
+                EmbroideryPoint(
+                    last.xUnits,
+                    last.yUnits,
+                    StitchCommand.TRIM,
+                    0
+                )
         }
     }
 
