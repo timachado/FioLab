@@ -75,9 +75,9 @@ object ImportedFontMatrixGenerator {
     ): Result<EmbroideryDesign> =
         runCatching {
             require(
-                options.heightMm in 4f..40f
+                options.heightMm in 4f..60f
             ) {
-                "A altura deve ficar entre 4 e 40 mm."
+                "A altura deve ficar entre 4 e 60 mm."
             }
 
             require(
