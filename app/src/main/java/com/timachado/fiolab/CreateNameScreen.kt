@@ -275,19 +275,6 @@ fun CreateNameScreen(
                                 options =
                                     glyphOptions
                             )
-                    },
-                    generateText = {
-                            sourceText,
-                            textOptions ->
-                        ImportedFontMatrixGenerator
-                            .generateText(
-                                font =
-                                    selected,
-                                text =
-                                    sourceText,
-                                options =
-                                    textOptions
-                            )
                     }
                 )
             }
@@ -316,7 +303,16 @@ fun CreateNameScreen(
                     satinShortStitches =
                         satinShortStitches,
                     satinUnderlayMode =
-                        satinUnderlayMode,
+                        if (
+                            importedFont !=
+                                null &&
+                            stitchStyle ==
+                                TextStitchStyle.SATIN
+                        ) {
+                            SatinUnderlayMode.NONE
+                        } else {
+                            satinUnderlayMode
+                        },
                     specialStitchMode =
                         specialStitchMode,
                     color =
