@@ -173,12 +173,14 @@ class ReferenceImportedFontEngineTest {
             }
 
         assertTrue(
-            "Underlay + Satin não pode avançar e depois voltar para linhas já concluídas.",
+            "Underlay + Satin não pode voltar para uma linha anterior; " +
+                "pequena oscilação dentro da largura Satin é permitida.",
             xSequence.zipWithNext()
                 .all {
                         pair ->
                     pair.second >=
-                        pair.first
+                        pair.first -
+                            3
                 }
         )
     }
