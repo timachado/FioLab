@@ -40,26 +40,61 @@ object MachineTransferValidator {
     ): HoopProfile =
         design.hoopProfile
             ?.takeIf {
-                HoopValidator
-                    .validate(
-                        design,
-                        it
-                    )
-                    .fits
+                fitsTransferHoop(
+                    design = design,
+                    hoop = it
+                )
             }
             ?: HoopProfile
                 .entries
                 .firstOrNull {
-                    HoopValidator
-                        .validate(
-                            design,
-                            it
-                        )
-                        .fits
+                    fitsTransferHoop(
+                        design = design,
+                        hoop = it
+                    )
                 }
             ?: HoopProfile
                 .entries
                 .last()
+
+    /*
+     * A tela "Enviar para a máquina" deve aceitar o bastidor físico
+     * nas duas orientações. Os perfis retangulares são armazenados
+     * internamente como largura x altura, mas a máquina permite girar
+     * o bastidor 90 graus. Mantemos o HoopValidator global intacto e
+     * aplicamos esta exceção somente no fluxo de transferência.
+     */
+    private fun fitsTransferHoop(
+        design: EmbroideryDesign,
+        hoop: HoopProfile
+    ): Boolean {
+        val designWidth =
+            design.bounds.widthMm
+
+        val designHeight =
+            design.bounds.heightMm
+
+        val usableWidth =
+            hoop.usableWidthMm
+
+        val usableHeight =
+            hoop.usableHeightMm
+
+        val fitsDirect =
+            designWidth <=
+                usableWidth &&
+                designHeight <=
+                    usableHeight
+
+        val fitsRotated =
+            designWidth <=
+                usableHeight &&
+                designHeight <=
+                    usableWidth
+
+        return fitsDirect ||
+            fitsRotated
+    }
 
     fun validate(
         design: EmbroideryDesign,
@@ -123,15 +158,14 @@ object MachineTransferValidator {
                     )
                 }
 
-                val fit =
-                    HoopValidator
-                        .validate(
-                            design,
-                            hoop
-                        )
+                val fits =
+                    fitsTransferHoop(
+                        design = design,
+                        hoop = hoop
+                    )
 
                 if (
-                    !fit.fits
+                    !fits
                 ) {
                     add(
                         TransferIssue(
