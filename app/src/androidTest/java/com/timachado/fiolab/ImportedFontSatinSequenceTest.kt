@@ -463,4 +463,112 @@ class ImportedFontSatinSequenceTest {
         )
     }
 
+
+    @Test
+    fun importedSatinGuideAndStitchesShareTheSameGlyphGeometry() {
+        val design =
+            ImportedFontMatrixGenerator
+                .generateText(
+                    font = systemFont(),
+                    text = "Maria",
+                    options =
+                        TextMatrixOptions(
+                            text = "Maria",
+                            heightMm = 18f,
+                            spacingMm = 0f,
+                            style = TextStitchStyle.SATIN,
+                            satinUnderlayMode =
+                                SatinUnderlayMode.CENTER,
+                            enforceHoop = false
+                        )
+                )
+                .getOrThrow()
+
+        val sewn =
+            design.points.filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        val guide =
+            design.guidePoints.filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        assertTrue(
+            "A costura Satin precisa conter pontos.",
+            sewn.isNotEmpty()
+        )
+
+        assertTrue(
+            "O guia do curso precisa existir.",
+            guide.isNotEmpty()
+        )
+
+        fun centerX(
+            points:
+                List<
+                    com.timachado.fiolab
+                        .core
+                        .embroidery
+                        .EmbroideryPoint
+                >
+        ): Float =
+            (
+                points.minOf {
+                    it.xUnits
+                } +
+                    points.maxOf {
+                        it.xUnits
+                    }
+                ) /
+                2f
+
+        fun centerY(
+            points:
+                List<
+                    com.timachado.fiolab
+                        .core
+                        .embroidery
+                        .EmbroideryPoint
+                >
+        ): Float =
+            (
+                points.minOf {
+                    it.yUnits
+                } +
+                    points.maxOf {
+                        it.yUnits
+                    }
+                ) /
+                2f
+
+        assertTrue(
+            "O guia rosa e a costura precisam compartilhar o mesmo centro horizontal.",
+            kotlin.math.abs(
+                centerX(
+                    sewn
+                ) -
+                    centerX(
+                        guide
+                    )
+            ) <=
+                5f
+        )
+
+        assertTrue(
+            "O guia rosa e a costura precisam compartilhar o mesmo centro vertical.",
+            kotlin.math.abs(
+                centerY(
+                    sewn
+                ) -
+                    centerY(
+                        guide
+                    )
+            ) <=
+                5f
+        )
+    }
+
 }
