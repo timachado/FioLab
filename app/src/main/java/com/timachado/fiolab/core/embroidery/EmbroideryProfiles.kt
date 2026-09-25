@@ -118,7 +118,7 @@ enum class FabricProfile(
         pullCompensationMm =
             0.20f,
         underlayMode =
-            SatinUnderlayMode.ZIGZAG,
+            SatinUnderlayMode.CENTER,
         shortStitches =
             true
     ),
@@ -160,7 +160,7 @@ enum class FabricProfile(
         pullCompensationMm =
             0.20f,
         underlayMode =
-            SatinUnderlayMode.ZIGZAG,
+            SatinUnderlayMode.CENTER,
         shortStitches =
             true
     ),
