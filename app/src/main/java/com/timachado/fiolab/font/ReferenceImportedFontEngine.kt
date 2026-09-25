@@ -1664,6 +1664,18 @@ internal object ReferenceImportedFontEngine {
                 column.rows
                     .toList()
 
+            /*
+             * A ordem dos blocos continua fixa (leitura espacial), mas
+             * cada bloco pode ser percorrido nos dois sentidos.
+             *
+             * Isso cria uma travessia em serpentina: se o bloco anterior
+             * terminou embaixo, o próximo entra por baixo; se terminou
+             * em cima, entra por cima. Assim a agulha não desce um bloco
+             * inteiro e depois salta de volta ao topo do bloco seguinte.
+             */
+            val reversed =
+                normal.asReversed()
+
             val candidates =
                 listOf(
                     orientRows(
@@ -1673,6 +1685,16 @@ internal object ReferenceImportedFontEngine {
                     ),
                     orientRows(
                         normal,
+                        swap =
+                            true
+                    ),
+                    orientRows(
+                        reversed,
+                        swap =
+                            false
+                    ),
+                    orientRows(
+                        reversed,
                         swap =
                             true
                     )
@@ -3119,6 +3141,120 @@ internal object ReferenceImportedFontEngine {
                         ) *
                         ratio
         )
+
+    internal fun debugSerpentineTransitionJumpTargets():
+        List<Pair<Int, Int>> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val first =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            0f
+                        ),
+                        FPoint(
+                            10f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            10f
+                        ),
+                        FPoint(
+                            10f,
+                            10f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            20f
+                        ),
+                        FPoint(
+                            10f,
+                            20f
+                        )
+                    )
+                )
+            )
+
+        val second =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            30f,
+                            0f
+                        ),
+                        FPoint(
+                            40f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            30f,
+                            10f
+                        ),
+                        FPoint(
+                            40f,
+                            10f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            30f,
+                            20f
+                        ),
+                        FPoint(
+                            40f,
+                            20f
+                        )
+                    )
+                )
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    first,
+                    second
+                ),
+            polygons =
+                emptyList(),
+            startHint =
+                FPoint(
+                    0f,
+                    0f
+                ),
+            underlayMode =
+                SatinUnderlayMode.NONE,
+            densityMm =
+                0.4f
+        )
+
+        return output
+            .filter {
+                it.command ==
+                    StitchCommand.JUMP
+            }
+            .map {
+                it.xUnits to
+                    it.yUnits
+            }
+    }
 
     internal fun debugReadingOrderColumnLeftEdges():
         List<Float> {
