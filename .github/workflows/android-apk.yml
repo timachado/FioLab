@@ -35,22 +35,6 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Export Android APK signing tools
-        shell: bash
-        run: |
-          mkdir -p android-signing-tools/lib
-          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" android-signing-tools/
-          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" android-signing-tools/
-          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" android-signing-tools/lib/
-          cp "$ANDROID_HOME/build-tools/36.0.0/lib64/libc++.so" android-signing-tools/
-
-      - name: Upload Android APK signing tools
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-signing-tools-36
-          path: android-signing-tools
-          if-no-files-found: error
-
 
       - name: Prepare brand assets
         shell: bash
