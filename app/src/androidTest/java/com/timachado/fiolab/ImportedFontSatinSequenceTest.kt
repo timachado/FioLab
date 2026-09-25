@@ -8,6 +8,9 @@ import com.timachado.fiolab.core.embroidery.TextStitchStyle
 import com.timachado.fiolab.font.ImportedFont
 import com.timachado.fiolab.font.ImportedFontMatrixGenerator
 import java.io.File
+import kotlin.math.hypot
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,8 +18,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ImportedFontSatinSequenceTest {
 
-    @Test
-    fun importedSatinNeverReturnsToPreviousGlyphAfterAdvancing() {
+    private fun systemFont(): ImportedFont {
         val fontFile =
             listOf(
                 File("/system/fonts/Roboto-Regular.ttf"),
@@ -27,19 +29,21 @@ class ImportedFontSatinSequenceTest {
                 "Fonte de sistema não encontrada no emulador."
             )
 
-        val font =
-            ImportedFont(
-                id = fontFile.name,
-                displayName = "Sistema",
-                fileName = fontFile.name,
-                extension = "ttf",
-                absolutePath = fontFile.absolutePath
-            )
+        return ImportedFont(
+            id = fontFile.name,
+            displayName = "Sistema",
+            fileName = fontFile.name,
+            extension = "ttf",
+            absolutePath = fontFile.absolutePath
+        )
+    }
 
+    @Test
+    fun importedSatinNeverReturnsToPreviousGlyphAfterAdvancing() {
         val design =
             ImportedFontMatrixGenerator
                 .generateText(
-                    font = font,
+                    font = systemFont(),
                     text = "AB",
                     options =
                         TextMatrixOptions(
@@ -54,7 +58,7 @@ class ImportedFontSatinSequenceTest {
                 )
                 .getOrThrow()
 
-        val stitches =
+        val sewn =
             design.points.filter {
                 it.command ==
                     StitchCommand.STITCH
@@ -62,11 +66,11 @@ class ImportedFontSatinSequenceTest {
 
         assertTrue(
             "A matriz precisa conter pontos Satin.",
-            stitches.isNotEmpty()
+            sewn.isNotEmpty()
         )
 
         val sortedX =
-            stitches
+            sewn
                 .map {
                     it.xUnits
                 }
@@ -84,13 +88,10 @@ class ImportedFontSatinSequenceTest {
                     "Não foi possível separar os dois glifos."
                 )
 
-        val gapUnits =
-            largestGap.second -
-                largestGap.first
-
         assertTrue(
-            "O teste precisa manter uma separação clara entre os glifos.",
-            gapUnits >=
+            "O teste precisa manter separação clara entre os glifos.",
+            largestGap.second -
+                largestGap.first >=
                 50
         )
 
@@ -104,7 +105,7 @@ class ImportedFontSatinSequenceTest {
         var enteredSecondGlyph =
             false
 
-        stitches.forEach {
+        sewn.forEach {
                 point ->
             if (
                 point.xUnits >
@@ -116,7 +117,7 @@ class ImportedFontSatinSequenceTest {
                 enteredSecondGlyph
             ) {
                 error(
-                    "A sequência voltou para o primeiro glifo depois de iniciar o segundo."
+                    "A sequência voltou ao primeiro glifo depois de iniciar o segundo."
                 )
             }
         }
@@ -128,219 +129,165 @@ class ImportedFontSatinSequenceTest {
     }
 
     @Test
-    fun importedSatinStartsWithSparseFixationAndEndsOnVectorOutline() {
-        val fontFile =
-            listOf(
-                File("/system/fonts/Roboto-Regular.ttf"),
-                File("/system/fonts/NotoSans-Regular.ttf")
-            ).firstOrNull {
-                it.isFile
-            } ?: error(
-                "Fonte de sistema não encontrada no emulador."
-            )
-
-        val font =
-            ImportedFont(
-                id = fontFile.name,
-                displayName = "Sistema",
-                fileName = fontFile.name,
-                extension = "ttf",
-                absolutePath = fontFile.absolutePath
-            )
-
-        val design =
+    fun importedSatinUsesReferenceStartUnderlayAndFinalLock() {
+        val withUnderlay =
             ImportedFontMatrixGenerator
                 .generateText(
-                    font = font,
-                    text = "O",
+                    font = systemFont(),
+                    text = "I",
                     options =
                         TextMatrixOptions(
-                            text = "O",
+                            text = "I",
                             heightMm = 25f,
                             style = TextStitchStyle.SATIN,
+                            satinDensityMm = 0.4f,
+                            satinPullCompensationMm = 0.2f,
                             satinUnderlayMode =
-                                SatinUnderlayMode.ZIGZAG,
+                                SatinUnderlayMode.CENTER,
                             enforceHoop = false
                         )
                 )
                 .getOrThrow()
 
-        val segments =
-            mutableListOf<
-                MutableList<
-                    com.timachado.fiolab
-                        .core
-                        .embroidery
-                        .EmbroideryPoint
-                >
-            >()
-
-        var current =
-            mutableListOf<
-                com.timachado.fiolab
-                    .core
-                    .embroidery
-                    .EmbroideryPoint
-            >()
-
-        design.points.forEach {
-                point ->
-            if (
-                point.command ==
-                    StitchCommand.TRIM
-            ) {
-                if (
-                    current.isNotEmpty()
-                ) {
-                    segments +=
-                        current
-
-                    current =
-                        mutableListOf()
-                }
-            } else if (
-                point.command ==
-                    StitchCommand.STITCH
-            ) {
-                current +=
-                    point
-            }
-        }
-
-        if (
-            current.isNotEmpty()
-        ) {
-            segments +=
-                current
-        }
-
-        assertTrue(
-            "O Satin em camadas precisa gerar fixação, suporte, cobertura e contorno.",
-            segments.size >=
-                4
-        )
-
-        val fixation =
-            segments.first()
-
-        assertTrue(
-            "A camada inicial de fixação precisa conter pontos corridos.",
-            fixation.size >=
-                2
-        )
-
-        val fixationAverageStep =
-            fixation
-                .zipWithNext()
-                .map {
-                    (first, second) ->
-                    kotlin.math.hypot(
-                        (
-                            second.xUnits -
-                                first.xUnits
-                            ).toDouble(),
-                        (
-                            second.yUnits -
-                                first.yUnits
-                            ).toDouble()
-                    )
-                }
-                .average()
-
-        val laterAverageSteps =
-            segments
-                .drop(1)
-                .mapNotNull {
-                        segment ->
-                    val distances =
-                        segment
-                            .zipWithNext()
-                            .map {
-                                (first, second) ->
-                                kotlin.math.hypot(
-                                    (
-                                        second.xUnits -
-                                            first.xUnits
-                                        ).toDouble(),
-                                    (
-                                        second.yUnits -
-                                            first.yUnits
-                                        ).toDouble()
-                                )
-                            }
-
-                    if (
-                        distances.isEmpty()
-                    ) {
-                        null
-                    } else {
-                        distances.average()
-                    }
-                }
-
-        val densestLaterAverage =
-            laterAverageSteps
-                .minOrNull()
-                ?: error(
-                    "As camadas posteriores não geraram pontos suficientes."
+        val withoutUnderlay =
+            ImportedFontMatrixGenerator
+                .generateText(
+                    font = systemFont(),
+                    text = "I",
+                    options =
+                        TextMatrixOptions(
+                            text = "I",
+                            heightMm = 25f,
+                            style = TextStitchStyle.SATIN,
+                            satinDensityMm = 0.4f,
+                            satinPullCompensationMm = 0.2f,
+                            satinUnderlayMode =
+                                SatinUnderlayMode.NONE,
+                            enforceHoop = false
+                        )
                 )
+                .getOrThrow()
 
-        assertTrue(
-            "A fixação deve ser mais esparsa que a cobertura Satin.",
-            fixationAverageStep >
-                densestLaterAverage *
-                    1.35
-        )
-
-        assertTrue(
-            "A fixação deve usar menos pontos que a camada mais densa.",
-            fixation.size <
-                segments
-                    .drop(1)
-                    .maxOf {
-                        it.size
-                    }
-        )
-
-        val outline =
-            segments.last()
-
-        val guide =
-            design.guidePoints
-
-        assertTrue(
-            "O contorno vetorial precisa existir para validar o fechamento.",
-            guide.isNotEmpty()
-        )
-
-        val nearGuide =
-            outline.count {
-                    point ->
-                guide.any {
-                        guidePoint ->
-                    kotlin.math.hypot(
-                        (
-                            point.xUnits -
-                                guidePoint.xUnits
-                            ).toDouble(),
-                        (
-                            point.yUnits -
-                                guidePoint.yUnits
-                            ).toDouble()
-                    ) <=
-                        14.0
-                }
+        val commands =
+            withUnderlay.points.filter {
+                it.command !=
+                    StitchCommand.END
             }
 
         assertTrue(
-            "A última camada deve acompanhar o contorno vetorial da letra.",
-            nearGuide.toDouble() /
-                outline.size
-                    .coerceAtLeast(
-                        1
-                    ) >=
-                0.70
+            "O primeiro comando do bloco Satin deve ser um salto até a entrada.",
+            commands.firstOrNull()?.command ==
+                StitchCommand.JUMP
+        )
+
+        assertTrue(
+            "O underlay central de referência deve adicionar pontos antes da cobertura.",
+            withUnderlay.stitchCount >
+                withoutUnderlay.stitchCount
+        )
+
+        val sewn =
+            withUnderlay.points.filter {
+                it.command ==
+                    StitchCommand.STITCH
+            }
+
+        assertTrue(
+            "A matriz precisa terminar com a trava de três pontos.",
+            sewn.size >=
+                3
+        )
+
+        val lockA =
+            sewn[
+                sewn.size -
+                    3
+            ]
+
+        val lockInside =
+            sewn[
+                sewn.size -
+                    2
+            ]
+
+        val lockBack =
+            sewn.last()
+
+        assertEquals(
+            "A trava final deve voltar exatamente ao ponto A.",
+            lockA.xUnits,
+            lockBack.xUnits
+        )
+
+        assertEquals(
+            "A trava final deve voltar exatamente ao ponto A.",
+            lockA.yUnits,
+            lockBack.yUnits
+        )
+
+        val lockLength =
+            hypot(
+                (
+                    lockInside.xUnits -
+                        lockA.xUnits
+                    ).toDouble(),
+                (
+                    lockInside.yUnits -
+                        lockA.yUnits
+                    ).toDouble()
+            )
+
+        assertTrue(
+            "A trava interna deve medir aproximadamente 0,6 mm.",
+            lockLength in
+                4.0..8.0
+        )
+
+        assertTrue(
+            "Depois da trava final não deve existir uma passada de contorno.",
+            withUnderlay.points
+                .dropWhile {
+                    it !==
+                        lockBack
+                }
+                .drop(1)
+                .all {
+                    it.command ==
+                        StitchCommand.END
+                }
         )
     }
 
+    @Test
+    fun importedSatinDoesNotForceTrimBetweenNearbyLetters() {
+        val design =
+            ImportedFontMatrixGenerator
+                .generateText(
+                    font = systemFont(),
+                    text = "II",
+                    options =
+                        TextMatrixOptions(
+                            text = "II",
+                            heightMm = 12f,
+                            spacingMm = 0f,
+                            style = TextStitchStyle.SATIN,
+                            satinUnderlayMode =
+                                SatinUnderlayMode.CENTER,
+                            enforceHoop = false
+                        )
+                )
+                .getOrThrow()
+
+        val trims =
+            design.points.count {
+                it.command ==
+                    StitchCommand.TRIM
+            }
+
+        assertFalse(
+            "Letras próximas não devem receber TRIM obrigatório só por mudar de glifo.",
+            trims >
+                0
+        )
+    }
 }
