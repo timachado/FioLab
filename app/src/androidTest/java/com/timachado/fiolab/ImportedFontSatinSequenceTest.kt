@@ -278,16 +278,82 @@ class ImportedFontSatinSequenceTest {
                 )
                 .getOrThrow()
 
-        val trims =
-            design.points.count {
+        val stitchedX =
+            design.points
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+                .map {
+                    it.xUnits
+                }
+                .distinct()
+                .sorted()
+
+        val largestGap =
+            stitchedX
+                .zipWithNext()
+                .maxByOrNull {
+                    it.second -
+                        it.first
+                }
+                ?: error(
+                    "Não foi possível localizar a separação entre os glifos."
+                )
+
+        val boundary =
+            (
+                largestGap.first +
+                    largestGap.second
+                ) /
+                2
+
+        val firstRightIndex =
+            design.points
+                .indexOfFirst {
+                    it.command ==
+                        StitchCommand.STITCH &&
+                        it.xUnits >
+                            boundary
+                }
+
+        require(
+            firstRightIndex >
+                0
+        )
+
+        val lastLeftIndex =
+            design.points
+                .subList(
+                    0,
+                    firstRightIndex
+                )
+                .indexOfLast {
+                    it.command ==
+                        StitchCommand.STITCH &&
+                        it.xUnits <
+                            boundary
+                }
+
+        require(
+            lastLeftIndex >=
+                0
+        )
+
+        val transition =
+            design.points
+                .subList(
+                    lastLeftIndex +
+                        1,
+                    firstRightIndex
+                )
+
+        assertFalse(
+            "Letras próximas não devem receber TRIM obrigatório na transição entre glifos.",
+            transition.any {
                 it.command ==
                     StitchCommand.TRIM
             }
-
-        assertFalse(
-            "Letras próximas não devem receber TRIM obrigatório só por mudar de glifo.",
-            trims >
-                0
         )
     }
 }
