@@ -249,6 +249,26 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun adjacentSatinColumnsContinueFromNearestEndInsteadOfJumpingBackToTop() {
+        val jumps =
+            ReferenceImportedFontEngine
+                .debugSerpentineTransitionJumpTargets()
+
+        assertTrue(
+            jumps.size >=
+                2
+        )
+
+        val transition =
+            jumps.last()
+
+        assertEquals(
+            20,
+            transition.second
+        )
+    }
+
+    @Test
     fun satinColumnsKeepStableLeftToRightReadingOrder() {
         assertEquals(
             listOf(
