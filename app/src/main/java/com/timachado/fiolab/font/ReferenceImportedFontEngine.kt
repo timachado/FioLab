@@ -2547,6 +2547,106 @@ internal object ReferenceImportedFontEngine {
         }
     }
 
+    internal fun debugProgressiveCenterUnderlayPath():
+        List<EmbroideryPoint> {
+        val output =
+            mutableListOf<
+                EmbroideryPoint
+            >()
+
+        val emitter =
+            SatinEmitter(
+                output
+            )
+
+        val column =
+            SatinColumn(
+                mutableListOf(
+                    SatinRow(
+                        FPoint(
+                            0f,
+                            0f
+                        ),
+                        FPoint(
+                            2f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            10f,
+                            0f
+                        ),
+                        FPoint(
+                            12f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            20f,
+                            0f
+                        ),
+                        FPoint(
+                            22f,
+                            0f
+                        )
+                    ),
+                    SatinRow(
+                        FPoint(
+                            30f,
+                            0f
+                        ),
+                        FPoint(
+                            32f,
+                            0f
+                        )
+                    )
+                )
+            )
+
+        emitter.emitGlyph(
+            columns =
+                listOf(
+                    column
+                ),
+            polygons =
+                listOf(
+                    Polygon(
+                        listOf(
+                            FPoint(
+                                -2f,
+                                -2f
+                            ),
+                            FPoint(
+                                34f,
+                                -2f
+                            ),
+                            FPoint(
+                                34f,
+                                2f
+                            ),
+                            FPoint(
+                                -2f,
+                                2f
+                            )
+                        )
+                    )
+                ),
+            startHint =
+                FPoint(
+                    0f,
+                    0f
+                ),
+            underlayMode =
+                SatinUnderlayMode.CENTER,
+            densityMm =
+                0.4f
+        )
+
+        return output
+    }
+
     internal fun debugVisualStartPath():
         List<EmbroideryPoint> {
         val output =
