@@ -158,6 +158,32 @@ class ReferenceImportedFontEngineTest {
     }
 
     @Test
+    fun centerUnderlayNeverReversesBackAcrossFinishedRows() {
+        val stitches =
+            ReferenceImportedFontEngine
+                .debugProgressiveCenterUnderlayPath()
+                .filter {
+                    it.command ==
+                        StitchCommand.STITCH
+                }
+
+        val xSequence =
+            stitches.map {
+                it.xUnits
+            }
+
+        assertTrue(
+            "Underlay + Satin não pode avançar e depois voltar para linhas já concluídas.",
+            xSequence.zipWithNext()
+                .all {
+                        pair ->
+                    pair.second >=
+                        pair.first
+                }
+        )
+    }
+
+    @Test
     fun centerUnderlayStartsOnColumnCenterInsteadOfWalkingEdges() {
         val points =
             ReferenceImportedFontEngine
