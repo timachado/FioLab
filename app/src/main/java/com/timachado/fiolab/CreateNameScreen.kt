@@ -288,7 +288,9 @@ fun CreateNameScreen(
                                 options =
                                     textOptions
                             )
-                    }
+                    },
+                    preserveWholeTextSequenceForSatin =
+                        true
                 )
             }
 
