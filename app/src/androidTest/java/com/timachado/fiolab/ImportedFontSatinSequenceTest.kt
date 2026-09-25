@@ -126,4 +126,172 @@ class ImportedFontSatinSequenceTest {
             enteredSecondGlyph
         )
     }
+
+    @Test
+    fun importedSatinStartsWithSparseFixationAndEndsOnVectorOutline() {
+        val fontFile =
+            listOf(
+                File("/system/fonts/Roboto-Regular.ttf"),
+                File("/system/fonts/NotoSans-Regular.ttf")
+            ).firstOrNull {
+                it.isFile
+            } ?: error(
+                "Fonte de sistema não encontrada no emulador."
+            )
+
+        val font =
+            ImportedFont(
+                id = fontFile.name,
+                displayName = "Sistema",
+                fileName = fontFile.name,
+                extension = "ttf",
+                absolutePath = fontFile.absolutePath
+            )
+
+        val design =
+            ImportedFontMatrixGenerator
+                .generateText(
+                    font = font,
+                    text = "O",
+                    options =
+                        TextMatrixOptions(
+                            text = "O",
+                            heightMm = 25f,
+                            style = TextStitchStyle.SATIN,
+                            satinUnderlayMode =
+                                SatinUnderlayMode.ZIGZAG,
+                            enforceHoop = false
+                        )
+                )
+                .getOrThrow()
+
+        val segments =
+            mutableListOf<
+                MutableList<
+                    com.timachado.fiolab
+                        .core
+                        .embroidery
+                        .EmbroideryPoint
+                >
+            >()
+
+        var current =
+            mutableListOf<
+                com.timachado.fiolab
+                    .core
+                    .embroidery
+                    .EmbroideryPoint
+            >()
+
+        design.points.forEach {
+                point ->
+            if (
+                point.command ==
+                    StitchCommand.TRIM
+            ) {
+                if (
+                    current.isNotEmpty()
+                ) {
+                    segments +=
+                        current
+
+                    current =
+                        mutableListOf()
+                }
+            } else if (
+                point.command ==
+                    StitchCommand.STITCH
+            ) {
+                current +=
+                    point
+            }
+        }
+
+        if (
+            current.isNotEmpty()
+        ) {
+            segments +=
+                current
+        }
+
+        assertTrue(
+            "O Satin em camadas precisa gerar fixação, suporte, cobertura e contorno.",
+            segments.size >=
+                4
+        )
+
+        val fixation =
+            segments.first()
+
+        assertTrue(
+            "A camada inicial de fixação precisa conter pontos corridos.",
+            fixation.size >=
+                2
+        )
+
+        val fixationAverageStep =
+            fixation
+                .zipWithNext()
+                .map {
+                    (first, second) ->
+                    kotlin.math.hypot(
+                        (
+                            second.xUnits -
+                                first.xUnits
+                            ).toDouble(),
+                        (
+                            second.yUnits -
+                                first.yUnits
+                            ).toDouble()
+                    )
+                }
+                .average()
+
+        assertTrue(
+            "A fixação deve usar pontos mais longos e leves.",
+            fixationAverageStep >=
+                16.0
+        )
+
+        val outline =
+            segments.last()
+
+        val guide =
+            design.guidePoints
+
+        assertTrue(
+            "O contorno vetorial precisa existir para validar o fechamento.",
+            guide.isNotEmpty()
+        )
+
+        val nearGuide =
+            outline.count {
+                    point ->
+                guide.any {
+                        guidePoint ->
+                    kotlin.math.hypot(
+                        (
+                            point.xUnits -
+                                guidePoint.xUnits
+                            ).toDouble(),
+                        (
+                            point.yUnits -
+                                guidePoint.yUnits
+                            ).toDouble()
+                    ) <=
+                        14.0
+                }
+            }
+
+        assertTrue(
+            "A última camada deve acompanhar o contorno vetorial da letra.",
+            nearGuide.toDouble() /
+                outline.size
+                    .coerceAtLeast(
+                        1
+                    ) >=
+                0.70
+        )
+    }
+
 }
