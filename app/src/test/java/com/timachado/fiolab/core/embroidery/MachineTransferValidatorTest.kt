@@ -134,4 +134,67 @@ class MachineTransferValidatorTest {
             result.ready
         )
     }
+
+    @Test
+    fun portraitMatrixFitsRectangularHoopWhenRotated() {
+        val result =
+            MachineTransferValidator
+                .validate(
+                    design =
+                        design(
+                            widthUnits = 692,
+                            heightUnits = 1784
+                        ),
+                    format = "PES",
+                    hoop =
+                        HoopProfile
+                            .H140X200
+                )
+
+        assertTrue(
+            "69,2 × 178,4 mm deve caber no bastidor 140 × 200 mm quando o bastidor é girado.",
+            result.ready
+        )
+    }
+
+    @Test
+    fun portraitMatrixStillRejectsHoopWhoseSafeAreaIsTooShort() {
+        val result =
+            MachineTransferValidator
+                .validate(
+                    design =
+                        design(
+                            widthUnits = 692,
+                            heightUnits = 1784
+                        ),
+                    format = "PES",
+                    hoop =
+                        HoopProfile
+                            .H130X180
+                )
+
+        assertFalse(
+            "Com margem segura de 5 mm, 69,2 × 178,4 mm ainda não cabe no 130 × 180 mm.",
+            result.ready
+        )
+    }
+
+    @Test
+    fun recommendedHoopUsesRotatedFitForPortraitMatrix() {
+        val result =
+            MachineTransferValidator
+                .recommendedHoop(
+                    design(
+                        widthUnits = 692,
+                        heightUnits = 1784
+                    )
+                )
+
+        assertTrue(
+            "O primeiro bastidor seguro deve ser 140 × 200 mm.",
+            result ==
+                HoopProfile.H140X200
+        )
+    }
+
 }
