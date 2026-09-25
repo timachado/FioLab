@@ -268,7 +268,7 @@ class ImportedFontSatinSequenceTest {
                     options =
                         TextMatrixOptions(
                             text = "II",
-                            heightMm = 12f,
+                            heightMm = 4f,
                             spacingMm = 0f,
                             style = TextStitchStyle.SATIN,
                             satinUnderlayMode =
