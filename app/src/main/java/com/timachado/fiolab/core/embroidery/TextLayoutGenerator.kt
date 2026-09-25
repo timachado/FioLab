@@ -36,7 +36,10 @@ data class TextGlyphProvider(
             TextMatrixOptions
         ) ->
             Result<EmbroideryDesign>)? =
-        null
+        null,
+    val preserveWholeTextSequenceForSatin:
+        Boolean =
+        false
 )
 
 data class TextLayoutOptions(
@@ -150,14 +153,39 @@ object TextLayoutGenerator {
                             sourceText
                     )
 
+                val preserveDirectSatinSequence =
+                    options
+                        .glyphProvider
+                        ?.preserveWholeTextSequenceForSatin ==
+                        true &&
+                        options.textOptions
+                            .style ==
+                        TextStitchStyle.SATIN &&
+                        options.textOptions
+                            .specialStitchMode ==
+                        null
+
                 val finished =
-                    MachineFinishing
-                        .apply(
-                            direct,
-                            options
-                                .machineFinishingSettings
-                        )
-                        .design
+                    if (
+                        preserveDirectSatinSequence
+                    ) {
+                        /*
+                         * O gerador Satin importado já emite o bloco
+                         * completo no padrão de referência: travel,
+                         * TRIM > 5 mm, underlay central e locks de
+                         * entrada/saída. Repassar pelo MachineFinishing
+                         * duplicaria arremates e mudaria a sequência.
+                         */
+                        direct
+                    } else {
+                        MachineFinishing
+                            .apply(
+                                direct,
+                                options
+                                    .machineFinishingSettings
+                            )
+                            .design
+                    }
 
                 EmbroideryStressPolicy
                     .requireGeneratedSafe(
