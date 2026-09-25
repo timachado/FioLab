@@ -2029,10 +2029,55 @@ object ImportedFontMatrixGenerator {
         unitsPerPixel: Float
     ) {
         val stitchStepUnits =
-            36f
+            42f
 
-        lines
-            .asReversed()
+        val firstFillLine =
+            lines.firstOrNull()
+
+        val reverseCandidates =
+            lines
+                .drop(1)
+                .asReversed()
+                .toMutableList()
+
+        val longestCandidate =
+            reverseCandidates
+                .maxByOrNull {
+                    skeletonLineLength(
+                        it
+                    )
+                }
+
+        val fixationRoute =
+            buildList {
+                if (
+                    longestCandidate !=
+                        null
+                ) {
+                    add(
+                        longestCandidate
+                    )
+
+                    reverseCandidates.remove(
+                        longestCandidate
+                    )
+                }
+
+                addAll(
+                    reverseCandidates
+                )
+
+                if (
+                    firstFillLine !=
+                        null
+                ) {
+                    add(
+                        firstFillLine
+                    )
+                }
+            }
+
+        fixationRoute
             .forEach {
                     sourceLine ->
                 val samples =
