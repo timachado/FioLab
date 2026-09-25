@@ -190,9 +190,62 @@ object ImportedFontMatrixGenerator {
                 options.heightMm *
                     10f
 
+            val capPath =
+                Path()
+
+            val capSample =
+                if (
+                    paint.hasGlyph(
+                        "H"
+                    )
+                ) {
+                    "H"
+                } else {
+                    renderableText
+                        .first()
+                        .toString()
+                }
+
+            paint.getTextPath(
+                capSample,
+                0,
+                capSample.length,
+                0f,
+                0f,
+                capPath
+            )
+
+            val capBounds =
+                RectF().also {
+                    capPath.computeBounds(
+                        it,
+                        true
+                    )
+                }
+
+            val fallbackCapHeight =
+                kotlin.math.abs(
+                    paint.fontMetrics
+                        .ascent
+                ) *
+                    0.72f
+
+            val capHeightRaw =
+                if (
+                    capBounds.height() >
+                        0.5f
+                ) {
+                    capBounds.height()
+                } else {
+                    fallbackCapHeight
+                }
+                    .coerceAtLeast(
+                        1f
+                    )
+
             val scale =
                 targetHeightUnits /
-                    pathBounds.height()
+                    capHeightRaw
 
             val guideContours =
                 samplePath(
@@ -267,8 +320,11 @@ object ImportedFontMatrixGenerator {
                         pathBounds,
                     scale =
                         scale,
-                    spacingMm =
-                        options.spacingMm
+                    spacingUnits =
+                        targetHeightUnits *
+                            0.04f +
+                            options.spacingMm *
+                            10f
                 )
 
             require(
@@ -508,7 +564,7 @@ object ImportedFontMatrixGenerator {
         text: String,
         pathBounds: RectF,
         scale: Float,
-        spacingMm: Float
+        spacingUnits: Float
     ): List<List<SampledContour>> {
         val groups =
             mutableListOf<
@@ -520,50 +576,40 @@ object ImportedFontMatrixGenerator {
                 scale >
                     0.0001f
             ) {
-                spacingMm *
-                    10f /
+                spacingUnits /
                     scale
             } else {
                 0f
             }
 
-        text.forEachIndexed {
-                index,
+        var penXRaw =
+            0f
+
+        text.forEach {
                 char ->
+            val advanceRaw =
+                paint.measureText(
+                    char.toString()
+                )
+
             if (
                 char.isWhitespace()
             ) {
-                return@forEachIndexed
+                penXRaw +=
+                    advanceRaw +
+                        extraSpacingRaw
+
+                return@forEach
             }
 
             val glyphPath =
                 Path()
 
-            val prefixAdvance =
-                if (
-                    index ==
-                        0
-                ) {
-                    0f
-                } else {
-                    paint.measureText(
-                        text,
-                        0,
-                        index
-                    )
-                }
-
-            val glyphX =
-                prefixAdvance +
-                    extraSpacingRaw *
-                        index
-
             paint.getTextPath(
-                text,
-                index,
-                index +
-                    1,
-                glyphX,
+                char.toString(),
+                0,
+                1,
+                penXRaw,
                 0f,
                 glyphPath
             )
@@ -636,6 +682,10 @@ object ImportedFontMatrixGenerator {
                 groups +=
                     transformed
             }
+
+            penXRaw +=
+                advanceRaw +
+                    extraSpacingRaw
         }
 
         return groups
@@ -651,37 +701,53 @@ object ImportedFontMatrixGenerator {
                 EmbroideryPoint
             >()
 
+        val effectiveStyle =
+            if (
+                options.specialStitchMode !=
+                    null
+            ) {
+                TextStitchStyle.RUNNING
+            } else {
+                options.style
+            }
+
+        if (
+            effectiveStyle ==
+                TextStitchStyle.SATIN
+        ) {
+            /*
+             * Referência comportamental Mão Design 18.1.2:
+             * a posição atual é compartilhada entre colunas e glifos.
+             * Não existe TRIM obrigatório entre letras; o TRIM só entra
+             * quando o deslocamento real ultrapassa o limiar de viagem.
+             */
+            val state =
+                ReferenceSatinState()
+
+            glyphGroups.forEach {
+                    contours ->
+                appendReferenceSatinGlyph(
+                    output = output,
+                    contours = contours,
+                    options = options,
+                    state = state
+                )
+            }
+
+            return output
+        }
+
         glyphGroups.forEach {
                 contours ->
             val glyphPoints =
-                when (
-                    if (
-                        options.specialStitchMode !=
-                            null
-                    ) {
-                        TextStitchStyle.RUNNING
-                    } else {
-                        options.style
-                    }
-                ) {
-                    TextStitchStyle.RUNNING ->
-                        buildCenterlineRunning(
-                            contours =
-                                contours,
-                            stitchLengthUnits =
-                                options
-                                    .stitchLengthMm *
-                                    10f
-                        )
-
-                    TextStitchStyle.SATIN ->
-                        buildSatinByAxis(
-                            contours =
-                                contours,
-                            options =
-                                options
-                        )
-                }
+                buildCenterlineRunning(
+                    contours =
+                        contours,
+                    stitchLengthUnits =
+                        options
+                            .stitchLengthMm *
+                            10f
+                )
 
             if (
                 glyphPoints.isEmpty()
@@ -714,6 +780,1233 @@ object ImportedFontMatrixGenerator {
         }
 
         return output
+    }
+
+    /*
+     * Implementação independente baseada no comportamento observável do
+     * Mão Design 18.1.2 para texto Satin:
+     *
+     * - contorno do glifo -> varreduras nos dois eixos;
+     * - escolhe o eixo cuja largura média dos vãos é menor;
+     * - agrupa vãos sobrepostos em colunas;
+     * - divide colunas acima de 7 mm;
+     * - underlay central de ida e volta;
+     * - trava de 0,6 mm no início e no fim;
+     * - cada linha Satin é bordada A -> B;
+     * - viagem > 5 mm gera TRIM;
+     * - saltos e pontos longos são quebrados em trechos de até 7 mm.
+     *
+     * Não há camada de contorno posterior nem "fixação" separada.
+     */
+    private data class ReferenceSatinState(
+        var currentX: Float = 0f,
+        var currentY: Float = 0f,
+        var started: Boolean = false
+    )
+
+    private data class ReferenceSpan(
+        val position: Float,
+        val start: Float,
+        val end: Float,
+        val transposed: Boolean
+    )
+
+    private data class ReferenceRow(
+        val ax: Float,
+        val ay: Float,
+        val bx: Float,
+        val by: Float
+    )
+
+    private data class ReferenceColumn(
+        val rows:
+            MutableList<ReferenceRow> =
+            mutableListOf()
+    )
+
+    private fun appendReferenceSatinGlyph(
+        output: MutableList<EmbroideryPoint>,
+        contours: List<SampledContour>,
+        options: TextMatrixOptions,
+        state: ReferenceSatinState
+    ) {
+        if (
+            contours.isEmpty()
+        ) {
+            return
+        }
+
+        val polygons =
+            densifyReferenceContours(
+                contours = contours,
+                maxStepUnits = 2f
+            )
+
+        if (
+            polygons.isEmpty()
+        ) {
+            return
+        }
+
+        val horizontal =
+            scanReferenceSpans(
+                polygons = polygons,
+                pitchUnits =
+                    options.satinDensityMm *
+                        10f,
+                transposed = false
+            )
+
+        val vertical =
+            scanReferenceSpans(
+                polygons = polygons,
+                pitchUnits =
+                    options.satinDensityMm *
+                        10f,
+                transposed = true
+            )
+
+        val chosen =
+            if (
+                meanReferenceSpanWidth(
+                    horizontal
+                ) >
+                meanReferenceSpanWidth(
+                    vertical
+                )
+            ) {
+                vertical
+            } else {
+                horizontal
+            }
+
+        val columns =
+            buildReferenceColumns(
+                layers = chosen,
+                pullCompensationUnits =
+                    options
+                        .satinPullCompensationMm *
+                        10f,
+                maxSatinWidthUnits =
+                    70f
+            )
+
+        columns.forEach {
+                column ->
+            emitReferenceColumn(
+                output = output,
+                column = column,
+                densityUnits =
+                    options.satinDensityMm *
+                        10f,
+                includeUnderlay =
+                    options.satinUnderlayMode !=
+                        com.timachado
+                            .fiolab
+                            .core
+                            .embroidery
+                            .SatinUnderlayMode
+                            .NONE,
+                state = state
+            )
+        }
+    }
+
+    private fun densifyReferenceContours(
+        contours: List<SampledContour>,
+        maxStepUnits: Float
+    ): List<List<Pair<Float, Float>>> {
+        val safeStep =
+            maxStepUnits
+                .coerceAtLeast(
+                    0.5f
+                )
+
+        return contours
+            .mapNotNull {
+                    contour ->
+                val source =
+                    contour.points
+
+                if (
+                    source.size <
+                        2
+                ) {
+                    return@mapNotNull null
+                }
+
+                val polygon =
+                    mutableListOf<
+                        Pair<Float, Float>
+                    >()
+
+                val segmentCount =
+                    if (
+                        contour.closed
+                    ) {
+                        source.size
+                    } else {
+                        source.size -
+                            1
+                    }
+
+                for (
+                    index in
+                        0 until
+                            segmentCount
+                ) {
+                    val first =
+                        source[index]
+
+                    val second =
+                        source[
+                            (
+                                index +
+                                    1
+                                ) %
+                                source.size
+                        ]
+
+                    val dx =
+                        second.first -
+                            first.first
+
+                    val dy =
+                        second.second -
+                            first.second
+
+                    val distance =
+                        hypot(
+                            dx.toDouble(),
+                            dy.toDouble()
+                        )
+                            .toFloat()
+
+                    val parts =
+                        max(
+                            1,
+                            ceil(
+                                distance /
+                                    safeStep
+                            ).toInt()
+                        )
+
+                    for (
+                        part in
+                            0 until
+                                parts
+                    ) {
+                        val ratio =
+                            part.toFloat() /
+                                parts
+
+                        val point =
+                            Pair(
+                                first.first +
+                                    dx *
+                                        ratio,
+                                first.second +
+                                    dy *
+                                        ratio
+                            )
+
+                        if (
+                            polygon.lastOrNull() !=
+                                point
+                        ) {
+                            polygon +=
+                                point
+                        }
+                    }
+                }
+
+                if (
+                    !contour.closed
+                ) {
+                    val last =
+                        source.last()
+
+                    polygon +=
+                        Pair(
+                            last.first.toFloat(),
+                            last.second.toFloat()
+                        )
+                }
+
+                if (
+                    polygon.size >=
+                        3
+                ) {
+                    polygon
+                } else {
+                    null
+                }
+            }
+    }
+
+    private fun scanReferenceSpans(
+        polygons:
+            List<List<Pair<Float, Float>>>,
+        pitchUnits: Float,
+        transposed: Boolean
+    ): List<List<ReferenceSpan>> {
+        val all =
+            polygons.flatten()
+
+        if (
+            all.isEmpty()
+        ) {
+            return emptyList()
+        }
+
+        fun coord(
+            point: Pair<Float, Float>
+        ): Float =
+            if (
+                transposed
+            ) {
+                point.first
+            } else {
+                point.second
+            }
+
+        fun cross(
+            point: Pair<Float, Float>
+        ): Float =
+            if (
+                transposed
+            ) {
+                point.second
+            } else {
+                point.first
+            }
+
+        val minCoord =
+            all.minOf {
+                coord(
+                    it
+                )
+            }
+
+        val maxCoord =
+            all.maxOf {
+                coord(
+                    it
+                )
+            }
+
+        val pitch =
+            pitchUnits
+                .coerceAtLeast(
+                    0.5f
+                )
+
+        val layers =
+            mutableListOf<
+                List<ReferenceSpan>
+            >()
+
+        var position =
+            minCoord +
+                pitch /
+                    2f
+
+        while (
+            position <=
+                maxCoord +
+                    0.001f
+        ) {
+            val intersections =
+                mutableListOf<Float>()
+
+            polygons.forEach {
+                    polygon ->
+                for (
+                    index in
+                        polygon.indices
+                ) {
+                    val first =
+                        polygon[index]
+
+                    val second =
+                        polygon[
+                            (
+                                index +
+                                    1
+                                ) %
+                                polygon.size
+                        ]
+
+                    val firstCoord =
+                        coord(
+                            first
+                        )
+
+                    val secondCoord =
+                        coord(
+                            second
+                        )
+
+                    val crosses =
+                        (
+                            firstCoord <=
+                                position &&
+                                secondCoord >
+                                    position
+                            ) ||
+                            (
+                                secondCoord <=
+                                    position &&
+                                    firstCoord >
+                                        position
+                                )
+
+                    if (
+                        !crosses
+                    ) {
+                        continue
+                    }
+
+                    val ratio =
+                        (
+                            position -
+                                firstCoord
+                            ) /
+                            (
+                                secondCoord -
+                                    firstCoord
+                                )
+
+                    intersections +=
+                        cross(
+                            first
+                        ) +
+                            ratio *
+                            (
+                                cross(
+                                    second
+                                ) -
+                                    cross(
+                                        first
+                                    )
+                                )
+                }
+            }
+
+            intersections.sort()
+
+            val spans =
+                mutableListOf<
+                    ReferenceSpan
+                >()
+
+            var index =
+                0
+
+            while (
+                index +
+                    1 <
+                    intersections.size
+            ) {
+                val start =
+                    intersections[index]
+
+                val end =
+                    intersections[
+                        index +
+                            1
+                    ]
+
+                if (
+                    end -
+                        start >=
+                        1f
+                ) {
+                    spans +=
+                        ReferenceSpan(
+                            position =
+                                position,
+                            start =
+                                start,
+                            end =
+                                end,
+                            transposed =
+                                transposed
+                        )
+                }
+
+                index +=
+                    2
+            }
+
+            layers +=
+                spans
+
+            position +=
+                pitch
+        }
+
+        return layers
+    }
+
+    private fun meanReferenceSpanWidth(
+        layers:
+            List<List<ReferenceSpan>>
+    ): Double {
+        var sum =
+            0.0
+
+        var count =
+            0
+
+        layers.forEach {
+                layer ->
+            layer.forEach {
+                    span ->
+                sum +=
+                    (
+                        span.end -
+                            span.start
+                        ).toDouble()
+
+                count++
+            }
+        }
+
+        return if (
+            count >
+                0
+        ) {
+            sum /
+                count
+        } else {
+            Double.MAX_VALUE
+        }
+    }
+
+    private fun ReferenceSpan.toRow(
+        pullCompensationUnits: Float
+    ): ReferenceRow {
+        val first =
+            start -
+                pullCompensationUnits
+
+        val second =
+            end +
+                pullCompensationUnits
+
+        return if (
+            transposed
+        ) {
+            ReferenceRow(
+                ax =
+                    position,
+                ay =
+                    first,
+                bx =
+                    position,
+                by =
+                    second
+            )
+        } else {
+            ReferenceRow(
+                ax =
+                    first,
+                ay =
+                    position,
+                bx =
+                    second,
+                by =
+                    position
+            )
+        }
+    }
+
+    private fun buildReferenceColumns(
+        layers:
+            List<List<ReferenceSpan>>,
+        pullCompensationUnits: Float,
+        maxSatinWidthUnits: Float
+    ): List<ReferenceColumn> {
+        val completed =
+            mutableListOf<
+                ReferenceColumn
+            >()
+
+        var active =
+            mutableListOf<
+                Pair<
+                    ReferenceSpan,
+                    ReferenceColumn
+                >
+            >()
+
+        layers.forEach {
+                layer ->
+            val matched =
+                BooleanArray(
+                    layer.size
+                )
+
+            val next =
+                mutableListOf<
+                    Pair<
+                        ReferenceSpan,
+                        ReferenceColumn
+                    >
+                >()
+
+            active.forEach {
+                    activeEntry ->
+                val previousSpan =
+                    activeEntry.first
+
+                val column =
+                    activeEntry.second
+
+                var found =
+                    false
+
+                for (
+                    index in
+                        layer.indices
+                ) {
+                    if (
+                        matched[index]
+                    ) {
+                        continue
+                    }
+
+                    val current =
+                        layer[index]
+
+                    val overlaps =
+                        current.start <=
+                            previousSpan.end &&
+                            current.end >=
+                                previousSpan.start
+
+                    if (
+                        overlaps
+                    ) {
+                        column.rows +=
+                            current.toRow(
+                                pullCompensationUnits
+                            )
+
+                        next +=
+                            Pair(
+                                current,
+                                column
+                            )
+
+                        matched[index] =
+                            true
+
+                        found =
+                            true
+
+                        break
+                    }
+                }
+
+                if (
+                    !found
+                ) {
+                    completed +=
+                        column
+                }
+            }
+
+            layer.forEachIndexed {
+                    index,
+                    span ->
+                if (
+                    matched[index]
+                ) {
+                    return@forEachIndexed
+                }
+
+                val column =
+                    ReferenceColumn()
+
+                column.rows +=
+                    span.toRow(
+                        pullCompensationUnits
+                    )
+
+                next +=
+                    Pair(
+                        span,
+                        column
+                    )
+            }
+
+            active =
+                next
+        }
+
+        completed +=
+            active.map {
+                it.second
+            }
+
+        val split =
+            mutableListOf<
+                ReferenceColumn
+            >()
+
+        completed
+            .filter {
+                it.rows.isNotEmpty()
+            }
+            .forEach {
+                    column ->
+                split +=
+                    splitReferenceWideColumn(
+                        column = column,
+                        maxWidthUnits =
+                            maxSatinWidthUnits
+                    )
+            }
+
+        return split.sortedWith(
+            compareBy<ReferenceColumn> {
+                it.rows
+                    .first()
+                    .ax
+            }.thenBy {
+                it.rows
+                    .first()
+                    .ay
+            }
+        )
+    }
+
+    private fun splitReferenceWideColumn(
+        column: ReferenceColumn,
+        maxWidthUnits: Float
+    ): List<ReferenceColumn> {
+        val maximum =
+            column.rows
+                .maxOfOrNull {
+                    row ->
+                    hypot(
+                        (
+                            row.bx -
+                                row.ax
+                            ).toDouble(),
+                        (
+                            row.by -
+                                row.ay
+                            ).toDouble()
+                    )
+                        .toFloat()
+                }
+                ?: 0f
+
+        if (
+            maximum <=
+                maxWidthUnits
+        ) {
+            return listOf(
+                column
+            )
+        }
+
+        val parts =
+            ceil(
+                maximum /
+                    maxWidthUnits
+            )
+                .toInt()
+                .coerceAtLeast(
+                    1
+                )
+
+        return List(
+            parts
+        ) {
+                part ->
+            val startRatio =
+                part.toFloat() /
+                    parts
+
+            val endRatio =
+                (
+                    part +
+                        1
+                    ).toFloat() /
+                    parts
+
+            ReferenceColumn(
+                rows =
+                    column.rows
+                        .map {
+                                row ->
+                            ReferenceRow(
+                                ax =
+                                    row.ax +
+                                        (
+                                            row.bx -
+                                                row.ax
+                                            ) *
+                                            startRatio,
+                                ay =
+                                    row.ay +
+                                        (
+                                            row.by -
+                                                row.ay
+                                            ) *
+                                            startRatio,
+                                bx =
+                                    row.ax +
+                                        (
+                                            row.bx -
+                                                row.ax
+                                            ) *
+                                            endRatio,
+                                by =
+                                    row.ay +
+                                        (
+                                            row.by -
+                                                row.ay
+                                            ) *
+                                            endRatio
+                            )
+                        }
+                        .toMutableList()
+            )
+        }
+    }
+
+    private fun emitReferenceColumn(
+        output: MutableList<EmbroideryPoint>,
+        column: ReferenceColumn,
+        densityUnits: Float,
+        includeUnderlay: Boolean,
+        state: ReferenceSatinState
+    ) {
+        if (
+            column.rows.isEmpty()
+        ) {
+            return
+        }
+
+        val first =
+            column.rows.first()
+
+        emitReferenceTravel(
+            output = output,
+            targetX = first.ax,
+            targetY = first.ay,
+            state = state
+        )
+
+        if (
+            includeUnderlay &&
+            column.rows.size >=
+                4
+        ) {
+            emitReferenceCenterUnderlay(
+                output = output,
+                column = column,
+                densityUnits = densityUnits,
+                state = state
+            )
+        }
+
+        emitReferenceLock(
+            output = output,
+            row = first,
+            state = state
+        )
+
+        column.rows.forEach {
+                row ->
+            emitReferenceStitchTo(
+                output = output,
+                targetX = row.ax,
+                targetY = row.ay,
+                state = state
+            )
+
+            emitReferenceStitchTo(
+                output = output,
+                targetX = row.bx,
+                targetY = row.by,
+                state = state
+            )
+        }
+
+        emitReferenceLock(
+            output = output,
+            row =
+                column.rows.last(),
+            state = state
+        )
+    }
+
+    private fun emitReferenceCenterUnderlay(
+        output: MutableList<EmbroideryPoint>,
+        column: ReferenceColumn,
+        densityUnits: Float,
+        state: ReferenceSatinState
+    ) {
+        val safeDensity =
+            densityUnits
+                .coerceAtLeast(
+                    0.5f
+                )
+
+        val rowStep =
+            max(
+                1,
+                (
+                    20f /
+                        safeDensity
+                    ).roundToInt()
+            )
+
+        val centers =
+            mutableListOf<
+                Pair<Float, Float>
+            >()
+
+        var index =
+            0
+
+        while (
+            index <
+                column.rows.size
+        ) {
+            val row =
+                column.rows[index]
+
+            centers +=
+                Pair(
+                    (
+                        row.ax +
+                            row.bx
+                        ) /
+                        2f,
+                    (
+                        row.ay +
+                            row.by
+                        ) /
+                        2f
+                )
+
+            index +=
+                rowStep
+        }
+
+        val last =
+            column.rows.last()
+
+        centers +=
+            Pair(
+                (
+                    last.ax +
+                        last.bx
+                    ) /
+                    2f,
+                (
+                    last.ay +
+                        last.by
+                    ) /
+                    2f
+            )
+
+        centers.forEach {
+                center ->
+            emitReferenceStitchTo(
+                output = output,
+                targetX =
+                    center.first,
+                targetY =
+                    center.second,
+                state = state
+            )
+        }
+
+        for (
+            reverseIndex in
+                centers.size -
+                    2 downTo
+                    0
+        ) {
+            val center =
+                centers[
+                    reverseIndex
+                ]
+
+            emitReferenceStitchTo(
+                output = output,
+                targetX =
+                    center.first,
+                targetY =
+                    center.second,
+                state = state
+            )
+        }
+    }
+
+    private fun emitReferenceLock(
+        output: MutableList<EmbroideryPoint>,
+        row: ReferenceRow,
+        state: ReferenceSatinState
+    ) {
+        val dx =
+            row.bx -
+                row.ax
+
+        val dy =
+            row.by -
+                row.ay
+
+        val length =
+            hypot(
+                dx.toDouble(),
+                dy.toDouble()
+            )
+                .toFloat()
+
+        val normalX =
+            if (
+                length >=
+                    0.001f
+            ) {
+                dx /
+                    length
+            } else {
+                1f
+            }
+
+        val normalY =
+            if (
+                length >=
+                    0.001f
+            ) {
+                dy /
+                    length
+            } else {
+                0f
+            }
+
+        emitReferenceStitchTo(
+            output = output,
+            targetX =
+                row.ax,
+            targetY =
+                row.ay,
+            state = state
+        )
+
+        emitReferenceStitchTo(
+            output = output,
+            targetX =
+                row.ax +
+                    normalX *
+                        6f,
+            targetY =
+                row.ay +
+                    normalY *
+                        6f,
+            state = state
+        )
+
+        emitReferenceStitchTo(
+            output = output,
+            targetX =
+                row.ax,
+            targetY =
+                row.ay,
+            state = state
+        )
+    }
+
+    private fun emitReferenceTravel(
+        output: MutableList<EmbroideryPoint>,
+        targetX: Float,
+        targetY: Float,
+        state: ReferenceSatinState
+    ) {
+        if (
+            !state.started
+        ) {
+            output +=
+                EmbroideryPoint(
+                    targetX
+                        .roundToInt(),
+                    targetY
+                        .roundToInt(),
+                    StitchCommand.JUMP,
+                    0
+                )
+
+            state.currentX =
+                targetX
+
+            state.currentY =
+                targetY
+
+            state.started =
+                true
+
+            return
+        }
+
+        val dx =
+            targetX -
+                state.currentX
+
+        val dy =
+            targetY -
+                state.currentY
+
+        val distance =
+            hypot(
+                dx.toDouble(),
+                dy.toDouble()
+            )
+                .toFloat()
+
+        if (
+            distance <
+                0.5f
+        ) {
+            return
+        }
+
+        if (
+            distance >
+                50f
+        ) {
+            output +=
+                EmbroideryPoint(
+                    state.currentX
+                        .roundToInt(),
+                    state.currentY
+                        .roundToInt(),
+                    StitchCommand.TRIM,
+                    0
+                )
+        }
+
+        val segments =
+            max(
+                1,
+                ceil(
+                    distance /
+                        70f
+                ).toInt()
+            )
+
+        val startX =
+            state.currentX
+
+        val startY =
+            state.currentY
+
+        for (
+            part in
+                1..segments
+        ) {
+            val ratio =
+                part.toFloat() /
+                    segments
+
+            output +=
+                EmbroideryPoint(
+                    (
+                        startX +
+                            dx *
+                                ratio
+                        ).roundToInt(),
+                    (
+                        startY +
+                            dy *
+                                ratio
+                        ).roundToInt(),
+                    StitchCommand.JUMP,
+                    0
+                )
+        }
+
+        state.currentX =
+            targetX
+
+        state.currentY =
+            targetY
+    }
+
+    private fun emitReferenceStitchTo(
+        output: MutableList<EmbroideryPoint>,
+        targetX: Float,
+        targetY: Float,
+        state: ReferenceSatinState
+    ) {
+        val dx =
+            targetX -
+                state.currentX
+
+        val dy =
+            targetY -
+                state.currentY
+
+        val distance =
+            hypot(
+                dx.toDouble(),
+                dy.toDouble()
+            )
+                .toFloat()
+
+        val segments =
+            max(
+                1,
+                ceil(
+                    distance /
+                        70f
+                ).toInt()
+            )
+
+        val startX =
+            state.currentX
+
+        val startY =
+            state.currentY
+
+        for (
+            part in
+                1..segments
+        ) {
+            val ratio =
+                part.toFloat() /
+                    segments
+
+            output +=
+                EmbroideryPoint(
+                    (
+                        startX +
+                            dx *
+                                ratio
+                        ).roundToInt(),
+                    (
+                        startY +
+                            dy *
+                                ratio
+                        ).roundToInt(),
+                    StitchCommand.STITCH,
+                    0
+                )
+        }
+
+        state.currentX =
+            targetX
+
+        state.currentY =
+            targetY
     }
 
     private fun buildCenterlineRunning(
