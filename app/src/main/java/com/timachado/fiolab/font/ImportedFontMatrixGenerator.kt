@@ -617,7 +617,7 @@ object ImportedFontMatrixGenerator {
             if (
                 glyphPath.isEmpty
             ) {
-                return@forEachIndexed
+                return@forEach
             }
 
             val transformed =
