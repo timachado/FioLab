@@ -1,0 +1,83 @@
+name: Cleanup newer releases
+
+on:
+  push:
+    branches:
+      - fix/brother-directopen-safe4-0469
+    paths:
+      - .github/workflows/cleanup-newer-releases.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove releases newer than v0.46.9
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = [0, 46, 9];
+
+            function versionParts(tag) {
+              return String(tag || "")
+                .trim()
+                .replace(/^v/i, "")
+                .split(".")
+                .map(v => Number.parseInt(v, 10) || 0);
+            }
+
+            function isNewer(parts, current) {
+              const count = Math.max(parts.length, current.length);
+              for (let i = 0; i < count; i++) {
+                const a = parts[i] || 0;
+                const b = current[i] || 0;
+                if (a !== b) return a > b;
+              }
+              return false;
+            }
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 }
+            );
+
+            const removed = [];
+            for (const release of releases) {
+              if (!isNewer(versionParts(release.tag_name), base)) continue;
+
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.id
+              });
+
+              try {
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `tags/${release.tag_name}`
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+
+              removed.push(release.tag_name);
+            }
+
+            const baseRelease = releases.find(r => r.tag_name === "v0.46.9");
+            if (baseRelease) {
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: baseRelease.id,
+                name: "Brother Matrizes 0.46.9",
+                body: "Brother Matrizes 0.46.9 — base atual estável mantida para o aplicativo."
+              });
+            }
+
+            core.notice(`Removidos: ${removed.join(", ") || "nenhum"}`);
