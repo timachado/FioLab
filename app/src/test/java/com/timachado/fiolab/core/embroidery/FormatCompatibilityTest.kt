@@ -45,6 +45,11 @@ class FormatCompatibilityTest {
         assertTrue(
             design.bounds.heightMm > 0f
         )
+
+        assertTrue(
+            "JEF real deve chegar ao comando END sem ser aceito parcialmente.",
+            design.endFound
+        )
     }
 
     @Test
@@ -85,6 +90,11 @@ class FormatCompatibilityTest {
 
         assertTrue(
             design.bounds.heightMm > 0f
+        )
+
+        assertTrue(
+            "PES Brother real deve chegar ao comando END sem ser aceito parcialmente.",
+            design.endFound
         )
     }
 
