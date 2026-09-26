@@ -131,7 +131,7 @@ fun ViewerScreen(
                         when {
                             design.sourceBytes
                                 .isEmpty() ->
-                                " • criada no FioLab"
+                                " • criada no Brother Matrizes"
 
                             design.isModified ->
                                 " • edição aplicada"
