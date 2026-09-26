@@ -167,7 +167,7 @@ fun FontLibraryScreen(
                 )
 
                 Text(
-                    "Fontes FioLab + TTF/OTF deste aparelho",
+                    "Fontes Brother Matrizes + TTF/OTF deste aparelho",
                     color =
                         FioTextMuted,
                     fontSize =
@@ -211,7 +211,7 @@ fun FontLibraryScreen(
         }
 
         Text(
-            "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta FioLab. Limite: 12 MB por fonte.",
+            "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta Brother Matrizes. Limite: 12 MB por fonte.",
             modifier =
                 Modifier.padding(
                     top = 6.dp,
@@ -323,7 +323,7 @@ fun FontLibraryScreen(
                 )
 
                 Text(
-                    "Fontes nativas do FioLab",
+                    "Fontes nativas do Brother Matrizes",
                     color = FioText,
                     fontWeight =
                         FontWeight.Bold
@@ -446,7 +446,7 @@ fun FontLibraryScreen(
 
             item {
                 Text(
-                    "As fontes nativas usam geometrias próprias do FioLab. As TTF/OTF importadas mantêm o desenho vetorial da fonte e são convertidas em trajetórias de bordado sem substituir as famílias nativas.",
+                    "As fontes nativas usam geometrias próprias do Brother Matrizes. As TTF/OTF importadas mantêm o desenho vetorial da fonte e são convertidas em trajetórias de bordado sem substituir as famílias nativas.",
                     modifier =
                         Modifier.padding(
                             bottom =
@@ -553,7 +553,7 @@ private fun ImportedFontCard(
                         viewContext
                     ).apply {
                         text =
-                            "FioLab Matrizes"
+                            "Brother Matrizes"
                         textSize =
                             28f
                         setTextColor(
@@ -575,7 +575,7 @@ private fun ImportedFontCard(
                 update = {
                         view ->
                     view.text =
-                        "FioLab Matrizes"
+                        "Brother Matrizes"
 
                     previewTypeface
                         ?.let {
