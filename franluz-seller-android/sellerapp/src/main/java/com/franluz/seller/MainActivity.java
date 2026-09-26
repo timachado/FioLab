@@ -366,10 +366,8 @@ public class MainActivity extends Activity {
         String sessionCheck =
             "(function(){"
                 + "var logged=document.body&&document.body.classList.contains('logged-in');"
-                + "var logout=!!document.querySelector("
-                + "'a[href*=\\"customer-logout\\"],a[href*=\\"wp-login.php?action=logout\\"],a[href*=\\"logout\\"]'"
-                + ");"
-                + "return logged||logout;"
+                + "var admin=!!document.getElementById('wpadminbar');"
+                + "return logged||admin;"
                 + "})();";
 
         view.evaluateJavascript(sessionCheck, value -> {
@@ -401,20 +399,18 @@ public class MainActivity extends Activity {
 
         String js =
             "(function(){"
-                + "var f=document.querySelector("
-                + "'form.woocommerce-form-login,form.login,form[action*=\\"minha-conta\\"]'"
-                + ");"
+                + "var f=document.querySelector('form.woocommerce-form-login,form.login,form[action*=minha-conta]');"
                 + "if(!f)return 'NO_FORM';"
-                + "var u=f.querySelector('input[name=\\"username\\"],input[name=\\"log\\"],input[type=\\"email\\"]');"
-                + "var p=f.querySelector('input[name=\\"password\\"],input[name=\\"pwd\\"]');"
+                + "var u=f.querySelector('input[name=username],input[name=log],input[type=email]');"
+                + "var p=f.querySelector('input[name=password],input[name=pwd]');"
                 + "if(!u||!p)return 'NO_FIELDS';"
                 + "u.value=" + JSONObject.quote(pendingLoginUser) + ";"
                 + "p.value=" + JSONObject.quote(pendingLoginPassword) + ";"
                 + "u.dispatchEvent(new Event('input',{bubbles:true}));"
                 + "p.dispatchEvent(new Event('input',{bubbles:true}));"
-                + "var r=f.querySelector('input[name=\\"rememberme\\"],input[type=\\"checkbox\\"][name*=\\"remember\\"]');"
+                + "var r=f.querySelector('input[name=rememberme],input[type=checkbox][name*=remember]');"
                 + "if(r)r.checked=" + (pendingLoginRemember ? "true" : "false") + ";"
-                + "var b=f.querySelector('button[name=\\"login\\"],button[type=\\"submit\\"],input[type=\\"submit\\"]');"
+                + "var b=f.querySelector('button[name=login],button[type=submit],input[type=submit]');"
                 + "if(f.requestSubmit){if(b)f.requestSubmit(b);else f.requestSubmit();}"
                 + "else if(b&&b.click){b.click();}else{f.submit();}"
                 + "return 'SUBMITTED';"
