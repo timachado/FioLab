@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FranLuz Seller</string>
+    <string name="launcher_name">FranLuz Seller</string>
+    <string name="launch_url">https://franluzhomedecor.flashhub.net/seller-franluz/?pwa=1&amp;twa=1</string>
+    <string name="asset_statements"><![CDATA[[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://franluzhomedecor.flashhub.net"}}]]]></string>
+</resources>
