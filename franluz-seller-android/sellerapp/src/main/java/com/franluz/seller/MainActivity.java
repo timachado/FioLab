@@ -49,6 +49,11 @@ public class MainActivity extends Activity {
     private int mode = MODE_LOCAL;
     private boolean bridgeAttached = false;
     private boolean showingOffline = false;
+    private String pendingLoginUser = "";
+    private String pendingLoginPassword = "";
+    private boolean pendingLoginRemember = true;
+    private boolean loginFormInjected = false;
+    private boolean verifyingAfterLogin = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,7 +141,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setUserAgentString(
-            s.getUserAgentString() + " FranLuzSeller/1.1.2 SellerOnly"
+            s.getUserAgentString() + " FranLuzSeller/1.1.3 SellerOnly"
         );
 
         CookieManager cookies = CookieManager.getInstance();
@@ -233,17 +238,24 @@ public class MainActivity extends Activity {
 
                 Uri uri = Uri.parse(url);
 
-                if (mode == MODE_CHECK_SESSION || mode == MODE_LOGIN) {
+                if (mode == MODE_LOGIN) {
+                    handleRealLoginPage(view, uri);
+                    return;
+                }
+
+                if (mode == MODE_CHECK_SESSION) {
                     if (isSellerPath(uri)) {
+                        verifyingAfterLogin = false;
                         pendingError = "";
                         showLocal("home");
                         return;
                     }
 
                     if (isLoginOrCustomerPath(uri)) {
-                        pendingError = mode == MODE_LOGIN
-                            ? "Não foi possível entrar como vendedor. Confira usuário, senha e permissão do Seller Center."
+                        pendingError = verifyingAfterLogin
+                            ? "Login realizado, mas esta conta não recebeu acesso ao Seller Center. Verifique a permissão de vendedor/administrador no WordPress."
                             : "";
+                        verifyingAfterLogin = false;
                         showLocal("login");
                         return;
                     }
@@ -304,13 +316,16 @@ public class MainActivity extends Activity {
 
     private void verifySellerSession() {
         mode = MODE_CHECK_SESSION;
+        verifyingAfterLogin = false;
         detachBridge();
+        webView.setVisibility(android.view.View.INVISIBLE);
         webView.loadUrl(sellerUrl);
     }
 
     private void showLocal(String screen) {
         mode = MODE_LOCAL;
         pendingSection = "";
+        webView.setVisibility(android.view.View.VISIBLE);
         attachBridge();
         webView.loadUrl(LOCAL_SHELL + "#" + screen);
     }
@@ -326,51 +341,106 @@ public class MainActivity extends Activity {
             return;
         }
 
+        pendingLoginUser = username.trim();
+        pendingLoginPassword = password;
+        pendingLoginRemember = remember;
+        loginFormInjected = false;
+        verifyingAfterLogin = false;
+
         mode = MODE_LOGIN;
         detachBridge();
+        webView.setVisibility(android.view.View.INVISIBLE);
 
-        CookieManager cookies = CookieManager.getInstance();
-        cookies.setCookie(
-            BASE_URL,
-            "wordpress_test_cookie=WP%20Cookie%20check; Path=/; Secure"
-        );
-        cookies.flush();
+        CookieManager.getInstance().flush();
+        webView.loadUrl(BASE_URL + "minha-conta/?franluz_seller_login=1");
+    }
 
-        String user = TextUtils.htmlEncode(username.trim());
-        String pass = TextUtils.htmlEncode(password);
-        String redirect = TextUtils.htmlEncode(sellerUrl);
-        String rememberField = remember
-            ? "<input type=\"hidden\" name=\"rememberme\" value=\"forever\">"
-            : "";
+    private void handleRealLoginPage(WebView view, Uri uri) {
+        if (!isTrustedHost(uri)) {
+            pendingError = "Não foi possível abrir a autenticação segura da FranLuz.";
+            clearPendingLogin();
+            showLocal("login");
+            return;
+        }
 
-        String html =
-            "<!doctype html><html><head><meta charset=\"utf-8\">"
-                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                + "<style>body{margin:0;background:#fff8ef}</style></head><body>"
-                + "<form id=\"f\" method=\"post\" action=\""
-                + BASE_URL
-                + "wp-login.php\">"
-                + "<input type=\"hidden\" name=\"log\" value=\""
-                + user
-                + "\">"
-                + "<input type=\"hidden\" name=\"pwd\" value=\""
-                + pass
-                + "\">"
-                + "<input type=\"hidden\" name=\"redirect_to\" value=\""
-                + redirect
-                + "\">"
-                + "<input type=\"hidden\" name=\"testcookie\" value=\"1\">"
-                + rememberField
-                + "</form><script>document.getElementById('f').submit();</script>"
-                + "</body></html>";
+        String sessionCheck =
+            "(function(){"
+                + "var logged=document.body&&document.body.classList.contains('logged-in');"
+                + "var logout=!!document.querySelector("
+                + "'a[href*=\\"customer-logout\\"],a[href*=\\"wp-login.php?action=logout\\"],a[href*=\\"logout\\"]'"
+                + ");"
+                + "return logged||logout;"
+                + "})();";
 
-        webView.loadDataWithBaseURL(
-            BASE_URL,
-            html,
-            "text/html",
-            "UTF-8",
-            null
-        );
+        view.evaluateJavascript(sessionCheck, value -> {
+            if ("true".equals(value)) {
+                completeRealLogin();
+                return;
+            }
+
+            if (!isLoginOrCustomerPath(uri)) {
+                pendingError = "O login não retornou para a área segura da FranLuz.";
+                clearPendingLogin();
+                showLocal("login");
+                return;
+            }
+
+            if (loginFormInjected) {
+                pendingError = "O site recusou o login. Confira o usuário/e-mail e a senha exatamente como no acesso pelo navegador.";
+                clearPendingLogin();
+                showLocal("login");
+                return;
+            }
+
+            injectRealWooCommerceLogin(view);
+        });
+    }
+
+    private void injectRealWooCommerceLogin(WebView view) {
+        loginFormInjected = true;
+
+        String js =
+            "(function(){"
+                + "var f=document.querySelector("
+                + "'form.woocommerce-form-login,form.login,form[action*=\\"minha-conta\\"]'"
+                + ");"
+                + "if(!f)return 'NO_FORM';"
+                + "var u=f.querySelector('input[name=\\"username\\"],input[name=\\"log\\"],input[type=\\"email\\"]');"
+                + "var p=f.querySelector('input[name=\\"password\\"],input[name=\\"pwd\\"]');"
+                + "if(!u||!p)return 'NO_FIELDS';"
+                + "u.value=" + JSONObject.quote(pendingLoginUser) + ";"
+                + "p.value=" + JSONObject.quote(pendingLoginPassword) + ";"
+                + "u.dispatchEvent(new Event('input',{bubbles:true}));"
+                + "p.dispatchEvent(new Event('input',{bubbles:true}));"
+                + "var r=f.querySelector('input[name=\\"rememberme\\"],input[type=\\"checkbox\\"][name*=\\"remember\\"]');"
+                + "if(r)r.checked=" + (pendingLoginRemember ? "true" : "false") + ";"
+                + "var b=f.querySelector('button[name=\\"login\\"],button[type=\\"submit\\"],input[type=\\"submit\\"]');"
+                + "if(f.requestSubmit){if(b)f.requestSubmit(b);else f.requestSubmit();}"
+                + "else if(b&&b.click){b.click();}else{f.submit();}"
+                + "return 'SUBMITTED';"
+                + "})();";
+
+        view.evaluateJavascript(js, value -> {
+            if ("\"NO_FORM\"".equals(value) || "\"NO_FIELDS\"".equals(value)) {
+                pendingError = "O formulário de acesso da FranLuz mudou e o aplicativo não conseguiu localizar os campos de login.";
+                clearPendingLogin();
+                showLocal("login");
+            }
+        });
+    }
+
+    private void completeRealLogin() {
+        CookieManager.getInstance().flush();
+        clearPendingLogin();
+        loginFormInjected = false;
+        verifyingAfterLogin = true;
+        mode = MODE_CHECK_SESSION;
+        webView.loadUrl(sellerUrl);
+    }
+
+    private void clearPendingLogin() {
+        pendingLoginUser = "";
+        pendingLoginPassword = "";
     }
 
     private void openSellerSection(String section) {
@@ -832,7 +902,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getVersion() {
-            return "1.1.2";
+            return "1.1.3";
         }
     }
 }
