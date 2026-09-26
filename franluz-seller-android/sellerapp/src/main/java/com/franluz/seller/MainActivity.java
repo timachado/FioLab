@@ -347,7 +347,7 @@ public class MainActivity extends Activity {
                 + "\">"
                 + "<input type=\"hidden\" name=\"testcookie\" value=\"1\">"
                 + rememberField
-                + "</form><script>document.getElementById('f').submit();<\/script>"
+                + "</form><script>document.getElementById('f').submit();</script>"
                 + "</body></html>";
 
         webView.loadDataWithBaseURL(
