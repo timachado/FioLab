@@ -36,10 +36,10 @@ jobs:
       - name: Verify supplied Seller icon
         shell: bash
         run: |
-          ICON="franluz-seller-webshell/app/src/main/res/drawable-nodpi/franluz_seller_icon.jpg"
+          ICON="franluz-seller-webshell/app/build/generated/franluzSellerIcon/res/drawable-nodpi/franluz_seller_icon.webp"
           test -s "$ICON"
-          test "$(stat -c%s "$ICON")" = "124575"
-          echo "1a3a7da382cc334adf257573a5a3e5eb625878e20350a67974b925b190d78f65  $ICON" | sha256sum -c -
+          test "$(stat -c%s "$ICON")" = "21334"
+          echo "d98cc6bac66bc54c082d9c25101ad5703b60afd62230644525f7d645afe2cae2  $ICON" | sha256sum -c -
 
       - name: Package
         shell: bash
