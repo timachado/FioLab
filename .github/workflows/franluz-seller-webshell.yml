@@ -3,7 +3,7 @@ name: Build FranLuz Seller Locked 2.2.2
 on:
   push:
     branches:
-      - temp/franluz-seller-webshell-2.2.2
+      - temp/franluz-seller-webshell-2.2.0
     paths:
       - 'franluz-seller-webshell/**'
       - '.github/workflows/franluz-seller-webshell.yml'
