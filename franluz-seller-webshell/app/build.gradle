@@ -10,8 +10,8 @@ android {
         applicationId 'com.franluz.seller'
         minSdk 26
         targetSdk 36
-        versionCode 22001
-        versionName '2.2.1'
+        versionCode 22002
+        versionName '2.2.2'
     }
 
     buildTypes {
