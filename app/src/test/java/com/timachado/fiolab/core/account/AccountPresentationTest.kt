@@ -18,7 +18,7 @@ class AccountPresentationTest {
         )
 
         assertEquals(
-            "FioLab Pro",
+            "Brother Matrizes Pro",
             AccountPresentation
                 .planLabel(
                     "pro"
