@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.FranLuzSeller" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/seller_gold</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/seller_brown</item>
+        <item name="android:navigationBarColor">@color/seller_ivory</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
