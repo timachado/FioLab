@@ -164,7 +164,7 @@ fun UpdateStatusCard() {
 
                 failed -> {
                     Text(
-                        "Não foi possível verificar agora. O FioLab continua funcionando normalmente.",
+                        "Não foi possível verificar agora. O Brother Matrizes continua funcionando normalmente.",
                         color =
                             FioTextMuted,
                         fontSize =
