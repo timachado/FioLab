@@ -28,22 +28,111 @@ object EmbroideryIntegrity {
                 "A matriz excede o limite seguro de comandos."
             }
 
-            require(
-                design.points
-                    .all {
-                        it.colorIndex >=
-                            0
-                    }
-            ) {
-                "A matriz possui índice de cor inválido."
-            }
+            var stitches =
+                0
 
-            val stitches =
-                design.points
-                    .count {
-                        it.command ==
-                            StitchCommand.STITCH
+            var jumps =
+                0
+
+            var colorChanges =
+                0
+
+            var endFound =
+                false
+
+            var hasCoordinate =
+                false
+
+            var minX =
+                0
+
+            var maxX =
+                0
+
+            var minY =
+                0
+
+            var maxY =
+                0
+
+            design.points
+                .forEach {
+                        point ->
+                    require(
+                        point.colorIndex >=
+                            0
+                    ) {
+                        "A matriz possui índice de cor inválido."
                     }
+
+                    when (
+                        point.command
+                    ) {
+                        StitchCommand.STITCH ->
+                            stitches++
+
+                        StitchCommand.JUMP ->
+                            jumps++
+
+                        StitchCommand.COLOR_CHANGE ->
+                            colorChanges++
+
+                        StitchCommand.END ->
+                            endFound =
+                                true
+
+                        else ->
+                            Unit
+                    }
+
+                    if (
+                        point.command !=
+                            StitchCommand.END
+                    ) {
+                        if (
+                            !hasCoordinate
+                        ) {
+                            minX =
+                                point.xUnits
+
+                            maxX =
+                                point.xUnits
+
+                            minY =
+                                point.yUnits
+
+                            maxY =
+                                point.yUnits
+
+                            hasCoordinate =
+                                true
+                        } else {
+                            minX =
+                                minOf(
+                                    minX,
+                                    point.xUnits
+                                )
+
+                            maxX =
+                                maxOf(
+                                    maxX,
+                                    point.xUnits
+                                )
+
+                            minY =
+                                minOf(
+                                    minY,
+                                    point.yUnits
+                                )
+
+                            maxY =
+                                maxOf(
+                                    maxY,
+                                    point.yUnits
+                                )
+                        }
+                    }
+                }
 
             require(
                 stitches >
@@ -52,16 +141,8 @@ object EmbroideryIntegrity {
                 "A matriz não possui pontos de costura."
             }
 
-            val coordinates =
-                design.points
-                    .filter {
-                        it.command !=
-                            StitchCommand.END
-                    }
-
             require(
-                coordinates
-                    .isNotEmpty()
+                hasCoordinate
             ) {
                 "A matriz não possui coordenadas válidas."
             }
@@ -69,47 +150,14 @@ object EmbroideryIntegrity {
             val bounds =
                 EmbroideryBounds(
                     minXUnits =
-                        coordinates
-                            .minOf {
-                                it.xUnits
-                            },
+                        minX,
                     maxXUnits =
-                        coordinates
-                            .maxOf {
-                                it.xUnits
-                            },
+                        maxX,
                     minYUnits =
-                        coordinates
-                            .minOf {
-                                it.yUnits
-                            },
+                        minY,
                     maxYUnits =
-                        coordinates
-                            .maxOf {
-                                it.yUnits
-                            }
+                        maxY
                 )
-
-            val jumps =
-                design.points
-                    .count {
-                        it.command ==
-                            StitchCommand.JUMP
-                    }
-
-            val colorChanges =
-                design.points
-                    .count {
-                        it.command ==
-                            StitchCommand.COLOR_CHANGE
-                    }
-
-            val endFound =
-                design.points
-                    .any {
-                        it.command ==
-                            StitchCommand.END
-                    }
 
             val warnings =
                 buildList {
