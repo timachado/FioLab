@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
 
-    implementation("com.github.EmbroidePy.EmbroideryIO:embroideryio-android:0.0.7")
+    implementation("com.github.EmbroidePy.EmbroideryIO:embroideryio-android:0.1.23")
 
     implementation(platform("io.github.jan-tennert.supabase:bom:3.2.3"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
