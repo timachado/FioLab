@@ -18,12 +18,16 @@ object ActiveDesignStore {
                 target =
                     activeFile(
                         context
-                    ),
-                bytes =
-                    ProjectCodec.encode(
-                        design
                     )
-            )
+            ) {
+                    output ->
+                ProjectCodec.encodeTo(
+                    design =
+                        design,
+                    sink =
+                        output
+                )
+            }
         }
 
     fun load(
@@ -41,9 +45,15 @@ object ActiveDesignStore {
                 null
             } else {
                 runCatching {
-                    ProjectCodec.decode(
-                        file.readBytes()
-                    )
+                    file.inputStream()
+                        .buffered(
+                            64 * 1024
+                        )
+                        .use {
+                            ProjectCodec.decode(
+                                it
+                            )
+                        }
                 }.getOrElse {
                         error ->
                     val quarantine =
