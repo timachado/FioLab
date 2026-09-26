@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setUserAgentString(
-            s.getUserAgentString() + " FranLuzSeller/1.1.3 SellerOnly"
+            s.getUserAgentString() + " FranLuzSeller/1.1.4 SellerOnly"
         );
 
         CookieManager cookies = CookieManager.getInstance();
@@ -604,47 +604,20 @@ public class MainActivity extends Activity {
     private void injectSellerChrome() {
         String js =
             "(function(){"
+                + "var top=document.getElementById('franluzSellerNativeTop');if(top)top.remove();"
+                + "var bottom=document.getElementById('franluzSellerNativeBottom');if(bottom)bottom.remove();"
                 + "var s=document.getElementById('franluzSellerNativeStyle');"
-                + "if(!s){s=document.createElement('style');s.id='franluzSellerNativeStyle';"
+                + "if(!s){s=document.createElement('style');s.id='franluzSellerNativeStyle';document.head.appendChild(s);}"
                 + "s.textContent='"
                 + "#wpadminbar,#masthead,#colophon,.site-header,.site-footer,"
                 + ".storefront-primary-navigation,.main-navigation,.handheld-navigation,"
-                + ".woocommerce-store-notice,.site-search,.franluz-bottom-nav,"
-                + ".flc-bottom-nav,.mobile-bottom-nav,.whatsapp-float,.floating-whatsapp"
+                + ".woocommerce-store-notice,.site-search,.whatsapp-float,.floating-whatsapp"
                 + "{display:none!important}"
                 + "html{margin-top:0!important}"
-                + "body{padding-top:58px!important;padding-bottom:70px!important;background:#f7f3ef!important}"
-                + "#franluzSellerNativeTop{position:fixed;z-index:2147483646;top:0;left:0;right:0;height:58px;"
-                + "background:#fff8ef;border-bottom:1px solid #eadfd4;display:flex;align-items:center;"
-                + "font-family:system-ui,-apple-system,sans-serif;padding:0 10px;gap:8px}"
-                + "#franluzSellerNativeTop button{border:0;background:#fff;border-radius:11px;width:38px;height:38px;"
-                + "font-size:22px;color:#573225;box-shadow:0 3px 12px rgba(87,50,37,.08)}"
-                + "#franluzSellerNativeTop b{font-size:14px;color:#573225;flex:1}"
-                + "#franluzSellerNativeTop small{display:block;font-size:9px;color:#88766e;font-weight:500}"
-                + "#franluzSellerNativeBottom{position:fixed;z-index:2147483646;bottom:0;left:0;right:0;height:64px;"
-                + "background:#fff;border-top:1px solid #eadfd4;display:grid;grid-template-columns:repeat(5,1fr);"
-                + "font-family:system-ui,-apple-system,sans-serif}"
-                + "#franluzSellerNativeBottom a{display:flex;align-items:center;justify-content:center;flex-direction:column;"
-                + "gap:3px;text-decoration:none;color:#7f716a;font-size:9px;font-weight:700}"
-                + "#franluzSellerNativeBottom span{font-size:18px;color:#573225}"
-                + "a[href*=/carrinho/],a[href*=/loja/],a[href*=/categoria-produto/],"
-                + "a[href*=/living-franluz/]{display:none!important}"
-                + "';document.head.appendChild(s);}"
-                + "if(!document.getElementById('franluzSellerNativeTop')){"
-                + "var t=document.createElement('div');t.id='franluzSellerNativeTop';"
-                + "t.innerHTML='<button onclick=\"location.href=\\'franluzseller://home\\'\">‹</button>'"
-                + "+'<b>FranLuz Seller<small>Área exclusiva do vendedor</small></b>'"
-                + "+'<button onclick=\"location.href=\\'franluzseller://home\\'\">⌂</button>';"
-                + "document.body.appendChild(t);}"
-                + "if(!document.getElementById('franluzSellerNativeBottom')){"
-                + "var n=document.createElement('nav');n.id='franluzSellerNativeBottom';"
-                + "n.innerHTML="
-                + "'<a href=\"franluzseller://home\"><span>⌂</span>Início</a>'"
-                + "+'<a href=\"franluzseller://section/orders\"><span>▣</span>Pedidos</a>'"
-                + "+'<a href=\"franluzseller://section/products\"><span>□</span>Produtos</a>'"
-                + "+'<a href=\"franluzseller://section/marketing\"><span>⌁</span>Marketing</a>'"
-                + "+'<a href=\"franluzseller://section/account\"><span>○</span>Conta</a>';"
-                + "document.body.appendChild(n);}"
+                + "body{padding-top:0!important;padding-bottom:0!important;background:#f7f3ef!important}"
+                + "a[href*=\\"/carrinho/\\"],a[href*=\\"/loja/\\"],a[href*=\\"/categoria-produto/\\"],"
+                + "a[href*=\\"/living-franluz/\\"]{display:none!important}"
+                + "';"
                 + "})();";
 
         webView.evaluateJavascript(js, null);
@@ -898,7 +871,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getVersion() {
-            return "1.1.3";
+            return "1.1.4";
         }
     }
 }
