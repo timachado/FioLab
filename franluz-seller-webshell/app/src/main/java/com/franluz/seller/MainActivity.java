@@ -79,7 +79,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setUserAgentString(
-            settings.getUserAgentString() + " FranLuzSellerLocked/2.2.0"
+            settings.getUserAgentString() + " FranLuzSellerLocked/2.2.1"
         );
 
         CookieManager cookies = CookieManager.getInstance();
