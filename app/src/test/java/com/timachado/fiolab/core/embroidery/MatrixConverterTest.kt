@@ -190,14 +190,14 @@ class MatrixConverterTest {
 
             assertEquals(
                 "A largura não pode mudar ao centralizar $format",
-                source.bounds.widthUnits,
-                target.bounds.widthUnits
+                source.bounds.maxXUnits - source.bounds.minXUnits,
+                target.bounds.maxXUnits - target.bounds.minXUnits
             )
 
             assertEquals(
                 "A altura não pode mudar ao centralizar $format",
-                source.bounds.heightUnits,
-                target.bounds.heightUnits
+                source.bounds.maxYUnits - source.bounds.minYUnits,
+                target.bounds.maxYUnits - target.bounds.minYUnits
             )
 
             val centerX =
