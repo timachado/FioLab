@@ -590,7 +590,7 @@ fun MachineTransferScreen(
         }
 
         Text(
-            "O FioLab não altera silenciosamente o tamanho da matriz para fazê-la caber. Se a validação bloquear o envio, ajuste o desenho ou escolha um bastidor compatível.",
+            "O Brother Matrizes não altera silenciosamente o tamanho da matriz para fazê-la caber. Se a validação bloquear o envio, ajuste o desenho ou escolha um bastidor compatível.",
             modifier =
                 Modifier.padding(
                     top =
