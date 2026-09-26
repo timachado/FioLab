@@ -1,0 +1,60 @@
+name: Temp Build FranLuz Seller APK
+
+on:
+  push:
+    branches:
+      - temp/franluz-seller-apk-build
+    paths:
+      - 'franluz-seller-android/**'
+      - '.github/workflows/franluz-seller-temp-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-franluz-seller:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Build FranLuz Seller APK
+        working-directory: franluz-seller-android
+        run: gradle --no-daemon :sellerapp:assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          test -s franluz-seller-android/sellerapp/build/outputs/apk/debug/sellerapp-debug.apk
+          mkdir -p dist
+          cp franluz-seller-android/sellerapp/build/outputs/apk/debug/sellerapp-debug.apk dist/FranLuz-Seller-v1.0.0.apk
+          sha256sum dist/FranLuz-Seller-v1.0.0.apk | tee dist/FranLuz-Seller-v1.0.0.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FranLuz-Seller-v1.0.0
+          path: |
+            dist/FranLuz-Seller-v1.0.0.apk
+            dist/FranLuz-Seller-v1.0.0.sha256
+          if-no-files-found: error
+          retention-days: 7
