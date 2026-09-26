@@ -3,7 +3,7 @@ name: Build FranLuz Seller TWA 2.1.1
 on:
   push:
     branches:
-      - temp/franluz-seller-twa-2.1.1
+      - temp/franluz-seller-twa-2.1.0
     paths:
       - 'franluz-seller-twa/**'
       - '.github/workflows/franluz-seller-twa.yml'
