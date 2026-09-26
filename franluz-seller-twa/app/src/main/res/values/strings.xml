@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">FranLuz Seller</string>
     <string name="launcher_name">FranLuz Seller</string>
-    <string name="launch_url">https://franluzhomedecor.infinityfree.io/seller-franluz/?seller_app=1&amp;twa=1</string>
+    <string name="launch_url">https://franluzhomedecor.infinityfree.io/franluz-seller-app/</string>
     <string name="asset_statements"><![CDATA[[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://franluzhomedecor.infinityfree.io"}}]]]></string>
 </resources>
