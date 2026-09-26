@@ -1,0 +1,66 @@
+name: Keep only Brother Matrizes base
+
+on:
+  push:
+    branches:
+      - fix/brother-directopen-safe4-0469
+    paths:
+      - .github/workflows/keep-only-brother-base.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only v0.46.9 release and tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const keep = "v0.46.9";
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 }
+            );
+
+            for (const release of releases) {
+              if (release.tag_name === keep) {
+                await github.rest.repos.updateRelease({
+                  owner,
+                  repo,
+                  release_id: release.id,
+                  name: "Brother Matrizes 0.46.9",
+                  body: "Brother Matrizes 0.46.9 — base atual estável do aplicativo."
+                });
+                continue;
+              }
+
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.id
+              });
+            }
+
+            const refs = await github.paginate(
+              github.rest.git.listMatchingRefs,
+              { owner, repo, ref: "tags/" }
+            );
+
+            for (const item of refs) {
+              const tag = item.ref.replace(/^refs\/tags\//, "");
+              if (tag === keep) continue;
+
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `tags/${tag}`
+              });
+            }
+
+            core.notice("Mantida somente a release/tag v0.46.9.");
