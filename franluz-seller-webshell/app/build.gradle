@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.franluz.seller'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.franluz.seller'
+        minSdk 26
+        targetSdk 36
+        versionCode 22000
+        versionName '2.2.0'
+    }
+
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
