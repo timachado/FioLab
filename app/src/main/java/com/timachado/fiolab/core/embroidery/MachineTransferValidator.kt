@@ -74,23 +74,29 @@ object MachineTransferValidator {
         val designHeight =
             design.bounds.heightMm
 
-        val usableWidth =
-            hoop.usableWidthMm
+        /*
+         * Para envio à máquina usamos a dimensão física nominal do
+         * bastidor. A margem segura continua existindo nas validações
+         * globais de criação/auto-fit, mas não deve reduzir novamente
+         * a capacidade física nesta tela de transferência.
+         */
+        val hoopWidth =
+            hoop.widthMm
 
-        val usableHeight =
-            hoop.usableHeightMm
+        val hoopHeight =
+            hoop.heightMm
 
         val fitsDirect =
             designWidth <=
-                usableWidth &&
+                hoopWidth &&
                 designHeight <=
-                    usableHeight
+                    hoopHeight
 
         val fitsRotated =
             designWidth <=
-                usableHeight &&
+                hoopHeight &&
                 designHeight <=
-                    usableWidth
+                    hoopWidth
 
         return fitsDirect ||
             fitsRotated
