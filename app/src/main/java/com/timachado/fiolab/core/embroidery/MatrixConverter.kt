@@ -152,14 +152,64 @@ object MatrixConverter {
             design
         )
 
+        /*
+         * Formatos de máquina trabalham melhor com a origem do desenho
+         * centralizada no bastidor. Preservamos tamanho, sequência e
+         * distâncias; somente removemos o offset absoluto acumulado.
+         */
+        val centerX =
+            (
+                design.bounds.minXUnits
+                    .toLong() +
+                    design.bounds.maxXUnits
+                        .toLong()
+                ) /
+                2L
+
+        val centerY =
+            (
+                design.bounds.minYUnits
+                    .toLong() +
+                    design.bounds.maxYUnits
+                        .toLong()
+                ) /
+                2L
+
         var currentX = 0
         var currentY = 0
 
         design.points.forEach { point ->
+            val centeredXLong =
+                point.xUnits
+                    .toLong() -
+                    centerX
+
+            val centeredYLong =
+                point.yUnits
+                    .toLong() -
+                    centerY
+
+            require(
+                centeredXLong in
+                    Int.MIN_VALUE.toLong()..
+                        Int.MAX_VALUE.toLong() &&
+                    centeredYLong in
+                        Int.MIN_VALUE.toLong()..
+                            Int.MAX_VALUE.toLong()
+            ) {
+                "A matriz possui coordenadas fora do intervalo seguro para centralização."
+            }
+
+            val centeredX =
+                centeredXLong
+                    .toInt()
+
             val outputY =
                 writerY(
                     design = design,
-                    yUnits = point.yUnits
+                    yUnits =
+                        centeredYLong
+                            .toInt()
                 )
 
             when (point.command) {
@@ -168,7 +218,7 @@ object MatrixConverter {
                         pattern = pattern,
                         fromX = currentX,
                         fromY = currentY,
-                        toX = point.xUnits,
+                        toX = centeredX,
                         toY = outputY,
                         command =
                             EmbConstant.STITCH
@@ -180,7 +230,7 @@ object MatrixConverter {
                         pattern = pattern,
                         fromX = currentX,
                         fromY = currentY,
-                        toX = point.xUnits,
+                        toX = centeredX,
                         toY = outputY,
                         command =
                             EmbConstant.JUMP
@@ -189,7 +239,7 @@ object MatrixConverter {
 
                 StitchCommand.TRIM -> {
                     pattern.addStitchAbs(
-                        point.xUnits.toFloat(),
+                        centeredX.toFloat(),
                         outputY.toFloat(),
                         EmbConstant.TRIM
                     )
@@ -197,7 +247,7 @@ object MatrixConverter {
 
                 StitchCommand.STOP -> {
                     pattern.addStitchAbs(
-                        point.xUnits.toFloat(),
+                        centeredX.toFloat(),
                         outputY.toFloat(),
                         EmbConstant.COLOR_CHANGE
                     )
@@ -205,7 +255,7 @@ object MatrixConverter {
 
                 StitchCommand.COLOR_CHANGE -> {
                     pattern.addStitchAbs(
-                        point.xUnits.toFloat(),
+                        centeredX.toFloat(),
                         outputY.toFloat(),
                         EmbConstant.COLOR_CHANGE
                     )
@@ -213,7 +263,7 @@ object MatrixConverter {
 
                 StitchCommand.SEQUIN -> {
                     pattern.addStitchAbs(
-                        point.xUnits.toFloat(),
+                        centeredX.toFloat(),
                         outputY.toFloat(),
                         EmbConstant.STITCH
                     )
@@ -221,14 +271,14 @@ object MatrixConverter {
 
                 StitchCommand.END -> {
                     pattern.addStitchAbs(
-                        point.xUnits.toFloat(),
+                        centeredX.toFloat(),
                         outputY.toFloat(),
                         EmbConstant.END
                     )
                 }
             }
 
-            currentX = point.xUnits
+            currentX = centeredX
             currentY = outputY
         }
 
