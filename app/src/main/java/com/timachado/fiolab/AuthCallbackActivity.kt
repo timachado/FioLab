@@ -84,7 +84,7 @@ class AuthCallbackActivity :
                         )
 
                         Text(
-                            "O FioLab está validando sua sessão com segurança.",
+                            "O Brother Matrizes está validando sua sessão com segurança.",
                             modifier =
                                 Modifier.padding(
                                     top =
