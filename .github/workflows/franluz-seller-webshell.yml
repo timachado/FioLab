@@ -1,0 +1,108 @@
+name: Build FranLuz Seller Locked 2.2.0
+
+on:
+  push:
+    branches:
+      - temp/franluz-seller-webshell-2.2.0
+    paths:
+      - 'franluz-seller-webshell/**'
+      - '.github/workflows/franluz-seller-webshell.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build APK
+        working-directory: franluz-seller-webshell
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp franluz-seller-webshell/app/build/outputs/apk/debug/app-debug.apk dist/FranLuz-Seller-Locked-v2.2.0.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/FranLuz-Seller-Locked-v2.2.0.apk
+          sha256sum dist/FranLuz-Seller-Locked-v2.2.0.apk | tee dist/FranLuz-Seller-Locked-v2.2.0.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FranLuz-Seller-Locked-v2.2.0
+          path: |
+            dist/FranLuz-Seller-Locked-v2.2.0.apk
+            dist/FranLuz-Seller-Locked-v2.2.0.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build test APK
+        working-directory: franluz-seller-webshell
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android 15 smoke
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb logcat -c
+            adb install -r franluz-seller-webshell/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop com.franluz.seller
+            adb shell am start -W -n com.franluz.seller/.MainActivity | tee start.txt
+            sleep 8
+            adb shell dumpsys activity activities | grep -A5 -B5 com.franluz.seller | tee activity.txt || true
+            adb logcat -d -v brief | grep -E "AndroidRuntime|FATAL EXCEPTION|com.franluz.seller|chromium" | tail -n 300 | tee webshell-log.txt || true
+            grep -q "Status: ok" start.txt
+            test -n "$(adb shell pidof com.franluz.seller)"
+            ! grep -q "FATAL EXCEPTION" webshell-log.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: FranLuz-Seller-Locked-v2.2.0-smoke
+          path: |
+            start.txt
+            activity.txt
+            webshell-log.txt
+          if-no-files-found: ignore
+          retention-days: 7
