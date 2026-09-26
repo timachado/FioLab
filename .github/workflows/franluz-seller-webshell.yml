@@ -1,9 +1,9 @@
-name: Build FranLuz Seller Locked 2.2.1
+name: Build FranLuz Seller Locked 2.2.2
 
 on:
   push:
     branches:
-      - temp/franluz-seller-webshell-2.2.1
+      - temp/franluz-seller-webshell-2.2.2
     paths:
       - 'franluz-seller-webshell/**'
       - '.github/workflows/franluz-seller-webshell.yml'
@@ -45,15 +45,15 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp franluz-seller-webshell/app/build/outputs/apk/debug/app-debug.apk dist/FranLuz-Seller-Locked-v2.2.1.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/FranLuz-Seller-Locked-v2.2.1.apk
-          sha256sum dist/FranLuz-Seller-Locked-v2.2.1.apk | tee dist/FranLuz-Seller-Locked-v2.2.1.sha256
+          cp franluz-seller-webshell/app/build/outputs/apk/debug/app-debug.apk dist/FranLuz-Seller-Locked-v2.2.2.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/FranLuz-Seller-Locked-v2.2.2.apk
+          sha256sum dist/FranLuz-Seller-Locked-v2.2.2.apk | tee dist/FranLuz-Seller-Locked-v2.2.2.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: FranLuz-Seller-Locked-v2.2.1
+          name: FranLuz-Seller-Locked-v2.2.2
           path: |
-            dist/FranLuz-Seller-Locked-v2.2.1.apk
-            dist/FranLuz-Seller-Locked-v2.2.1.sha256
+            dist/FranLuz-Seller-Locked-v2.2.2.apk
+            dist/FranLuz-Seller-Locked-v2.2.2.sha256
           if-no-files-found: error
           retention-days: 7
 
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: FranLuz-Seller-Locked-v2.2.1-smoke
+          name: FranLuz-Seller-Locked-v2.2.2-smoke
           path: |
             start.txt
             activity.txt
