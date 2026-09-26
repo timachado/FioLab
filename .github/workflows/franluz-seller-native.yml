@@ -3,7 +3,7 @@ name: Build FranLuz Seller Native 2.0
 on:
   push:
     branches:
-      - feat/franluz-seller-native-2.0.0
+      - temp/franluz-seller-native-v2-build
     paths:
       - 'franluz-seller-native/**'
       - 'franluz-seller-bridge/**'
