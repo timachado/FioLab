@@ -59,18 +59,52 @@ object EmbroideryIoParser {
             val x = pattern.getX(index).roundToInt()
             val y = pattern.getY(index).roundToInt()
 
-            val command = when (rawCommand) {
-                EmbConstant.STITCH -> StitchCommand.STITCH
-                EmbConstant.JUMP -> StitchCommand.JUMP
-                EmbConstant.TRIM -> StitchCommand.TRIM
-                EmbConstant.STOP -> StitchCommand.STOP
-                EmbConstant.COLOR_CHANGE,
-                EmbConstant.NEEDLE_SET -> StitchCommand.COLOR_CHANGE
-                EmbConstant.SEQUIN_MODE,
-                EmbConstant.SEQUIN_EJECT -> StitchCommand.SEQUIN
-                EmbConstant.END -> StitchCommand.END
-                else -> null
-            } ?: continue
+            val command =
+                when (
+                    rawCommand
+                ) {
+                    EmbConstant.STITCH,
+                    EmbConstant.SEW_TO,
+                    EmbConstant.NEEDLE_AT ->
+                        StitchCommand.STITCH
+
+                    EmbConstant.JUMP,
+                    EmbConstant.STITCH_BREAK ->
+                        StitchCommand.JUMP
+
+                    EmbConstant.TRIM,
+                    EmbConstant.SEQUENCE_BREAK,
+                    EmbConstant.TIE_OFF ->
+                        StitchCommand.TRIM
+
+                    EmbConstant.STOP,
+                    EmbConstant.FRAME_EJECT ->
+                        StitchCommand.STOP
+
+                    EmbConstant.COLOR_CHANGE,
+                    EmbConstant.NEEDLE_SET,
+                    EmbConstant.COLOR_BREAK ->
+                        StitchCommand.COLOR_CHANGE
+
+                    EmbConstant.SEQUIN_MODE,
+                    EmbConstant.SEQUIN_EJECT ->
+                        StitchCommand.SEQUIN
+
+                    EmbConstant.END ->
+                        StitchCommand.END
+
+                    EmbConstant.TIE_ON ->
+                        StitchCommand.STITCH
+
+                    /*
+                     * SLOW/FAST e opções de encoder não representam
+                     * perfuração nem deslocamento visível. Ignorá-los
+                     * é seguro; os comandos de geometria acima nunca
+                     * mais são descartados silenciosamente.
+                     */
+                    else ->
+                        null
+                } ?: continue
 
             when (command) {
                 StitchCommand.STITCH -> stitchCount++
