@@ -235,10 +235,9 @@ private sealed interface Screen {
             EmbroideryDisplayMode.REALISTIC,
         val referenceHoop:
             HoopProfile =
-            design.hoopProfile
-                ?: recommendedHoopFor(
-                    design
-                ),
+            recommendedHoopFor(
+                design
+            ),
         val showConnections:
             Boolean =
             false
@@ -251,10 +250,9 @@ private sealed interface Screen {
             EmbroideryDisplayMode.REALISTIC,
         val referenceHoop:
             HoopProfile =
-            design.hoopProfile
-                ?: recommendedHoopFor(
-                    design
-                ),
+            recommendedHoopFor(
+                design
+            ),
         val showConnections:
             Boolean =
             false
@@ -271,10 +269,9 @@ private sealed interface Screen {
             EmbroideryDisplayMode.REALISTIC,
         val referenceHoop:
             HoopProfile =
-            design.hoopProfile
-                ?: recommendedHoopFor(
-                    design
-                ),
+            recommendedHoopFor(
+                design
+            ),
         val showConnections:
             Boolean =
             false
