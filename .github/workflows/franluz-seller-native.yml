@@ -1,9 +1,9 @@
-name: Build FranLuz Seller Native 2.0\n# validation trigger after AGP 9 Kotlin cleanup
+name: Build FranLuz Seller Native 2.0\n# clean validation branch
 
 on:
   push:
     branches:
-      - temp/franluz-seller-native-v2-build
+      - temp/franluz-seller-native-v2-build2
     paths:
       - 'franluz-seller-native/**'
       - 'franluz-seller-bridge/**'
