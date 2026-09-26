@@ -1,6 +1,9 @@
 package com.timachado.fiolab.core.embroidery
 
 import java.io.ByteArrayInputStream
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlin.math.roundToInt
 import org.embroideryio.embroideryio.EmbConstant
 import org.embroideryio.embroideryio.EmbroideryIO
@@ -49,6 +52,9 @@ internal fun mapEmbroideryIoCommand(
     }
 
 object EmbroideryIoParser {
+    private const val PARSE_TIMEOUT_SECONDS =
+        12L
+
     private val enabledFormats = setOf("jef", "pes")
 
     fun parse(fileName: String, bytes: ByteArray): EmbroideryLoadResult {
@@ -62,20 +68,74 @@ object EmbroideryIoParser {
             )
         }
 
-        val pattern = try {
-            ByteArrayInputStream(bytes).use { input ->
-                EmbroideryIO.readStream(fileName, input)
+        val executor =
+            Executors
+                .newSingleThreadExecutor {
+                        runnable ->
+                    Thread(
+                        runnable,
+                        "brother-matrix-parser"
+                    ).apply {
+                        isDaemon =
+                            true
+                    }
+                }
+
+        val future =
+            executor.submit<
+                org.embroideryio.embroideryio.EmbPattern?
+            > {
+                ByteArrayInputStream(
+                    bytes
+                ).use {
+                        input ->
+                    EmbroideryIO
+                        .readStream(
+                            fileName,
+                            input
+                        )
+                }
             }
-        } catch (error: Exception) {
-            return EmbroideryLoadResult.Error(
-                "Não foi possível interpretar a matriz " +
-                    extension.uppercase() + ".",
-                error.message
+
+        val pattern =
+            try {
+                future.get(
+                    PARSE_TIMEOUT_SECONDS,
+                    TimeUnit.SECONDS
+                )
+            } catch (
+                error:
+                    TimeoutException
+            ) {
+                future.cancel(
+                    true
+                )
+
+                return EmbroideryLoadResult.Error(
+                    "Esta matriz demorou demais para ser interpretada e foi interrompida para evitar travar o aplicativo.",
+                    "Tempo limite de leitura: " +
+                        PARSE_TIMEOUT_SECONDS +
+                        " s"
+                )
+            } catch (
+                error:
+                    Exception
+            ) {
+                return EmbroideryLoadResult.Error(
+                    "Não foi possível interpretar a matriz " +
+                        extension.uppercase() +
+                        ".",
+                    error.cause
+                        ?.message
+                        ?: error.message
+                )
+            } finally {
+                executor.shutdownNow()
+            } ?: return EmbroideryLoadResult.Error(
+                "O arquivo " +
+                    extension.uppercase() +
+                    " não contém uma matriz reconhecível."
             )
-        } ?: return EmbroideryLoadResult.Error(
-            "O arquivo " + extension.uppercase() +
-                " não contém uma matriz reconhecível."
-        )
 
         if (pattern.size() <= 0) {
             return EmbroideryLoadResult.Error(
@@ -147,6 +207,16 @@ object EmbroideryIoParser {
             )
         }
 
+        if (
+            !endFound
+        ) {
+            return EmbroideryLoadResult.Error(
+                "A matriz foi reconhecida, mas a leitura terminou antes do comando final. O arquivo não será aberto incompleto.",
+                "Comando END ausente após a interpretação " +
+                    extension.uppercase()
+            )
+        }
+
         val colors = pattern.threadlist.map { it.color }
 
         val design =
@@ -165,7 +235,7 @@ object EmbroideryIoParser {
                 jumpCount = jumpCount,
                 colorChanges = colorChanges,
                 endFound = endFound,
-                sourceBytes = bytes.copyOf(),
+                sourceBytes = bytes,
                 threadColors = colors,
                 sourceYAxisDown = true
             )
