@@ -1,9 +1,9 @@
-name: Build FranLuz Seller TWA 2.1.0
+name: Build FranLuz Seller TWA 2.1.1
 
 on:
   push:
     branches:
-      - temp/franluz-seller-twa-2.1.0
+      - temp/franluz-seller-twa-2.1.1
     paths:
       - 'franluz-seller-twa/**'
       - '.github/workflows/franluz-seller-twa.yml'
@@ -38,15 +38,15 @@ jobs:
         run: |
           test -s franluz-seller-twa/app/build/outputs/apk/debug/app-debug.apk
           mkdir -p dist
-          cp franluz-seller-twa/app/build/outputs/apk/debug/app-debug.apk dist/FranLuz-Seller-TWA-v2.1.0.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/FranLuz-Seller-TWA-v2.1.0.apk
-          sha256sum dist/FranLuz-Seller-TWA-v2.1.0.apk | tee dist/FranLuz-Seller-TWA-v2.1.0.sha256
+          cp franluz-seller-twa/app/build/outputs/apk/debug/app-debug.apk dist/FranLuz-Seller-TWA-v2.1.1.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs dist/FranLuz-Seller-TWA-v2.1.1.apk
+          sha256sum dist/FranLuz-Seller-TWA-v2.1.1.apk | tee dist/FranLuz-Seller-TWA-v2.1.1.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: FranLuz-Seller-TWA-v2.1.0
+          name: FranLuz-Seller-TWA-v2.1.1
           path: |
-            dist/FranLuz-Seller-TWA-v2.1.0.apk
-            dist/FranLuz-Seller-TWA-v2.1.0.sha256
+            dist/FranLuz-Seller-TWA-v2.1.1.apk
+            dist/FranLuz-Seller-TWA-v2.1.1.sha256
           if-no-files-found: error
           retention-days: 7
 
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: FranLuz-Seller-TWA-v2.1.0-smoke
+          name: FranLuz-Seller-TWA-v2.1.1-smoke
           path: |
             twa-start.txt
             twa-log.txt
