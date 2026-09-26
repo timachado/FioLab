@@ -93,7 +93,7 @@ fun HomeScreen(
                             R.drawable.fiolab_brand_logo
                         ),
                     contentDescription =
-                        "FioLab Matrizes",
+                        "Brother Matrizes",
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -620,7 +620,7 @@ fun HomeScreen(
             }
         ) {
             Text(
-                "FioLab ${BuildConfig.VERSION_NAME} • Material 3 Expressive",
+                "Brother Matrizes ${BuildConfig.VERSION_NAME} • Material 3 Expressive",
                 modifier =
                     Modifier
                         .fillMaxWidth()
