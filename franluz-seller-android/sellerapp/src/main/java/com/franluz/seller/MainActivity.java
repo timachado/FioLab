@@ -63,18 +63,31 @@ public class MainActivity extends Activity {
     private void configureSystemBars() {
         getWindow().setStatusBarColor(Color.rgb(255, 248, 239));
         getWindow().setNavigationBarColor(Color.rgb(255, 255, 255));
+    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsetsController c = getWindow().getInsetsController();
-            if (c != null) {
-                c.setSystemBarsAppearance(
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+    private void applySystemBarAppearance(FrameLayout root) {
+        root.post(() -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController c = root.getWindowInsetsController();
+                if (c != null) {
+                    c.setSystemBarsAppearance(
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                            | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                            | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    );
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                root.setSystemUiVisibility(
+                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                        | android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                );
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                root.setSystemUiVisibility(
+                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                 );
             }
-        }
+        });
     }
 
     private void createWebView() {
@@ -91,6 +104,7 @@ public class MainActivity extends Activity {
             )
         );
         setContentView(root);
+        applySystemBarAppearance(root);
 
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -122,7 +136,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setUserAgentString(
-            s.getUserAgentString() + " FranLuzSeller/1.1.0 SellerOnly"
+            s.getUserAgentString() + " FranLuzSeller/1.1.2 SellerOnly"
         );
 
         CookieManager cookies = CookieManager.getInstance();
@@ -818,7 +832,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getVersion() {
-            return "1.1.0";
+            return "1.1.2";
         }
     }
 }
