@@ -131,6 +131,107 @@ class MatrixConverterTest {
         )
     }
 
+
+    @Test
+    fun machineFormatsRecenterShiftedDesignWithoutChangingSize() {
+        val source =
+            shiftedDesign()
+
+        for (
+            format in
+                MatrixConverter
+                    .supportedFormats
+        ) {
+            val converted =
+                MatrixConverter
+                    .convert(
+                        source,
+                        format,
+                        outputSuffix =
+                            "centrado"
+                    )
+                    .getOrThrow()
+
+            val parsed =
+                when (
+                    format
+                ) {
+                    "DST" ->
+                        DstParser
+                            .parse(
+                                converted.fileName,
+                                converted.bytes
+                            )
+
+                    "PES",
+                    "JEF" ->
+                        EmbroideryIoParser
+                            .parse(
+                                converted.fileName,
+                                converted.bytes
+                            )
+
+                    else ->
+                        error(
+                            "Formato inesperado."
+                        )
+                }
+
+            assertTrue(
+                parsed is
+                    EmbroideryLoadResult.Success
+            )
+
+            val target =
+                (
+                    parsed as
+                        EmbroideryLoadResult.Success
+                    ).design
+
+            assertEquals(
+                "A largura não pode mudar ao centralizar $format",
+                source.bounds.widthUnits,
+                target.bounds.widthUnits
+            )
+
+            assertEquals(
+                "A altura não pode mudar ao centralizar $format",
+                source.bounds.heightUnits,
+                target.bounds.heightUnits
+            )
+
+            val centerX =
+                (
+                    target.bounds.minXUnits +
+                        target.bounds.maxXUnits
+                    ) /
+                    2f
+
+            val centerY =
+                (
+                    target.bounds.minYUnits +
+                        target.bounds.maxYUnits
+                    ) /
+                    2f
+
+            assertTrue(
+                "A exportação $format precisa ficar centralizada no eixo X.",
+                kotlin.math.abs(
+                    centerX
+                ) <=
+                    1f
+            )
+
+            assertTrue(
+                "A exportação $format precisa ficar centralizada no eixo Y.",
+                kotlin.math.abs(
+                    centerY
+                ) <=
+                    1f
+            )
+        }
+    }
+
     private fun assertVisualGeometryPreserved(
         source: EmbroideryDesign,
         format: String
@@ -425,4 +526,88 @@ class MatrixConverterTest {
                 )
         )
     }
+
+    private fun shiftedDesign():
+        EmbroideryDesign {
+        val points =
+            listOf(
+                EmbroideryPoint(
+                    1000,
+                    2000,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    1200,
+                    2000,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    1200,
+                    2300,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    1000,
+                    2300,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    1000,
+                    2000,
+                    StitchCommand.STITCH,
+                    0
+                ),
+                EmbroideryPoint(
+                    1000,
+                    2000,
+                    StitchCommand.END,
+                    0
+                )
+            )
+
+        return EmbroideryDesign(
+            fileName =
+                "deslocada.pes",
+            format =
+                "PES",
+            label =
+                "CENTRO",
+            points =
+                points,
+            bounds =
+                EmbroideryBounds(
+                    minXUnits =
+                        1000,
+                    maxXUnits =
+                        1200,
+                    minYUnits =
+                        2000,
+                    maxYUnits =
+                        2300
+                ),
+            stitchCount =
+                5,
+            jumpCount =
+                0,
+            colorChanges =
+                0,
+            endFound =
+                true,
+            sourceBytes =
+                ByteArray(
+                    0
+                ),
+            threadColors =
+                listOf(
+                    0xE6BE70
+                ),
+            sourceYAxisDown =
+                true
+        )
+    }
+
 }
