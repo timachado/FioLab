@@ -9,7 +9,7 @@ class AccountModelsTest {
     @Test
     fun planLabelsCoverRecurringAndLifetimePlans() {
         assertEquals(
-            "FioLab Pro Mensal",
+            "Brother Matrizes Pro Mensal",
             AccountPresentation
                 .planLabel(
                     "pro_monthly"
@@ -17,7 +17,7 @@ class AccountModelsTest {
         )
 
         assertEquals(
-            "FioLab Pro Anual",
+            "Brother Matrizes Pro Anual",
             AccountPresentation
                 .planLabel(
                     "pro_annual"
@@ -25,7 +25,7 @@ class AccountModelsTest {
         )
 
         assertEquals(
-            "FioLab Vitalício",
+            "Brother Matrizes Vitalício",
             AccountPresentation
                 .planLabel(
                     "lifetime"
@@ -33,7 +33,7 @@ class AccountModelsTest {
         )
 
         assertEquals(
-            "FioLab Vitalício • Lançamento",
+            "Brother Matrizes Vitalício • Lançamento",
             AccountPresentation
                 .planLabel(
                     "lifetime_launch"
@@ -48,7 +48,7 @@ class AccountModelsTest {
                 code =
                     "lifetime_launch",
                 name =
-                    "FioLab Vitalício • Lançamento",
+                    "Brother Matrizes Vitalício • Lançamento",
                 billingType =
                     "lifetime",
                 isPaid =
