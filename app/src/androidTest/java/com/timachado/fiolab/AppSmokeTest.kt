@@ -50,7 +50,7 @@ class AppSmokeTest {
 
         composeRule
             .onNodeWithText(
-                "Sobre o FioLab"
+                "Sobre o Brother Matrizes"
             )
             .performScrollTo()
             .assertIsDisplayed()
@@ -92,7 +92,7 @@ class AppSmokeTest {
 
         composeRule
             .onNodeWithText(
-                "Fontes FioLab + TTF/OTF deste aparelho"
+                "Fontes Brother Matrizes + TTF/OTF deste aparelho"
             )
             .assertIsDisplayed()
 
@@ -104,7 +104,7 @@ class AppSmokeTest {
 
         composeRule
             .onNodeWithText(
-                "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta FioLab. Limite: 12 MB por fonte."
+                "A fonte TTF/OTF fica salva somente neste aparelho e disponível em Criar Nome até você excluir. Ela não é enviada nem sincronizada com sua conta Brother Matrizes. Limite: 12 MB por fonte."
             )
             .assertIsDisplayed()
     }
