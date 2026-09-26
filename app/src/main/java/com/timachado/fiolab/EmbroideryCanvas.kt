@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.timachado.fiolab.core.embroidery.EmbroideryDesign
+import com.timachado.fiolab.core.embroidery.EmbroideryPoint
+import com.timachado.fiolab.core.embroidery.EmbroideryPreviewOptimizer
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.ui.theme.FioGold
@@ -61,6 +63,45 @@ fun EmbroideryCanvas(
     ) {
         mutableStateOf(Offset.Zero)
     }
+
+    val fullPreview =
+        pointLimit >=
+            design.points.size
+
+    val optimizePreview =
+        interactive &&
+            fullPreview &&
+            design.points.size >
+                EmbroideryPreviewOptimizer
+                    .MAX_PREVIEW_COMMANDS
+
+    val renderPoints =
+        remember(
+            design.points,
+            pointLimit,
+            optimizePreview
+        ) {
+            when {
+                optimizePreview ->
+                    EmbroideryPreviewOptimizer
+                        .optimize(
+                            design.points
+                        )
+
+                fullPreview ->
+                    design.points
+
+                else ->
+                    design.points
+                        .subList(
+                            0,
+                            pointLimit.coerceIn(
+                                0,
+                                design.points.size
+                            )
+                        )
+            }
+        }
 
     val gestures = if (interactive) {
         Modifier.pointerInput(
@@ -122,7 +163,9 @@ fun EmbroideryCanvas(
 
             drawDesign(
                 design = design,
-                pointLimit = pointLimit,
+                points = renderPoints,
+                lightweight =
+                    optimizePreview,
                 userScale = zoom,
                 userOffset = offset,
                 hoop = hoop,
@@ -449,7 +492,8 @@ private fun DrawScope.drawGrid(
 
 private fun DrawScope.drawDesign(
     design: EmbroideryDesign,
-    pointLimit: Int,
+    points: List<EmbroideryPoint>,
+    lightweight: Boolean,
     userScale: Float,
     userOffset: Offset,
     hoop: HoopProfile?,
@@ -591,13 +635,7 @@ private fun DrawScope.drawDesign(
 
     var colorIndex = 0
 
-    design.points
-        .take(
-            pointLimit.coerceIn(
-                0,
-                design.points.size
-            )
-        )
+    points
         .forEach { point ->
             val current =
                 Offset(
@@ -649,7 +687,9 @@ private fun DrawScope.drawDesign(
                                     colorIndex
                                 ),
                             mode =
-                                displayMode
+                                displayMode,
+                            lightweight =
+                                lightweight
                         )
                     }
 
@@ -731,7 +771,8 @@ private fun DrawScope.drawStitchByDisplay(
     start: Offset,
     end: Offset,
     color: Color,
-    mode: EmbroideryDisplayMode
+    mode: EmbroideryDisplayMode,
+    lightweight: Boolean
 ) {
     when (
         mode
@@ -782,6 +823,26 @@ private fun DrawScope.drawStitchByDisplay(
         }
 
         EmbroideryDisplayMode.REALISTIC -> {
+            if (
+                lightweight
+            ) {
+                drawLine(
+                    color =
+                        color,
+                    start =
+                        start,
+                    end =
+                        end,
+                    strokeWidth =
+                        1.25.dp
+                            .toPx(),
+                    cap =
+                        StrokeCap.Round
+                )
+
+                return
+            }
+
             val vector =
                 end -
                     start
