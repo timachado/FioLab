@@ -275,22 +275,22 @@ object AccountPresentation {
                 "Gratuito"
 
             "pro" ->
-                "FioLab Pro"
+                "Brother Matrizes Pro"
 
             "premium" ->
-                "FioLab Premium"
+                "Brother Matrizes Premium"
 
             "pro_monthly" ->
-                "FioLab Pro Mensal"
+                "Brother Matrizes Pro Mensal"
 
             "pro_annual" ->
-                "FioLab Pro Anual"
+                "Brother Matrizes Pro Anual"
 
             "lifetime" ->
-                "FioLab Vitalício"
+                "Brother Matrizes Vitalício"
 
             "lifetime_launch" ->
-                "FioLab Vitalício • Lançamento"
+                "Brother Matrizes Vitalício • Lançamento"
 
             else ->
                 planCode
