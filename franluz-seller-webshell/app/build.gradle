@@ -10,8 +10,8 @@ android {
         applicationId 'com.franluz.seller'
         minSdk 26
         targetSdk 36
-        versionCode 22000
-        versionName '2.2.0'
+        versionCode 22001
+        versionName '2.2.1'
     }
 
     buildTypes {
@@ -23,4 +23,27 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+
+def franluzSellerIconParts = [file("../icon-src/icon.part1"), file("../icon-src/icon.part2"), file("../icon-src/icon.part3"), file("../icon-src/icon.part4")]
+def franluzSellerGeneratedRes = file("$buildDir/generated/franluzSellerIcon/res")
+
+android.sourceSets.main.res.srcDir franluzSellerGeneratedRes
+
+tasks.register("generateFranLuzSellerIcon") {
+    inputs.files(franluzSellerIconParts)
+    outputs.file(new File(franluzSellerGeneratedRes, "drawable-nodpi/franluz_seller_icon.webp"))
+
+    doLast {
+        def encoded = franluzSellerIconParts.collect { it.getText("UTF-8").trim() }.join("")
+        def bytes = java.util.Base64.decoder.decode(encoded)
+        def out = new File(franluzSellerGeneratedRes, "drawable-nodpi/franluz_seller_icon.webp")
+        out.parentFile.mkdirs()
+        out.bytes = bytes
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("generateFranLuzSellerIcon")
 }
