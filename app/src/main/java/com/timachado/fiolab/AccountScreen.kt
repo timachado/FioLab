@@ -145,7 +145,7 @@ fun AccountScreen(
                     ) {
                         "Entre para acompanhar sua conta."
                     } else {
-                        "Perfil e assinatura FioLab."
+                        "Perfil e assinatura Brother Matrizes."
                     },
                     color =
                         FioTextMuted,
@@ -312,7 +312,7 @@ private fun TextScalePreferenceCard(
             )
 
             Text(
-                "Ajuste a leitura do FioLab neste aparelho. A escala do Android continua respeitada.",
+                "Ajuste a leitura do Brother Matrizes neste aparelho. A escala do Android continua respeitada.",
                 modifier =
                     Modifier.padding(
                         top =
@@ -490,7 +490,7 @@ private fun SignedOutAccount(
                 }
 
                 Text(
-                    "Mais rápido e sem precisar criar outra senha no FioLab.",
+                    "Mais rápido e sem precisar criar outra senha no Brother Matrizes.",
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -859,7 +859,7 @@ private fun SignedInAccount(
                             .fillMaxWidth(),
                     label = {
                         Text(
-                            "Nome no FioLab"
+                            "Nome no Brother Matrizes"
                         )
                     },
                     singleLine =
@@ -1108,7 +1108,7 @@ private fun SignedInAccount(
                             "Este plano não possui renovação nem próxima cobrança."
 
                         account.isPaid ->
-                            "O FioLab acompanha aqui o plano, status e renovação vinculados à sua conta."
+                            "O Brother Matrizes acompanha aqui o plano, status e renovação vinculados à sua conta."
 
                         else ->
                             "Quando uma contratação for confirmada, o plano será vinculado à sua conta automaticamente."
@@ -1274,7 +1274,7 @@ private fun SignedInAccount(
                     )
                 ) {
                     Text(
-                        "Planos FioLab",
+                        "Planos Brother Matrizes",
                         color =
                             FioText,
                         fontWeight =
@@ -1440,7 +1440,7 @@ private fun SignedInAccount(
                                     )
 
                                     Text(
-                                        "FioLab " +
+                                        "Brother Matrizes " +
                                             device.appVersion +
                                             " • último acesso " +
                                             formattedDate(
@@ -1717,7 +1717,7 @@ private fun AboutFioLabCard() {
             )
         ) {
             Text(
-                "Sobre o FioLab",
+                "Sobre o Brother Matrizes",
                 color =
                     FioText,
                 fontWeight =
@@ -1727,7 +1727,7 @@ private fun AboutFioLabCard() {
             )
 
             Text(
-                "FioLab • " +
+                "Brother Matrizes • " +
                     FioLabAbout
                         .productTagline,
                 modifier =
@@ -1845,7 +1845,11 @@ private fun PlanSummary(
                 Alignment.CenterVertically
         ) {
             Text(
-                plan.name,
+                plan.name
+                    .replace(
+                        "FioLab",
+                        "Brother Matrizes"
+                    ),
                 modifier =
                     Modifier.weight(
                         1f
@@ -1927,7 +1931,11 @@ private fun PlanSummary(
                 .isNotBlank()
         ) {
             Text(
-                plan.description,
+                plan.description
+                    .replace(
+                        "FioLab",
+                        "Brother Matrizes"
+                    ),
                 modifier =
                     Modifier.padding(
                         top =
