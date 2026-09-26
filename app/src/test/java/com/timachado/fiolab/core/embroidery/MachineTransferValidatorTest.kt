@@ -81,13 +81,13 @@ class MachineTransferValidatorTest {
     }
 
     @Test
-    fun matrixOutsideSafeHoopAreaIsBlocked() {
+    fun matrixOutsidePhysicalHoopAreaIsBlocked() {
         val result =
             MachineTransferValidator
                 .validate(
                     design =
                         design(
-                            858,
+                            1001,
                             984
                         ),
                     format =
