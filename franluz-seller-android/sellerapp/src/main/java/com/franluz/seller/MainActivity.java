@@ -615,8 +615,8 @@ public class MainActivity extends Activity {
                 + "{display:none!important}"
                 + "html{margin-top:0!important}"
                 + "body{padding-top:0!important;padding-bottom:0!important;background:#f7f3ef!important}"
-                + "a[href*=\\"/carrinho/\\"],a[href*=\\"/loja/\\"],a[href*=\\"/categoria-produto/\\"],"
-                + "a[href*=\\"/living-franluz/\\"]{display:none!important}"
+                + "a[href*=\"/carrinho/\"],a[href*=\"/loja/\"],a[href*=\"/categoria-produto/\"],"
+                + "a[href*=\"/living-franluz/\"]{display:none!important}"
                 + "';"
                 + "})();";
 
