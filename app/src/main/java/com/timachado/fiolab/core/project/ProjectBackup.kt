@@ -225,7 +225,7 @@ object ProjectBackupCodec {
                                 lines[0] ==
                                     MAGIC
                         ) {
-                            "Arquivo não é um backup do FioLab."
+                            "Arquivo não é um backup do Brother Matrizes."
                         }
 
                         require(
