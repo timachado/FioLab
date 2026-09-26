@@ -60,6 +60,22 @@ class HoopAutoSelectionTest {
         )
     }
 
+
+    @Test
+    fun uploadedPes858x1202Uses130x180Automatically() {
+        assertEquals(
+            HoopProfile.H130X180,
+            recommendedHoopFor(
+                design(
+                    widthUnits =
+                        858,
+                    heightUnits =
+                        1202
+                )
+            )
+        )
+    }
+
     private fun design(
         widthUnits: Int,
         heightUnits: Int
