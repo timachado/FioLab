@@ -158,7 +158,7 @@ class MachineTransferValidatorTest {
     }
 
     @Test
-    fun portraitMatrixStillRejectsHoopWhoseSafeAreaIsTooShort() {
+    fun portraitMatrixFitsNominal130x180Hoop() {
         val result =
             MachineTransferValidator
                 .validate(
@@ -173,8 +173,8 @@ class MachineTransferValidatorTest {
                             .H130X180
                 )
 
-        assertFalse(
-            "Com margem segura de 5 mm, 69,2 × 178,4 mm ainda não cabe no 130 × 180 mm.",
+        assertTrue(
+            "69,2 × 178,4 mm deve caber fisicamente no bastidor nominal 130 × 180 mm.",
             result.ready
         )
     }
@@ -191,9 +191,9 @@ class MachineTransferValidatorTest {
                 )
 
         assertTrue(
-            "O primeiro bastidor seguro deve ser 140 × 200 mm.",
+            "O primeiro bastidor físico compatível deve ser 130 × 180 mm.",
             result ==
-                HoopProfile.H140X200
+                HoopProfile.H130X180
         )
     }
 
