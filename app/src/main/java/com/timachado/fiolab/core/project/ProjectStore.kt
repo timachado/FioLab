@@ -10,11 +10,13 @@ import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.MachineFinishingInfo
 import com.timachado.fiolab.core.embroidery.StitchCommand
 import com.timachado.fiolab.core.storage.AtomicFileWriter
+import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.InputStream
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -237,11 +239,30 @@ object ProjectCodec {
 
     fun decode(
         bytes: ByteArray
+    ): EmbroideryDesign =
+        ByteArrayInputStream(
+            bytes
+        ).use {
+            decode(
+                it
+            )
+        }
+
+    fun decode(
+        source: InputStream
     ): EmbroideryDesign {
         return DataInputStream(
-            ByteArrayInputStream(
-                bytes
-            )
+            if (
+                source is
+                    BufferedInputStream
+            ) {
+                source
+            } else {
+                BufferedInputStream(
+                    source,
+                    64 * 1024
+                )
+            }
         ).use {
                 input ->
             require(
@@ -286,7 +307,9 @@ object ProjectCodec {
             }
 
             val colors =
-                buildList {
+                ArrayList<Int>(
+                    colorCount
+                ).apply {
                     repeat(
                         colorCount
                     ) {
@@ -363,27 +386,28 @@ object ProjectCodec {
             }
 
             val points =
-                buildList {
-                    repeat(
-                        pointCount
-                    ) {
-                        add(
-                            EmbroideryPoint(
-                                xUnits =
-                                    input.readInt(),
-                                yUnits =
-                                    input.readInt(),
-                                command =
-                                    StitchCommand
-                                        .valueOf(
-                                            input.readUTF()
-                                        ),
-                                colorIndex =
-                                    input.readInt()
-                            )
-                        )
-                    }
-                }
+                ArrayList<EmbroideryPoint>(
+                    pointCount
+                )
+
+            repeat(
+                pointCount
+            ) {
+                points +=
+                    EmbroideryPoint(
+                        xUnits =
+                            input.readInt(),
+                        yUnits =
+                            input.readInt(),
+                        command =
+                            StitchCommand
+                                .valueOf(
+                                    input.readUTF()
+                                ),
+                        colorIndex =
+                            input.readInt()
+                    )
+            }
 
             val guidePoints =
                 if (
@@ -400,7 +424,9 @@ object ProjectCodec {
                         "Quantidade de pontos do guia inválida."
                     }
 
-                    buildList {
+                    ArrayList<EmbroideryPoint>(
+                        guideCount
+                    ).apply {
                         repeat(
                             guideCount
                         ) {
@@ -425,48 +451,6 @@ object ProjectCodec {
                     emptyList()
                 }
 
-            val coordinates =
-                points.filter {
-                    it.command !=
-                        StitchCommand.END
-                }
-
-            val bounds =
-                if (
-                    coordinates
-                        .isEmpty()
-                ) {
-                    EmbroideryBounds(
-                        0,
-                        0,
-                        0,
-                        0
-                    )
-                } else {
-                    EmbroideryBounds(
-                        minXUnits =
-                            coordinates
-                                .minOf {
-                                    it.xUnits
-                                },
-                        maxXUnits =
-                            coordinates
-                                .maxOf {
-                                    it.xUnits
-                                },
-                        minYUnits =
-                            coordinates
-                                .minOf {
-                                    it.yUnits
-                                },
-                        maxYUnits =
-                            coordinates
-                                .maxOf {
-                                    it.yUnits
-                                }
-                    )
-                }
-
             EmbroideryIntegrity
                 .normalize(
                     EmbroideryDesign(
@@ -479,27 +463,20 @@ object ProjectCodec {
                         points =
                             points,
                         bounds =
-                            bounds,
+                            EmbroideryBounds(
+                                0,
+                                0,
+                                0,
+                                0
+                            ),
                         stitchCount =
-                            points.count {
-                                it.command ==
-                                    StitchCommand.STITCH
-                            },
+                            0,
                         jumpCount =
-                            points.count {
-                                it.command ==
-                                    StitchCommand.JUMP
-                            },
+                            0,
                         colorChanges =
-                            points.count {
-                                it.command ==
-                                    StitchCommand.COLOR_CHANGE
-                            },
+                            0,
                         endFound =
-                            points.any {
-                                it.command ==
-                                    StitchCommand.END
-                            },
+                            false,
                         sourceBytes =
                             ByteArray(0),
                         guidePoints =
@@ -656,10 +633,16 @@ object ProjectStore {
                         file ->
                     runCatching {
                         val design =
-                            ProjectCodec
-                                .decode(
-                                    file.readBytes()
+                            file.inputStream()
+                                .buffered(
+                                    64 * 1024
                                 )
+                                .use {
+                                    ProjectCodec
+                                        .decode(
+                                            it
+                                        )
+                                }
 
                         summary(
                             id =
@@ -706,9 +689,15 @@ object ProjectStore {
                 "Projeto não encontrado."
             }
 
-            ProjectCodec.decode(
-                file.readBytes()
-            )
+            file.inputStream()
+                .buffered(
+                    64 * 1024
+                )
+                .use {
+                    ProjectCodec.decode(
+                        it
+                    )
+                }
         }
 
     fun delete(
