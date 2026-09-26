@@ -758,7 +758,7 @@ fun CreateNameScreen(
 
                         "Fonte" -> {
                             Text(
-                                "Fontes FioLab",
+                                "Fontes Brother Matrizes",
                                 color =
                                     FioText,
                                 fontWeight =
