@@ -7,6 +7,8 @@ import com.timachado.fiolab.core.embroidery.FabricProfile
 import com.timachado.fiolab.core.embroidery.HoopProfile
 import com.timachado.fiolab.core.embroidery.MachineFinishingInfo
 import com.timachado.fiolab.core.embroidery.StitchCommand
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
@@ -194,4 +196,46 @@ class ProjectCodecTest {
             result.isFailure
         )
     }
+
+    @Test
+    fun streamingRoundTripPreservesMatrix() {
+        val original =
+            sample()
+
+        val output =
+            ByteArrayOutputStream()
+
+        ProjectCodec
+            .encodeTo(
+                design =
+                    original,
+                sink =
+                    output
+            )
+
+        val restored =
+            ByteArrayInputStream(
+                output.toByteArray()
+            ).use {
+                ProjectCodec.decode(
+                    it
+                )
+            }
+
+        assertEquals(
+            original.points,
+            restored.points
+        )
+
+        assertEquals(
+            original.threadColors,
+            restored.threadColors
+        )
+
+        assertEquals(
+            original.hoopProfile,
+            restored.hoopProfile
+        )
+    }
+
 }
