@@ -4,7 +4,7 @@ import kotlin.math.ceil
 
 object EmbroideryPreviewOptimizer {
     const val MAX_PREVIEW_COMMANDS =
-        25_000
+        8_000
 
     fun optimize(
         points: List<EmbroideryPoint>,
@@ -41,7 +41,7 @@ object EmbroideryPreviewOptimizer {
                     structuralCount
                 )
                 .coerceAtLeast(
-                    4_000
+                    2_000
                 )
 
         val stride =
