@@ -17,6 +17,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -48,6 +49,24 @@ object ProjectCodec {
     fun encode(
         design: EmbroideryDesign
     ): ByteArray {
+        val buffer =
+            ByteArrayOutputStream()
+
+        encodeTo(
+            design =
+                design,
+            sink =
+                buffer
+        )
+
+        return buffer
+            .toByteArray()
+    }
+
+    fun encodeTo(
+        design: EmbroideryDesign,
+        sink: OutputStream
+    ) {
         EmbroideryIntegrity
             .normalize(
                 design
@@ -64,177 +83,173 @@ object ProjectCodec {
                 )
             }
 
-        val buffer =
-            ByteArrayOutputStream()
-
-        DataOutputStream(
-            buffer
-        ).use {
-                output ->
-            output.writeUTF(
-                MAGIC
+        val output =
+            DataOutputStream(
+                sink
             )
 
-            output.writeInt(
-                VERSION
-            )
+        output.writeUTF(
+            MAGIC
+        )
 
-            output.writeUTF(
-                design.fileName
-                    .take(
-                        500
-                    )
-            )
+        output.writeInt(
+            VERSION
+        )
 
-            output.writeUTF(
-                design.format
-                    .take(
-                        32
-                    )
-            )
+        output.writeUTF(
+            design.fileName
+                .take(
+                    500
+                )
+        )
 
-            writeNullableString(
-                output,
-                design.label
-            )
+        output.writeUTF(
+            design.format
+                .take(
+                    32
+                )
+        )
 
-            output.writeInt(
-                design.threadColors
-                    .size
-            )
+        writeNullableString(
+            output,
+            design.label
+        )
 
+        output.writeInt(
             design.threadColors
-                .forEach {
-                    output.writeInt(
-                        it
-                    )
-                }
+                .size
+        )
 
-            writeNullableString(
-                output,
-                design.hoopProfile
-                    ?.name
+        design.threadColors
+            .forEach {
+                output.writeInt(
+                    it
+                )
+            }
+
+        writeNullableString(
+            output,
+            design.hoopProfile
+                ?.name
+        )
+
+        writeNullableString(
+            output,
+            design.fabricProfile
+                ?.name
+        )
+
+        val finishing =
+            design.machineFinishing
+
+        output.writeBoolean(
+            finishing !=
+                null
+        )
+
+        if (
+            finishing !=
+                null
+        ) {
+            output.writeBoolean(
+                finishing
+                    .tieInEnabled
             )
-
-            writeNullableString(
-                output,
-                design.fabricProfile
-                    ?.name
-            )
-
-            val finishing =
-                design.machineFinishing
 
             output.writeBoolean(
-                finishing !=
-                    null
+                finishing
+                    .tieOffEnabled
             )
-
-            if (
-                finishing !=
-                    null
-            ) {
-                output.writeBoolean(
-                    finishing
-                        .tieInEnabled
-                )
-
-                output.writeBoolean(
-                    finishing
-                        .tieOffEnabled
-                )
-
-                output.writeBoolean(
-                    finishing
-                        .autoTrimLongJumps
-                )
-
-                output.writeFloat(
-                    finishing
-                        .trimJumpThresholdMm
-                )
-
-                output.writeBoolean(
-                    finishing
-                        .optimizeTravel
-                )
-            }
 
             output.writeBoolean(
-                design.sourceYAxisDown
+                finishing
+                    .autoTrimLongJumps
             )
 
-            require(
-                design.points
-                    .size <=
-                    MAX_POINTS
-            ) {
-                "Projeto grande demais para salvar."
-            }
-
-            output.writeInt(
-                design.points
-                    .size
+            output.writeFloat(
+                finishing
+                    .trimJumpThresholdMm
             )
 
-            design.points
-                .forEach {
-                        point ->
-                    output.writeInt(
-                        point.xUnits
-                    )
-
-                    output.writeInt(
-                        point.yUnits
-                    )
-
-                    output.writeUTF(
-                        point.command
-                            .name
-                    )
-
-                    output.writeInt(
-                        point.colorIndex
-                    )
-                }
-
-            require(
-                design.guidePoints
-                    .size <=
-                    MAX_POINTS
-            ) {
-                "Guia vetorial grande demais para salvar."
-            }
-
-            output.writeInt(
-                design.guidePoints
-                    .size
+            output.writeBoolean(
+                finishing
+                    .optimizeTravel
             )
-
-            design.guidePoints
-                .forEach {
-                        point ->
-                    output.writeInt(
-                        point.xUnits
-                    )
-
-                    output.writeInt(
-                        point.yUnits
-                    )
-
-                    output.writeUTF(
-                        point.command
-                            .name
-                    )
-
-                    output.writeInt(
-                        point.colorIndex
-                    )
-                }
         }
 
-        return buffer
-            .toByteArray()
+        output.writeBoolean(
+            design.sourceYAxisDown
+        )
+
+        require(
+            design.points
+                .size <=
+                MAX_POINTS
+        ) {
+            "Projeto grande demais para salvar."
+        }
+
+        output.writeInt(
+            design.points
+                .size
+        )
+
+        design.points
+            .forEach {
+                    point ->
+                output.writeInt(
+                    point.xUnits
+                )
+
+                output.writeInt(
+                    point.yUnits
+                )
+
+                output.writeUTF(
+                    point.command
+                        .name
+                )
+
+                output.writeInt(
+                    point.colorIndex
+                )
+            }
+
+        require(
+            design.guidePoints
+                .size <=
+                MAX_POINTS
+        ) {
+            "Guia vetorial grande demais para salvar."
+        }
+
+        output.writeInt(
+            design.guidePoints
+                .size
+        )
+
+        design.guidePoints
+            .forEach {
+                    point ->
+                output.writeInt(
+                    point.xUnits
+                )
+
+                output.writeInt(
+                    point.yUnits
+                )
+
+                output.writeUTF(
+                    point.command
+                        .name
+                )
+
+                output.writeInt(
+                    point.colorIndex
+                )
+            }
+
+        output.flush()
     }
 
     fun decode(
@@ -581,12 +596,16 @@ object ProjectStore {
 
             AtomicFileWriter.write(
                 target =
-                    file,
-                bytes =
-                    ProjectCodec.encode(
-                        design
-                    )
-            )
+                    file
+            ) {
+                    output ->
+                ProjectCodec.encodeTo(
+                    design =
+                        design,
+                    sink =
+                        output
+                )
+            }
 
             file.setLastModified(
                 System.currentTimeMillis()
